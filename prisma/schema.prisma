@@ -1,0 +1,335 @@
+// This is your Prisma schema file.
+// Learn about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma connects to your database and generates an ORM/query client
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USERS
+// ============================================================================
+// The User model represents a person in the system.
+// Key concept: Each user can belong to multiple chapters through ChapterMember.
+// We use Supabase Auth for authentication (stores encrypted passwords, JWT tokens).
+// This model just stores user profile information.
+//
+// Why separate from Supabase Auth?
+// - Supabase Auth handles login/signup/security
+// - Prisma User stores additional profile data (avatar, timezone, display name)
+// - User.id IS the Supabase Auth UID (same primary key)
+// - This is set when user signs up via Supabase Auth trigger or manual sync
+model User {
+  id            String    @id                  // Supabase Auth UID (not generated, set from auth.uid)
+  email         String    @unique              // User's email (unique across system)
+  name          String?                        // Display name
+  avatarUrl     String?                        // Path to avatar in Supabase Storage, prefixed with bucket URL (e.g., "avatars/user-id.jpg")
+  timezone      String    @default("UTC")      // User's local timezone (e.g., "America/Los_Angeles")
+  createdAt     DateTime  @default(now())      // Timestamp when user created account
+  updatedAt     DateTime  @updatedAt           // Auto-updated when user data changes
+
+  // Relationships (one user → many chapters via ChapterMember)
+  chapterMemberships ChapterMember[]           // This user's membership in chapters
+  createdChapters    Chapter[]                 // Chapters this user created
+  topicsCreated      Topic[]                   // Topics this user suggested
+  sentInvitations    ChapterInvitation[]       // Invitations this user sent
+  discussionNotes    DiscussionNote[]          // Discussion notes from meetings
+
+  @@index([email])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// CHAPTERS
+// ============================================================================
+// A Chapter is a book club group (5-10 people who meet monthly).
+// Key concept: Chapters are the fundamental organizational unit.
+// Multiple users can belong to one chapter, and each user can belong to multiple chapters.
+//
+// Why this structure?
+// - Chapters are independent communities with their own themes and meetings
+// - Each chapter needs its own data taxonomy (themes)
+// - Chapters can be public or private (handled via Row-Level Security in Supabase)
+model Chapter {
+  id          String    @id @default(cuid())
+  name        String                         // Chapter name (e.g., "NYC Book Club")
+  description String?                        // Optional description of chapter's focus
+  creatorId   String                         // User who created this chapter
+  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships (one chapter → many members, meetings, themes)
+  members         ChapterMember[]            // All members of this chapter
+  meetings        Meeting[]                  // All meetings for this chapter
+  themes          Theme[]                    // Taxonomy of themes (reusable categories)
+  invitations     ChapterInvitation[]        // Pending invitations to this chapter
+
+  @@index([creatorId])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// CHAPTER MEMBERSHIP
+// ============================================================================
+// ChapterMember is a junction table (many-to-many relationship).
+// It connects Users to Chapters.
+//
+// Why a junction table?
+// - A user can be in multiple chapters
+// - A chapter has multiple members
+// - We need to track membership metadata (joinedAt, role if needed in future)
+// - Easier to query "all members of chapter X" or "all chapters for user Y"
+model ChapterMember {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapterId String
+  chapter   Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  joinedAt  DateTime  @default(now())        // When they joined (invited date + acceptance)
+
+  @@unique([userId, chapterId])              // Prevent duplicate memberships
+  @@index([userId])
+  @@index([chapterId])
+}
+
+// ============================================================================
+// CHAPTER INVITATIONS
+// ============================================================================
+// ChapterInvitation represents a pending invite to join a chapter.
+// Key design decision: We store the email address, not a userId.
+//
+// Why?
+// - User might not exist in system yet
+// - When they sign up later, we can match them by email and create ChapterMember
+// - Allows flexibility for inviting people who haven't joined yet
+//
+// Status flow: pending → when accepted, create ChapterMember and delete this record
+// OR: rejected, also delete this record
+// This keeps the table clean with only active invitations.
+model ChapterInvitation {
+  id          String    @id @default(cuid())
+  chapterId   String
+  chapter     Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  invitedEmail String                       // Email of person being invited
+  inviterId   String                        // User who sent invitation
+  inviter     User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  status      InvitationStatus @default(PENDING)
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime                      // Invitation expires after 30 days (calculated at creation)
+
+  @@unique([chapterId, invitedEmail])       // Only one invitation per email per chapter
+  @@index([invitedEmail])
+  @@index([chapterId])
+  @@index([status])
+}
+
+enum InvitationStatus {
+  PENDING                                    // Waiting for response
+  ACCEPTED                                   // Accepted - record should be deleted after creating ChapterMember
+}
+
+// ============================================================================
+// THEMES
+// ============================================================================
+// Themes are tags/categories for organizing discussion topics.
+// Each chapter has its own taxonomy of themes (they're not global).
+//
+// Why chapter-specific?
+// - Different book clubs might organize topics differently
+// - One chapter might focus on "Character Development", another on "Plot Twists"
+// - Allows communities to define what matters to them
+//
+// Examples: "Character Development", "World-Building", "Pacing", "Writing Style"
+model Theme {
+  id        String    @id @default(cuid())
+  chapterId String
+  chapter   Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  name      String                         // Theme name
+  color     String    @default("#000000")  // Hex color for visualization
+  description String?                      // What does this theme represent?
+  createdAt DateTime  @default(now())
+
+  // Relationships (one theme → many topics via TopicTheme)
+  topics    TopicTheme[]                   // Topics tagged with this theme
+
+  @@unique([chapterId, name])               // Prevent duplicate themes in same chapter
+  @@index([chapterId])
+}
+
+// ============================================================================
+// MEETINGS
+// ============================================================================
+// A Meeting is a monthly (or recurring) gathering for a chapter.
+// Key design decision: Individual Meeting records per occurrence (not recurrence rules).
+//
+// Why individual records?
+// - Easier to query: "get all meetings in date range" is simple
+// - Easier to manage: cancel/reschedule one meeting without complex logic
+// - Easier to store data: this specific meeting's topics, notes
+// - Trade-off: need to handle recurring creation in application logic
+//
+// recurringGroupId: If this is part of a recurring series, this groups them together
+// Example: All "First Tuesday of Month" meetings have same recurringGroupId
+// Allows bulk operations like "reschedule all future occurrences"
+//
+// Status: SCHEDULED → ACTIVE → COMPLETED or CANCELLED
+model Meeting {
+  id              String    @id @default(cuid())
+  chapterId       String
+  chapter         Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  title           String                  // Meeting title (e.g., "December Discussion")
+  description     String?
+  scheduledAt     DateTime                // When meeting is scheduled (includes time)
+  duration        Int       @default(60)  // Duration in minutes
+  status          MeetingStatus @default(SCHEDULED)
+  recurringGroupId String?                // Groups recurring meeting instances together
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relationships (one meeting → many topics, discussion notes)
+  topics          Topic[]                 // Topics discussed in this meeting
+  discussionNotes DiscussionNote[]        // Notes/insights from this meeting
+
+  @@index([chapterId])
+  @@index([scheduledAt])
+  @@index([status])
+  @@index([recurringGroupId])
+}
+
+enum MeetingStatus {
+  SCHEDULED                                 // Not yet started
+  ACTIVE                                    // Currently happening
+  COMPLETED                                 // Finished
+  CANCELLED                                 // Cancelled
+}
+
+// ============================================================================
+// TOPICS
+// ============================================================================
+// A Topic is something discussed in a meeting (book, podcast, movie, experience, idea).
+// Topics can be created before a meeting starts (pre-planned) or during the meeting.
+//
+// Key concept: Topics are associated with a specific meeting.
+// They can be tagged with multiple themes.
+//
+// Why this design?
+// - Topics belong to meetings (not abstract)
+// - This lets us query "all topics from meeting X"
+// - When viewing past meetings, we can show all topics discussed
+// - Topics persist after meeting for future reference and graph visualization
+model Topic {
+  id          String    @id @default(cuid())
+  meetingId   String
+  meeting     Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title       String                       // Topic title (e.g., "The Midnight Library")
+  description String?                      // Why was this suggested? (optional notes)
+  createdById String
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: SetNull) // If user deleted, topic remains (SetNull instead of Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relationships (one topic → many themes via TopicTheme)
+  themes      TopicTheme[]                // Themes tagged on this topic
+  notes       DiscussionNote[]            // Notes from discussion about this topic
+
+  @@index([meetingId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+// ============================================================================
+// TOPIC-THEME JUNCTION TABLE
+// ============================================================================
+// TopicTheme connects Topics to Themes (many-to-many).
+// A topic can have multiple themes, and a theme can be applied to many topics.
+//
+// Why a junction table?
+// - Flexibility: topics can have 0, 1, or many themes
+// - Reusability: themes are defined once per chapter, used many times
+// - Easy to add theme metadata later (e.g., relevance score)
+model TopicTheme {
+  id      String @id @default(cuid())
+  topicId String
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  themeId String
+  theme   Theme  @relation(fields: [themeId], references: [id], onDelete: Cascade)
+
+  @@unique([topicId, themeId])             // Prevent duplicate theme tags on same topic
+  @@index([topicId])
+  @@index([themeId])
+}
+
+// ============================================================================
+// DISCUSSION NOTES
+// ============================================================================
+// Discussion notes capture insights, quotes, or follow-ups from a meeting.
+// These are optional but valuable for the force-directed graph later.
+//
+// Why separate from topics?
+// - Topics are "what was discussed" (the item on the wheel)
+// - Notes are "what was said" (actual discussion content)
+// - Keeps data clean and allows rich discussion capture
+model DiscussionNote {
+  id        String    @id @default(cuid())
+  meetingId String
+  meeting   Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  topicId   String?                        // Optional: which topic was this note about?
+  topic     Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content   String                         // The note/comment
+  createdAt DateTime  @default(now())
+
+  @@index([meetingId])
+  @@index([topicId])
+  @@index([userId])
+}
+
+// ============================================================================
+// SCHEMA DESIGN NOTES FOR LEARNING
+// ============================================================================
+//
+// KEY CONCEPTS DEMONSTRATED:
+//
+// 1. ONE-TO-MANY RELATIONSHIPS
+//    User → Chapters (via ChapterMember)
+//    Chapter → Meetings
+//    Meeting → Topics
+//    User → DiscussionNotes
+//
+// 2. MANY-TO-MANY RELATIONSHIPS
+//    Users ↔ Chapters (via ChapterMember junction table)
+//    Topics ↔ Themes (via TopicTheme junction table)
+//
+// 3. CASCADE DELETES
+//    When chapter deleted → all members, invitations, meetings, topics deleted
+//    This prevents orphaned data
+//
+// 4. UNIQUE CONSTRAINTS
+//    User.email - only one user per email
+//    ChapterMember - can't join same chapter twice
+//    Theme - can't have duplicate theme names in same chapter
+//    ChapterInvitation - only one active invite per email per chapter
+//
+// 5. INDEXES
+//    Added on foreign keys for performance (joining tables)
+//    Added on fields frequently queried (chapterId, createdAt, status, email)
+//    Why? Queries like "find all meetings for chapter X" need fast lookups
+//
+// 6. SOFT DELETES vs HARD DELETES
+//    This schema uses hard deletes (with CASCADE) where it makes sense
+//    Exception: User → Topics uses SetNull (topics preserved even if creator deleted)
+//    Trade-off: preserves discussion history while maintaining referential integrity
+//
+// 7. TIMESTAMPS
+//    createdAt - when record was created (immutable)
+//    updatedAt - when record was last modified (auto-managed by Prisma)
+//    Why both? Helps track record lifecycle, useful for auditing
+//
+// ============================================================================
