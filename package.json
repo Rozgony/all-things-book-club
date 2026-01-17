@@ -1,0 +1,22 @@
+{
+  "name": "all-things-book-club",
+  "version": "1.0.0",
+  "description": "the book club site",
+  "main": "index.js",
+  "dependencies": {
+    "@prisma/client": "^5.9.0",
+    "@types/node": "^25.0.9",
+    "prisma": "^5.9.0",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "y"
+  },
+  "author": "",
+  "license": "ISC",
+  "keywords": []
+}
