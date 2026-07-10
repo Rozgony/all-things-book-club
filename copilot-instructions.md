@@ -48,6 +48,8 @@ I will teach you backend concepts and best practices throughout this project by:
 ### Known Constraints & Considerations
 
 - Personal learning project—focus on understanding over speed
+- **Monorepo structure**: `backend/` and `frontend/` are separate packages with their own `package.json`, `tsconfig.json`, `node_modules`. Keep them isolated and independent
+- **Monorepo best practices**: Each package manages its own dependencies; coordinate shared concerns in `prisma/` (schema, migrations); use consistent naming/patterns across packages; be explicit about interdependencies
 - Supabase provides managed PostgreSQL, so no infrastructure setup needed
 - Monthly online meetings suggest real-time collaboration features may be useful later
 

@@ -43,39 +43,53 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 
 ## Implementation Sequence
 
-1. **Phase 1**: Database schema + user auth
-2. **Phase 2**: Chapters & invitations
-3. **Phase 3**: Themes management
-4. **Phase 4**: Meetings & topics
-5. **Phase 5**: Custom wheel (D3.js)
-6. **Phase 6**: Force-directed graph (library TBD)
-7. **Phase 7**: Polish, testing, refinement
+1. **Phase 1**: Database schema + user auth ✅
+   - Schema migrated to Supabase
+   - Express + TypeScript backend scaffolded
+   - Supabase Auth JWT validation middleware
+   - User auto-create on first login
+   - User profile endpoints (GET/PATCH /api/users/me)
+   - Auth verify endpoint for testing (POST /api/auth/verify)
+2. **Phase 1.5**: Tests ✅
+   - Vitest + Supertest configured
+   - Auth middleware tests (valid/invalid tokens, user creation)
+   - Auth route tests (verify endpoint)
+   - User service tests (get/update user)
+   - User route tests (profile get/update)
+3. **Phase 2**: Chapters & invitations
+4. **Phase 3**: Themes management
+5. **Phase 4**: Meetings & topics
+6. **Phase 5**: Custom wheel (D3.js)
+7. **Phase 6**: Force-directed graph (library TBD)
+8. **Phase 7**: Polish, testing, refinement, GDPR compliance endpoints
 
 ---
 
 ## Current Status
 
-- Schema designed
-- Project setup started
-- Ready to begin Phase 1 implementation
+**Phase 1 & 1.5 Complete** ✅
+- Database schema designed and migrated
+- Express + TypeScript backend fully scaffolded
+- Auth flow wired (Supabase JWT validation, user auto-create)
+- User profile API endpoints functional
+- Comprehensive test suite for auth and user operations
+- Monorepo structure in place (`backend/`, `frontend/`, `prisma/` shared)
+- Node 24 pinned via `.nvmrc`
+
+**Ready for Phase 2**: Chapters and invitations backend
 
 ---
 
-## Technology Stack
+## Backend Tech Stack
 
-### Frontend
-- Framework: React
-- Language: TypeScript
-- Build Tool: (To be determined)
-
-### Backend
-- Runtime/Framework: (To be determined - Node.js, Supabase Functions, or other)
-- Language: TypeScript
-- Database: PostgreSQL (via Supabase)
-- Authentication: (To be determined)
-
-### Infrastructure
-- Hosting: Supabase (handles Postgres, Auth, Realtime, Storage)
+- **Runtime**: Node.js 24 (pinned via `.nvmrc`)
+- **Framework**: Express 5.2.1
+- **Language**: TypeScript
+- **ORM**: Prisma 5.9.0
+- **Database**: PostgreSQL (via Supabase)
+- **Auth**: Supabase Auth (JWT-based)
+- **Testing**: Vitest + Supertest
+- **Dev Tools**: tsx (TypeScript execution)
 
 ---
 
@@ -130,13 +144,14 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 - Real-time features deferred (no live RSVP updates or meeting chat—use Zoom for that)
 - Graph visualization deferred to Phase 6; library choice TBD
 - User can invite by email; invitation acceptance flow implemented
+- GDPR: TLS + Supabase at-rest encryption satisfies security requirement. `DELETE /api/users/me` (right to erasure) and `GET /api/users/me/export` (data portability) deferred to Phase 7 — schema cascade deletes already support erasure. Sign Supabase DPA in dashboard before launch.
 
 ---
 
 ## Next Steps
 
-Ready to proceed with implementation:
-1. Create the database schema with Prisma
-2. Set up the Express backend with Supabase
-3. Begin Phase 1 (Auth + User Profiles)
-4. Build out Chapters/Invitations (Phase 2)
+**Phase 2 — Chapters & Invitations**
+1. Chapter creation and membership management endpoints
+2. Chapter invitation workflow (email-based, expiring)
+3. Tests for chapter and invitation flows
+4. Explore and refine chapter query patterns (which chapters does a user belong to, pending invitations, etc.)
