@@ -18,7 +18,8 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 ### Wheel Specifications
 - **Spin order**: Random (not sequential)
 - **Display**: No person name/avatar shown in center when spinning
-- **Persistence**: Store spin results and order per meeting
+- **Persistence**: The only thing to store is what has been selected so far in a meeting. So if the page is re-freshed mid-meeting or another user in the group looks at the spinner on their own, they will see the same progress.
+- **Behavior**: Once a topic is selected, it will appear in a modal on the screen.  The user can then skip it or remove it once it is discussed. 
 - **Rendering**: Canvas or SVG (TBD based on D3.js capabilities)
 
 ### Invitations & Membership
@@ -111,6 +112,13 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 ## Project-Specific Patterns
 
 (To be documented as patterns emerge during development)
+
+---
+
+### Multi-Site / Shared Login
+- **Approach**: Single Supabase project for all future related sites
+- User model is kept lean (profile data only) so it's universal across apps
+- When a second site is ready: configure additional redirect URLs in Supabase dashboard — no schema changes needed
 
 ---
 

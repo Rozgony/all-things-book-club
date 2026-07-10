@@ -87,19 +87,26 @@ model Chapter {
 // Why a junction table?
 // - A user can be in multiple chapters
 // - A chapter has multiple members
-// - We need to track membership metadata (joinedAt, role if needed in future)
+// - We need to track membership metadata (joinedAt, role)
 // - Easier to query "all members of chapter X" or "all chapters for user Y"
 model ChapterMember {
-  id        String    @id @default(cuid())
+  id        String            @id @default(cuid())
   userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   chapterId String
-  chapter   Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  joinedAt  DateTime  @default(now())        // When they joined (invited date + acceptance)
+  chapter   Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  role      ChapterMemberRole @default(MEMBER)  // Member's role within the chapter
+  joinedAt  DateTime          @default(now())   // When they joined (invited date + acceptance)
 
   @@unique([userId, chapterId])              // Prevent duplicate memberships
   @@index([userId])
   @@index([chapterId])
+  @@schema("public")
+}
+
+enum ChapterMemberRole {
+  ADMIN                                      // Can manage chapter settings and members
+  MEMBER                                     // Standard member
   @@schema("public")
 }
 
@@ -114,30 +121,23 @@ model ChapterMember {
 // - When they sign up later, we can match them by email and create ChapterMember
 // - Allows flexibility for inviting people who haven't joined yet
 //
-// Status flow: pending → when accepted, create ChapterMember and delete this record
-// OR: rejected, also delete this record
-// This keeps the table clean with only active invitations.
+// Lifecycle: when accepted → delete this record and create ChapterMember.
+// Invitations expire after 30 days (expiresAt) and are cleaned up by a scheduled job.
+// This keeps the table containing only active pending invitations.
 model ChapterInvitation {
-  id          String    @id @default(cuid())
-  chapterId   String
-  chapter     Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  invitedEmail String                       // Email of person being invited
-  inviterId   String                        // User who sent invitation
-  inviter     User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-  status      InvitationStatus @default(PENDING)
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime                      // Invitation expires after 30 days (calculated at creation)
+  id           String   @id @default(cuid())
+  chapterId    String
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  invitedEmail String                        // Email of person being invited
+  inviterId    String                        // User who sent invitation
+  inviter      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime                      // Invitation expires after 30 days (calculated at creation)
 
-  @@unique([chapterId, invitedEmail])       // Only one invitation per email per chapter
+  @@unique([chapterId, invitedEmail])        // Only one invitation per email per chapter
   @@index([invitedEmail])
   @@index([chapterId])
-  @@index([status])
-  @@schema("public")
-}
-
-enum InvitationStatus {
-  PENDING                                    // Waiting for response
-  ACCEPTED                                   // Accepted - record should be deleted after creating ChapterMember
+  @@index([expiresAt])                       // For efficient cleanup of expired invitations
   @@schema("public")
 }
 
@@ -233,24 +233,36 @@ enum MeetingStatus {
 // - This lets us query "all topics from meeting X"
 // - When viewing past meetings, we can show all topics discussed
 // - Topics persist after meeting for future reference and graph visualization
+//
+// wheelStatus tracks where a topic is in the wheel flow so state is preserved
+// across page refreshes and for all users in the meeting simultaneously.
 model Topic {
-  id          String    @id @default(cuid())
+  id          String      @id @default(cuid())
   meetingId   String
-  meeting     Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  title       String                       // Topic title (e.g., "The Midnight Library")
-  description String?                      // Why was this suggested? (optional notes)
-  createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: SetNull) // If user deleted, topic remains (SetNull instead of Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  meeting     Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title       String                           // Topic title (e.g., "The Midnight Library")
+  description String?                          // Why was this suggested? (optional notes)
+  createdById String?                          // Nullable: topic preserved if creator deleted
+  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  wheelStatus TopicStatus @default(PENDING)    // Current state in the wheel flow
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
   // Relationships (one topic → many themes via TopicTheme)
-  themes      TopicTheme[]                // Themes tagged on this topic
-  notes       DiscussionNote[]            // Notes from discussion about this topic
+  themes      TopicTheme[]                    // Themes tagged on this topic
+  notes       DiscussionNote[]                // Notes from discussion about this topic
 
   @@index([meetingId])
   @@index([createdById])
   @@index([createdAt])
+  @@index([wheelStatus])
+  @@schema("public")
+}
+
+enum TopicStatus {
+  PENDING    // In the wheel, not yet selected
+  SELECTED   // Currently selected by wheel — showing in modal
+  DISCUSSED  // Marked as discussed/completed, removed from wheel
   @@schema("public")
 }
 
