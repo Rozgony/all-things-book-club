@@ -9,7 +9,7 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 - **Project Name:** all-things-book-club
 - **Purpose:** Website for hosting monthly online book club meetings
 - **Project Type:** Personal learning project
-- **Learning Focus:** Backend development (PostgreSQL, Node.js/backend framework, database design, APIs)
+- **Learning Focus:** Full-stack development (backend-first, then UI per feature)
 
 ---
 
@@ -18,8 +18,8 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 ### Wheel Specifications
 - **Spin order**: Random (not sequential)
 - **Display**: No person name/avatar shown in center when spinning
-- **Persistence**: The only thing to store is what has been selected so far in a meeting. So if the page is re-freshed mid-meeting or another user in the group looks at the spinner on their own, they will see the same progress.
-- **Behavior**: Once a topic is selected, it will appear in a modal on the screen.  The user can then skip it or remove it once it is discussed. 
+- **Persistence**: Store what has been selected so far in a meeting. Refresh-safe and shared across users viewing the same meeting.
+- **Behavior**: Selected topic appears in a modal. User can skip it or remove it once discussed.
 - **Rendering**: Canvas or SVG (TBD based on D3.js capabilities)
 
 ### Invitations & Membership
@@ -31,127 +31,136 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 ### Data Visibility: Past Meeting Topics
 - Show: **title, themes, who suggested it, and notes** (comprehensive view)
 
-### Force-Directed Graph (Phase 6)
-- **No user nodes**—graph only shows relationships between:
-  - Topics (as nodes)
-  - Themes (as nodes)
-  - Meetings (as nodes)
+### Force-Directed Graph
+- **No user nodes** — graph only shows relationships between:
+  - Topics (as nodes), Themes (as nodes), Meetings (as nodes)
   - Connections: topics to themes, topics to meetings, etc.
-- Simpler graph focused on discussion content, not people
+
+---
+
+## Approach: Iterative Vertical Slices
+
+Each slice is a complete feature — **database → API → frontend UI**. Nothing moves to the next slice until the current one works end-to-end in the browser.
+
+The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang frontend build at the end.
 
 ---
 
 ## Implementation Sequence
 
-1. **Phase 1**: Database schema + user auth ✅
-   - Schema migrated to Supabase
-   - Express + TypeScript backend scaffolded
-   - Supabase Auth JWT validation middleware
-   - User auto-create on first login
-   - User profile endpoints (GET/PATCH /api/users/me)
-   - Auth verify endpoint for testing (POST /api/auth/verify)
-2. **Phase 1.5**: Tests ✅
-   - Vitest + Supertest configured
-   - Auth middleware tests (valid/invalid tokens, user creation)
-   - Auth route tests (verify endpoint)
-   - User service tests (get/update user)
-   - User route tests (profile get/update)
-3. **Phase 2**: Chapters & invitations
-4. **Phase 3**: Themes management
-5. **Phase 4**: Meetings & topics
-6. **Phase 5**: Custom wheel (D3.js)
-7. **Phase 6**: Force-directed graph (library TBD)
-8. **Phase 7**: Polish, testing, refinement, GDPR compliance endpoints
+### Slice 0 — Foundation ✅
+- Database schema designed and migrated (Supabase/PostgreSQL)
+- Express + TypeScript backend scaffolded
+- Supabase Auth JWT validation middleware
+- Monorepo structure (`backend/`, `frontend/`, `prisma/` shared)
+- Node 24 pinned via `.nvmrc`
+
+### Slice 1 — User Profile ✅
+**"A user can log in and see their profile"**
+- API: `GET /api/users/me`, `PATCH /api/users/me`, `POST /api/auth/verify`
+- Frontend: Login page → redirect to Profile page (display + edit name, avatar, timezone)
+- Tests: Auth middleware, user service, user routes
+
+### Slice 2 — Chapters (in progress)
+**"A user can create a chapter and see it on a Chapters page"**
+- API: `POST /api/chapters`, `GET /api/chapters`, `GET /api/chapters/:id`, `PATCH /api/chapters/:id`, `DELETE /api/chapters/:id`
+- Frontend: Chapters list page, Chapter detail page, Create chapter form
+- Tests: Chapter service, chapter routes
+
+### Slice 3 — Invitations
+**"A member can invite someone by email; invitee can accept or reject"**
+- API: `POST /api/chapters/:id/invitations`, `GET /api/invitations`, `POST /api/invitations/:id/accept`, `POST /api/invitations/:id/reject`
+- Frontend: Invite form on Chapter detail page, Pending invitations banner on Chapters list
+- Tests: Invitation routes
+
+### Slice 4 — Member Management
+**"An admin can add and remove chapter members"**
+- API: `POST /api/chapters/:id/members`, `DELETE /api/chapters/:id/members/:userId`
+- Frontend: Member list on Chapter detail page, Add/remove controls (admin only)
+- Tests: Member management routes
+
+### Slice 5 — Themes
+**"An admin can manage the chapter's theme taxonomy"**
+- API: `POST/GET/PATCH/DELETE /api/chapters/:id/themes`
+- Frontend: Themes management section on Chapter settings page
+- Tests: Theme service + routes
+
+### Slice 6 — Meetings & Topics
+**"A chapter can schedule a meeting and add discussion topics"**
+- API: `POST/GET /api/chapters/:id/meetings`, `POST/GET /api/meetings/:id/topics`
+- Frontend: Meeting list on Chapter page, Meeting detail page with topic list
+- Tests: Meeting + topic service and routes
+
+### Slice 7 — Spin Wheel
+**"During a meeting, members can spin a wheel to randomly select a topic"**
+- API: `GET/PATCH /api/meetings/:id/spin-state`
+- Frontend: D3.js canvas/SVG wheel on Meeting page, persisted spin state shared across users
+- Tests: Spin state route
+
+### Slice 8 — Force-Directed Graph
+**"A chapter can visualize connections between topics, themes, and meetings"**
+- API: `GET /api/chapters/:id/graph` (returns nodes + edges)
+- Frontend: D3.js force-directed graph on Chapter page (no user nodes)
+- Tests: Graph query service
+
+### Slice 9 — Polish & Compliance
+- GDPR: `DELETE /api/users/me` (right to erasure), `GET /api/users/me/export` (data portability)
+- Sign Supabase DPA in dashboard before launch
+- Accessibility audit, error states, loading states
+- Final end-to-end tests
 
 ---
 
 ## Current Status
 
-**Phase 1 & 1.5 Complete** ✅
-- Database schema designed and migrated
-- Express + TypeScript backend fully scaffolded
-- Auth flow wired (Supabase JWT validation, user auto-create)
-- User profile API endpoints functional
-- Comprehensive test suite for auth and user operations
-- Monorepo structure in place (`backend/`, `frontend/`, `prisma/` shared)
-- Node 24 pinned via `.nvmrc`
+**Slices 0 & 1 Complete** ✅
 
-**Ready for Phase 2**: Chapters and invitations backend
+**Slice 2 In Progress** 🔄
+- `backend/src/services/chapters.service.ts` — complete
+- `backend/src/routes/chapters.ts` — POST, GET /, GET /:id complete; remaining routes TODO
+- `backend/src/__tests__/routes/chapters.test.ts` — POST and GET tests complete
+- `backend/src/__tests__/services/chapters.test.ts` — scaffolded, service tests TODO
+- Frontend: not started
 
 ---
 
-## Backend Tech Stack
+## Tech Stack
 
-- **Runtime**: Node.js 24 (pinned via `.nvmrc`)
+### Backend
+- **Runtime**: Node.js 24
 - **Framework**: Express 5.2.1
 - **Language**: TypeScript
 - **ORM**: Prisma 5.9.0
 - **Database**: PostgreSQL (via Supabase)
 - **Auth**: Supabase Auth (JWT-based)
 - **Testing**: Vitest + Supertest
-- **Dev Tools**: tsx (TypeScript execution)
+
+### Frontend
+- TBD — to be decided at Slice 1 frontend work
 
 ---
 
 ## Code Style & Conventions
 
-### Naming Conventions
-- (To be defined as patterns emerge)
-
-### File Organization
-- (To be defined)
-
-### Folder Structure
-- (To be defined)
-
----
-
-## Testing Framework & Approach
-
-- **Testing Framework**: Vitest (unit tests), React Testing Library (component tests)
-- **API Tests**: Supertest or similar
-- **Test Location**: `__tests__` folder colocated with source
-- **Coverage Goals**: Comprehensive coverage for critical paths and business logic
-
----
-
-## Development Workflow
-
-- **Branch Strategy**: (To be defined)
-- **Commit Message Style**: (To be defined)
-- **Code Review Process**: (To be defined)
-
----
-
-## Project-Specific Patterns
-
-(To be documented as patterns emerge during development)
-
----
-
-### Multi-Site / Shared Login
-- **Approach**: Single Supabase project for all future related sites
-- User model is kept lean (profile data only) so it's universal across apps
-- When a second site is ready: configure additional redirect URLs in Supabase dashboard — no schema changes needed
+- Services: functional exports, direct Prisma calls, no validation (validation in routes)
+- Routes: try/catch on every handler, `AppError` for user-facing errors, `next(err)` for middleware
+- Tests: Vitest + `vi.mock()` for Prisma/Supabase, Supertest for route integration tests
+- `__tests__/` folder colocated with source (`services/`, `routes/`, `middleware/`)
 
 ---
 
 ## Known Constraints & Considerations
 
-- Personal learning project—focus on understanding backend over speed
-- Supabase provides managed PostgreSQL, so no infrastructure setup needed
-- Custom wheel takes precedence over standard libraries (build with D3.js for consistency)
-- Real-time features deferred (no live RSVP updates or meeting chat—use Zoom for that)
-- Graph visualization deferred to Phase 6; library choice TBD
-- User can invite by email; invitation acceptance flow implemented
-- GDPR: TLS + Supabase at-rest encryption satisfies security requirement. `DELETE /api/users/me` (right to erasure) and `GET /api/users/me/export` (data portability) deferred to Phase 7 — schema cascade deletes already support erasure. Sign Supabase DPA in dashboard before launch.
+- Personal learning project — understanding over speed
+- Supabase provides managed PostgreSQL (no infra setup needed)
+- Custom wheel built with D3.js (no third-party wheel libraries)
+- Real-time features deferred (no live RSVP or meeting chat — use Zoom)
+- GDPR: TLS + Supabase at-rest encryption in place. Erasure/export endpoints deferred to Slice 9. Schema cascade deletes already support erasure.
 
 ---
 
-## Next Steps
+## Multi-Site / Shared Login
 
-**Phase 2 — Chapters & Invitations**
-1. Chapter creation and membership management endpoints
-2. Chapter invitation workflow (email-based, expiring)
-3. Tests for chapter and invitation flows
-4. Explore and refine chapter query patterns (which chapters does a user belong to, pending invitations, etc.)
+- Single Supabase project for all future related sites
+- User model is lean (profile data only) — universal across apps
+- When a second site is ready: add redirect URLs in Supabase dashboard, no schema changes needed

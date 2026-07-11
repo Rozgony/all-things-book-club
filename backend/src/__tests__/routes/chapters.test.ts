@@ -27,11 +27,13 @@ vi.mock('../../services/chapters.service', () => ({
   createChapter: vi.fn(),
   getChapterById: vi.fn(),
   getChaptersByUserId: vi.fn(),
+  updateChapter: vi.fn(),
+  deleteChapter: vi.fn(),
 }))
 
 import { supabase } from '../../lib/supabase'
 import { prisma } from '../../lib/prisma'
-import { createChapter, getChapterById, getChaptersByUserId } from '../../services/chapters.service'
+import { createChapter, getChapterById, getChaptersByUserId, updateChapter, deleteChapter } from '../../services/chapters.service'
 
 // Fixtures
 const mockMember = {
@@ -156,5 +158,89 @@ describe('GET /api/chapters/:id', () => {
     expect(res.status).toBe(200)
     expect(res.body.id).toBe('chapter-123')
     expect(getChapterById).toHaveBeenCalledWith('chapter-123')
+  })
+})
+
+// ─── PATCH /api/chapters/:id ──────────────────────────────────────────────────
+
+describe('PATCH /api/chapters/:id', () => {
+  it('returns 401 when no token provided', async () => {
+    const res = await request(app).patch('/api/chapters/chapter-123').send({ name: 'Updated' })
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 404 when chapter not found', async () => {
+    vi.mocked(getChapterById).mockResolvedValueOnce(null)
+
+    const res = await authenticatedRequest('patch', '/api/chapters/chapter-999').send({ name: 'Updated' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 403 when user is not a member', async () => {
+    vi.mocked(getChapterById).mockResolvedValueOnce(mockChapter)
+
+    const res = await authenticatedRequest('patch', '/api/chapters/chapter-123', { id: 'outsider', email: 'other@example.com' }).send({ name: 'Updated' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 403 when user is a member but not admin', async () => {
+    const memberChapter = {
+      ...mockChapter,
+      members: [{ ...mockMember, userId: 'user-123', role: 'MEMBER' as const }],
+    }
+    vi.mocked(getChapterById).mockResolvedValueOnce(memberChapter)
+
+    const res = await authenticatedRequest('patch', '/api/chapters/chapter-123').send({ name: 'Updated' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('updates and returns chapter with 200', async () => {
+    const updatedChapter = { ...mockChapter, name: 'Updated Name' }
+    vi.mocked(getChapterById).mockResolvedValueOnce(mockChapter)
+    vi.mocked(updateChapter).mockResolvedValueOnce(updatedChapter)
+
+    const res = await authenticatedRequest('patch', '/api/chapters/chapter-123').send({ name: 'Updated Name' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.name).toBe('Updated Name')
+    expect(updateChapter).toHaveBeenCalledWith('chapter-123', { name: 'Updated Name', description: undefined })
+  })
+})
+
+// ─── DELETE /api/chapters/:id ─────────────────────────────────────────────────
+
+describe('DELETE /api/chapters/:id', () => {
+  it('returns 401 when no token provided', async () => {
+    const res = await request(app).delete('/api/chapters/chapter-123')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 404 when chapter not found', async () => {
+    vi.mocked(getChapterById).mockResolvedValueOnce(null)
+
+    const res = await authenticatedRequest('delete', '/api/chapters/chapter-999')
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 403 when user is not the creator', async () => {
+    vi.mocked(getChapterById).mockResolvedValueOnce(mockChapter)
+
+    const res = await authenticatedRequest('delete', '/api/chapters/chapter-123', { id: 'other-user', email: 'other@example.com' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('deletes chapter and returns 204', async () => {
+    vi.mocked(getChapterById).mockResolvedValueOnce(mockChapter)
+    vi.mocked(deleteChapter).mockResolvedValueOnce(mockChapter)
+
+    const res = await authenticatedRequest('delete', '/api/chapters/chapter-123')
+
+    expect(res.status).toBe(204)
+    expect(deleteChapter).toHaveBeenCalledWith('chapter-123')
   })
 })

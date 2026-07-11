@@ -4,7 +4,9 @@ import { AppError } from '../middleware/errorHandler'
 import {
   createChapter,
   getChapterById,
-  getChaptersByUserId
+  getChaptersByUserId,
+  updateChapter,
+  deleteChapter,
 } from '../services/chapters.service'
 
 const router = Router()
@@ -53,8 +55,36 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 // TODO v2: POST /:id/members — add member to chapter (addChapterMember, admin only)
 // TODO v2: POST /:id/invitations — create invitation (createChapterInvitation, member can invite)
 
-// TODO v3: PATCH /:id — update chapter name/description (updateChapter, admin only)
-// TODO v3: DELETE /:id — delete chapter (deleteChapter, creator only)
-// TODO v3: DELETE /:id/members/:userId — remove member (removeChapterMember, admin only)
+// PATCH /:id — update chapter name/description (admin only)
+router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const chapter = await getChapterById(req.params.id)
+    if (!chapter) throw new AppError(404, 'chapter not found')
+
+    const membership = chapter.members.find(m => m.userId === req.userId)
+    if (!membership) throw new AppError(403, 'you are not a member of this chapter')
+    if (membership.role !== 'ADMIN') throw new AppError(403, 'only admins can update chapters')
+
+    const { name, description } = req.body
+    const updated = await updateChapter(req.params.id, { name, description })
+    res.json(updated)
+  } catch (err) {
+    next(err)
+  }
+})
+
+// DELETE /:id — delete chapter (creator only)
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const chapter = await getChapterById(req.params.id)
+    if (!chapter) throw new AppError(404, 'chapter not found')
+    if (chapter.creatorId !== req.userId) throw new AppError(403, 'only the creator can delete this chapter')
+
+    await deleteChapter(req.params.id)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
 
 export default router

@@ -167,37 +167,39 @@ export async function getChaptersByUserId(
 // }
 
 
-// export type UpdateChapterData = {
-//   name?: string
-//   description?: string
-// }
+export type UpdateChapterData = {
+  name?: string
+  description?: string
+}
 
-/** TODO v3
- * Update the included the name or description of a Chapter
- * Caller is responsible for validating that the creator exists and has proper permissions
+/**
+ * Update the name or description of a Chapter
+ * Caller is responsible for validating that the user is an admin of the chapter
  */
-// export async function updateChapter(
-//   id: string,
-//   chapterData: UpdateChapterData
-// ) {
-//   return prisma.chapter.update({
-//     where: { id },
-//     data: {
-//       ...chapterData
-//     },
-//   })
-// }
+export async function updateChapter(
+  id: string,
+  chapterData: UpdateChapterData
+) {
+  return prisma.chapter.update({
+    where: { id },
+    data: {
+      ...chapterData
+    },
+    include: { members: true },
+  })
+}
 
-/** TODO v3
+/**
  * Delete a Chapter
- * Caller is responsible for validating that the creator exists and has proper permissions
+ * Caller is responsible for validating that the user is the creator
  */
-// export async function deleteChapter(
-//   id: string,
-// ) {
-//   return prisma.chapter.delete({
-//     where: { id },
-//   })
+export async function deleteChapter(
+  id: string,
+) {
+  return prisma.chapter.delete({
+    where: { id },
+  })
+}
 // }
 
 
