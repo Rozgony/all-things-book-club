@@ -6,36 +6,36 @@ import { ChapterDetailPage } from './pages/ChapterDetailPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
-  return (
-    <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route
-        path="/profile"
-        element={
-          <ProtectedRoute>
-            <ProfilePage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/chapters"
-        element={
-          <ProtectedRoute>
-            <ChaptersPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/chapters/:id"
-        element={
-          <ProtectedRoute>
-            <ChapterDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/chapters" replace />} />
-    </Routes>
-  )
+	return (
+	  <Routes>
+	    <Route path="/login" element={<LoginPage />} />
+	    <Route
+	      path="/profile"
+	      element={
+	        <ProtectedRoute>
+	          <ProfilePage />
+	        </ProtectedRoute>
+	      }
+	    />
+	    <Route
+	      path="/chapters"
+	      element={
+	        <ProtectedRoute>
+	          <ChaptersPage />
+	        </ProtectedRoute>
+	      }
+	    />
+	    <Route
+	      path="/chapters/:id"
+	      element={
+	        <ProtectedRoute>
+	          <ChapterDetailPage />
+	        </ProtectedRoute>
+	      }
+	    />
+	    <Route path="*" element={<Navigate to="/chapters" replace />} />
+	  </Routes>
+	)
 }
 
 export default App

@@ -1,26 +1,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../lib/prisma', () => ({
-  prisma: {
-    chapter: {
-      create: vi.fn(),
-      findUnique: vi.fn(),
-      findMany: vi.fn(),
-      update: vi.fn(),
-      delete: vi.fn(),
-    },
-    chapterMember: {
-      create: vi.fn(),
-      deleteMany: vi.fn(),
-    },
-    chapterInvitation: {
-      create: vi.fn(),
-      findMany: vi.fn(),
-      findUnique: vi.fn(),
-      delete: vi.fn(),
-    },
-    $transaction: vi.fn(),
-  },
+	prisma: {
+	  chapter: {
+	    create: vi.fn(),
+	    findUnique: vi.fn(),
+	    findMany: vi.fn(),
+	    update: vi.fn(),
+	    delete: vi.fn(),
+	  },
+	  chapterMember: {
+	    create: vi.fn(),
+	    deleteMany: vi.fn(),
+	  },
+	  chapterInvitation: {
+	    create: vi.fn(),
+	    findMany: vi.fn(),
+	    findUnique: vi.fn(),
+	    delete: vi.fn(),
+	  },
+	  $transaction: vi.fn(),
+	},
 }))
 
 import { prisma } from '../../lib/prisma'
@@ -28,46 +28,46 @@ import { createChapter } from '../../services/chapters.service'
 
 // Fixtures
 const mockMember = {
-  id: 'member-123',
-  userId: 'user-123',
-  chapterId: 'chapter-123',
-  role: 'ADMIN' as const,
-  joinedAt: new Date(),
+	id: 'member-123',
+	userId: 'user-123',
+	chapterId: 'chapter-123',
+	role: 'ADMIN' as const,
+	joinedAt: new Date(),
 }
 
 const mockChapter = {
-  id: 'chapter-123',
-  name: 'Test Chapter',
-  description: null,
-  creatorId: 'user-123',
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  members: [mockMember],
+	id: 'chapter-123',
+	name: 'Test Chapter',
+	description: null,
+	creatorId: 'user-123',
+	createdAt: new Date(),
+	updatedAt: new Date(),
+	members: [mockMember],
 }
 
 beforeEach(() => {
-  vi.clearAllMocks()
+	vi.clearAllMocks()
 })
 
 describe('createChapter', () => {
-  it('creates a chapter and seeds creator as ADMIN member', async () => {
-    vi.mocked(prisma.chapter.create).mockResolvedValueOnce(mockChapter)
+	it('creates a chapter and seeds creator as ADMIN member', async () => {
+	  vi.mocked(prisma.chapter.create).mockResolvedValueOnce(mockChapter)
 
-    const result = await createChapter('user-123', { name: 'Test Chapter' })
+	  const result = await createChapter('user-123', { name: 'Test Chapter' })
 
-    expect(prisma.chapter.create).toHaveBeenCalledWith({
-      data: {
-        name: 'Test Chapter',
-        description: undefined,
-        creatorId: 'user-123',
-        members: {
-          create: { userId: 'user-123', role: 'ADMIN' },
-        },
-      },
-      include: { members: true },
-    })
-    expect(result).toEqual(mockChapter)
-  })
+	  expect(prisma.chapter.create).toHaveBeenCalledWith({
+	    data: {
+	      name: 'Test Chapter',
+	      description: undefined,
+	      creatorId: 'user-123',
+	      members: {
+	        create: { userId: 'user-123', role: 'ADMIN' },
+	      },
+	    },
+	    include: { members: true },
+	  })
+	  expect(result).toEqual(mockChapter)
+	})
 })
 
 // TODO: describe('getChapterById') — test found and null cases

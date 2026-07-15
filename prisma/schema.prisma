@@ -3,14 +3,14 @@
 // Prisma connects to your database and generates an ORM/query client
 
 generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+	provider = "prisma-client-js"
+	previewFeatures = ["multiSchema"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-  schemas  = ["public"]
+	provider = "postgresql"
+	url      = env("DATABASE_URL")
+	schemas  = ["public"]
 }
 
 // ============================================================================
@@ -27,24 +27,24 @@ datasource db {
 // - User.id IS the Supabase Auth UID (copied from auth.uid when user signs up)
 // - NO foreign key constraint to auth.users (avoid cross-schema references)
 model User {
-  id            String    @id                  // Supabase Auth UID (copied from auth.uid, not a FK)
-  email         String    @unique              // User's email (unique across system)
-  name          String?                        // Display name
-  avatarUrl     String?                        // Path to avatar in Supabase Storage, prefixed with bucket URL (e.g., "avatars/user-id.jpg")
-  timezone      String    @default("UTC")      // User's local timezone (e.g., "America/Los_Angeles")
-  createdAt     DateTime  @default(now())      // Timestamp when user created account
-  updatedAt     DateTime  @updatedAt           // Auto-updated when user data changes
+	id            String    @id                  // Supabase Auth UID (copied from auth.uid, not a FK)
+	email         String    @unique              // User's email (unique across system)
+	name          String?                        // Display name
+	avatarUrl     String?                        // Path to avatar in Supabase Storage, prefixed with bucket URL (e.g., "avatars/user-id.jpg")
+	timezone      String    @default("UTC")      // User's local timezone (e.g., "America/Los_Angeles")
+	createdAt     DateTime  @default(now())      // Timestamp when user created account
+	updatedAt     DateTime  @updatedAt           // Auto-updated when user data changes
 
-  // Relationships (one user → many chapters via ChapterMember)
-  chapterMemberships ChapterMember[]           // This user's membership in chapters
-  createdChapters    Chapter[]                 // Chapters this user created
-  topicsCreated      Topic[]                   // Topics this user suggested
-  sentInvitations    ChapterInvitation[]       // Invitations this user sent
-  discussionNotes    DiscussionNote[]          // Discussion notes from meetings
+	// Relationships (one user → many chapters via ChapterMember)
+	chapterMemberships ChapterMember[]           // This user's membership in chapters
+	createdChapters    Chapter[]                 // Chapters this user created
+	topicsCreated      Topic[]                   // Topics this user suggested
+	sentInvitations    ChapterInvitation[]       // Invitations this user sent
+	discussionNotes    DiscussionNote[]          // Discussion notes from meetings
 
-  @@index([email])
-  @@index([createdAt])
-  @@schema("public")
+	@@index([email])
+	@@index([createdAt])
+	@@schema("public")
 }
 
 // ============================================================================
@@ -59,23 +59,23 @@ model User {
 // - Each chapter needs its own dhwata taxonomy (themes)
 // - Chapters can be public or private (handled via Row-Level Security in Supabase)
 model Chapter {
-  id          String    @id @default(cuid())
-  name        String                         // Chapter name (e.g., "NYC Book Club")
-  description String?                        // Optional description of chapter's focus
-  creatorId   String                         // User who created this chapter
-  creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+	id          String    @id @default(cuid())
+	name        String                         // Chapter name (e.g., "NYC Book Club")
+	description String?                        // Optional description of chapter's focus
+	creatorId   String                         // User who created this chapter
+	creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+	createdAt   DateTime  @default(now())
+	updatedAt   DateTime  @updatedAt
 
-  // Relationships (one chapter → many members, meetings, themes)
-  members         ChapterMember[]            // All members of this chapter
-  meetings        Meeting[]                  // All meetings for this chapter
-  themes          Theme[]                    // Taxonomy of themes (reusable categories)
-  invitations     ChapterInvitation[]        // Pending invitations to this chapter
+	// Relationships (one chapter → many members, meetings, themes)
+	members         ChapterMember[]            // All members of this chapter
+	meetings        Meeting[]                  // All meetings for this chapter
+	themes          Theme[]                    // Taxonomy of themes (reusable categories)
+	invitations     ChapterInvitation[]        // Pending invitations to this chapter
 
-  @@index([creatorId])
-  @@index([createdAt])
-  @@schema("public")
+	@@index([creatorId])
+	@@index([createdAt])
+	@@schema("public")
 }
 
 // ============================================================================
@@ -90,24 +90,24 @@ model Chapter {
 // - We need to track membership metadata (joinedAt, role)
 // - Easier to query "all members of chapter X" or "all chapters for user Y"
 model ChapterMember {
-  id        String            @id @default(cuid())
-  userId    String
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  chapterId String
-  chapter   Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  role      ChapterMemberRole @default(MEMBER)  // Member's role within the chapter
-  joinedAt  DateTime          @default(now())   // When they joined (invited date + acceptance)
+	id        String            @id @default(cuid())
+	userId    String
+	user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+	chapterId String
+	chapter   Chapter           @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+	role      ChapterMemberRole @default(MEMBER)  // Member's role within the chapter
+	joinedAt  DateTime          @default(now())   // When they joined (invited date + acceptance)
 
-  @@unique([userId, chapterId])              // Prevent duplicate memberships
-  @@index([userId])
-  @@index([chapterId])
-  @@schema("public")
+	@@unique([userId, chapterId])              // Prevent duplicate memberships
+	@@index([userId])
+	@@index([chapterId])
+	@@schema("public")
 }
 
 enum ChapterMemberRole {
-  ADMIN                                      // Can manage chapter settings and members
-  MEMBER                                     // Standard member
-  @@schema("public")
+	ADMIN                                      // Can manage chapter settings and members
+	MEMBER                                     // Standard member
+	@@schema("public")
 }
 
 // ============================================================================
@@ -125,20 +125,20 @@ enum ChapterMemberRole {
 // Invitations expire after 30 days (expiresAt) and are cleaned up by a scheduled job.
 // This keeps the table containing only active pending invitations.
 model ChapterInvitation {
-  id           String   @id @default(cuid())
-  chapterId    String
-  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  invitedEmail String                        // Email of person being invited
-  inviterId    String                        // User who sent invitation
-  inviter      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime                      // Invitation expires after 30 days (calculated at creation)
+	id           String   @id @default(cuid())
+	chapterId    String
+	chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+	invitedEmail String                        // Email of person being invited
+	inviterId    String                        // User who sent invitation
+	inviter      User     @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+	createdAt    DateTime @default(now())
+	expiresAt    DateTime                      // Invitation expires after 30 days (calculated at creation)
 
-  @@unique([chapterId, invitedEmail])        // Only one invitation per email per chapter
-  @@index([invitedEmail])
-  @@index([chapterId])
-  @@index([expiresAt])                       // For efficient cleanup of expired invitations
-  @@schema("public")
+	@@unique([chapterId, invitedEmail])        // Only one invitation per email per chapter
+	@@index([invitedEmail])
+	@@index([chapterId])
+	@@index([expiresAt])                       // For efficient cleanup of expired invitations
+	@@schema("public")
 }
 
 // ============================================================================
@@ -154,20 +154,20 @@ model ChapterInvitation {
 //
 // Examples: "Character Development", "World-Building", "Pacing", "Writing Style"
 model Theme {
-  id        String    @id @default(cuid())
-  chapterId String
-  chapter   Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  name      String                         // Theme name
-  color     String    @default("#000000")  // Hex color for visualization
-  description String?                      // What does this theme represent?
-  createdAt DateTime  @default(now())
+	id        String    @id @default(cuid())
+	chapterId String
+	chapter   Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+	name      String                         // Theme name
+	color     String    @default("#000000")  // Hex color for visualization
+	description String?                      // What does this theme represent?
+	createdAt DateTime  @default(now())
 
-  // Relationships (one theme → many topics via TopicTheme)
-  topics    TopicTheme[]                   // Topics tagged with this theme
+	// Relationships (one theme → many topics via TopicTheme)
+	topics    TopicTheme[]                   // Topics tagged with this theme
 
-  @@unique([chapterId, name])               // Prevent duplicate themes in same chapter
-  @@index([chapterId])
-  @@schema("public")
+	@@unique([chapterId, name])               // Prevent duplicate themes in same chapter
+	@@index([chapterId])
+	@@schema("public")
 }
 
 // ============================================================================
@@ -188,35 +188,35 @@ model Theme {
 //
 // Status: SCHEDULED → ACTIVE → COMPLETED or CANCELLED
 model Meeting {
-  id              String    @id @default(cuid())
-  chapterId       String
-  chapter         Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  title           String                  // Meeting title (e.g., "December Discussion")
-  description     String?
-  scheduledAt     DateTime                // When meeting is scheduled (includes time)
-  duration        Int       @default(60)  // Duration in minutes
-  status          MeetingStatus @default(SCHEDULED)
-  recurringGroupId String?                // Groups recurring meeting instances together
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+	id              String    @id @default(cuid())
+	chapterId       String
+	chapter         Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+	title           String                  // Meeting title (e.g., "December Discussion")
+	description     String?
+	scheduledAt     DateTime                // When meeting is scheduled (includes time)
+	duration        Int       @default(60)  // Duration in minutes
+	status          MeetingStatus @default(SCHEDULED)
+	recurringGroupId String?                // Groups recurring meeting instances together
+	createdAt       DateTime  @default(now())
+	updatedAt       DateTime  @updatedAt
 
-  // Relationships (one meeting → many topics, discussion notes)
-  topics          Topic[]                 // Topics discussed in this meeting
-  discussionNotes DiscussionNote[]        // Notes/insights from this meeting
+	// Relationships (one meeting → many topics, discussion notes)
+	topics          Topic[]                 // Topics discussed in this meeting
+	discussionNotes DiscussionNote[]        // Notes/insights from this meeting
 
-  @@index([chapterId])
-  @@index([scheduledAt])
-  @@index([status])
-  @@index([recurringGroupId])
-  @@schema("public")
+	@@index([chapterId])
+	@@index([scheduledAt])
+	@@index([status])
+	@@index([recurringGroupId])
+	@@schema("public")
 }
 
 enum MeetingStatus {
-  SCHEDULED                                 // Not yet started
-  ACTIVE                                    // Currently happening
-  COMPLETED                                 // Finished
-  CANCELLED                                 // Cancelled
-  @@schema("public")
+	SCHEDULED                                 // Not yet started
+	ACTIVE                                    // Currently happening
+	COMPLETED                                 // Finished
+	CANCELLED                                 // Cancelled
+	@@schema("public")
 }
 
 // ============================================================================
@@ -237,33 +237,33 @@ enum MeetingStatus {
 // wheelStatus tracks where a topic is in the wheel flow so state is preserved
 // across page refreshes and for all users in the meeting simultaneously.
 model Topic {
-  id          String      @id @default(cuid())
-  meetingId   String
-  meeting     Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  title       String                           // Topic title (e.g., "The Midnight Library")
-  description String?                          // Why was this suggested? (optional notes)
-  createdById String?                          // Nullable: topic preserved if creator deleted
-  createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
-  wheelStatus TopicStatus @default(PENDING)    // Current state in the wheel flow
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+	id          String      @id @default(cuid())
+	meetingId   String
+	meeting     Meeting     @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+	title       String                           // Topic title (e.g., "The Midnight Library")
+	description String?                          // Why was this suggested? (optional notes)
+	createdById String?                          // Nullable: topic preserved if creator deleted
+	createdBy   User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+	wheelStatus TopicStatus @default(PENDING)    // Current state in the wheel flow
+	createdAt   DateTime    @default(now())
+	updatedAt   DateTime    @updatedAt
 
-  // Relationships (one topic → many themes via TopicTheme)
-  themes      TopicTheme[]                    // Themes tagged on this topic
-  notes       DiscussionNote[]                // Notes from discussion about this topic
+	// Relationships (one topic → many themes via TopicTheme)
+	themes      TopicTheme[]                    // Themes tagged on this topic
+	notes       DiscussionNote[]                // Notes from discussion about this topic
 
-  @@index([meetingId])
-  @@index([createdById])
-  @@index([createdAt])
-  @@index([wheelStatus])
-  @@schema("public")
+	@@index([meetingId])
+	@@index([createdById])
+	@@index([createdAt])
+	@@index([wheelStatus])
+	@@schema("public")
 }
 
 enum TopicStatus {
-  PENDING    // In the wheel, not yet selected
-  SELECTED   // Currently selected by wheel — showing in modal
-  DISCUSSED  // Marked as discussed/completed, removed from wheel
-  @@schema("public")
+	PENDING    // In the wheel, not yet selected
+	SELECTED   // Currently selected by wheel — showing in modal
+	DISCUSSED  // Marked as discussed/completed, removed from wheel
+	@@schema("public")
 }
 
 // ============================================================================
@@ -277,16 +277,16 @@ enum TopicStatus {
 // - Reusability: themes are defined once per chapter, used many times
 // - Easy to add theme metadata later (e.g., relevance score)
 model TopicTheme {
-  id      String @id @default(cuid())
-  topicId String
-  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  themeId String
-  theme   Theme  @relation(fields: [themeId], references: [id], onDelete: Cascade)
+	id      String @id @default(cuid())
+	topicId String
+	topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+	themeId String
+	theme   Theme  @relation(fields: [themeId], references: [id], onDelete: Cascade)
 
-  @@unique([topicId, themeId])             // Prevent duplicate theme tags on same topic
-  @@index([topicId])
-  @@index([themeId])
-  @@schema("public")
+	@@unique([topicId, themeId])             // Prevent duplicate theme tags on same topic
+	@@index([topicId])
+	@@index([themeId])
+	@@schema("public")
 }
 
 // ============================================================================
@@ -300,20 +300,20 @@ model TopicTheme {
 // - Notes are "what was said" (actual discussion content)
 // - Keeps data clean and allows rich discussion capture
 model DiscussionNote {
-  id        String    @id @default(cuid())
-  meetingId String
-  meeting   Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
-  topicId   String?                        // Optional: which topic was this note about?
-  topic     Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  content   String                         // The note/comment
-  createdAt DateTime  @default(now())
+	id        String    @id @default(cuid())
+	meetingId String
+	meeting   Meeting   @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+	topicId   String?                        // Optional: which topic was this note about?
+	topic     Topic?    @relation(fields: [topicId], references: [id], onDelete: SetNull)
+	userId    String
+	user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+	content   String                         // The note/comment
+	createdAt DateTime  @default(now())
 
-  @@index([meetingId])
-  @@index([topicId])
-  @@index([userId])
-  @@schema("public")
+	@@index([meetingId])
+	@@index([topicId])
+	@@index([userId])
+	@@schema("public")
 }
 
 // ============================================================================

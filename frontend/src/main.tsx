@@ -6,20 +6,20 @@ import './index.css'
 import App from './App.tsx'
 
 function Root() {
-  const initialize = useAuthStore((s) => s._initialize)
+	const initialize = useAuthStore((s) => s._initialize)
 
-  useEffect(() => {
-    const unsubscribe = initialize()
-    return unsubscribe
-  }, [initialize])
+	useEffect(() => {
+	  const unsubscribe = initialize()
+	  return unsubscribe
+	}, [initialize])
 
-  return <App />
+	return <App />
 }
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <Root />
-    </BrowserRouter>
-  </StrictMode>,
+	<StrictMode>
+	  <BrowserRouter>
+	    <Root />
+	  </BrowserRouter>
+	</StrictMode>,
 )

@@ -6,25 +6,25 @@ import { prisma } from '../lib/prisma'
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function createChapter(
-  creatorId: string,
-  data: { name: string; description?: string }
+	creatorId: string,
+	data: { name: string; description?: string }
 ) {
-  return prisma.chapter.create({
-    data: {
-      name: data.name,
-      description: data.description,
-      creatorId,
-      members: {
-        create: {
-          userId: creatorId,
-          role: 'ADMIN',
-        },
-      },
-    },
-    include: {
-      members: true,
-    },
-  })
+	return prisma.chapter.create({
+	  data: {
+	    name: data.name,
+	    description: data.description,
+	    creatorId,
+	    members: {
+	      create: {
+	        userId: creatorId,
+	        role: 'ADMIN',
+	      },
+	    },
+	  },
+	  include: {
+	    members: true,
+	  },
+	})
 }
 
 /**
@@ -32,19 +32,19 @@ export async function createChapter(
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function getChapterById(
-  id: string,
-  includeUsers?: boolean
+	id: string,
+	includeUsers?: boolean
 ) {
-  return prisma.chapter.findUnique({
-    where: { id },
-    include: {
-      members: {
-        include: {
-          user: !!includeUsers
-        }
-      }
-    },
-  })
+	return prisma.chapter.findUnique({
+	  where: { id },
+	  include: {
+	    members: {
+	      include: {
+	        user: !!includeUsers
+	      }
+	    }
+	  },
+	})
 }
 
 /**
@@ -52,20 +52,20 @@ export async function getChapterById(
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function getChaptersByUserId(
-  userId: string
+	userId: string
 ) {
-  return prisma.chapter.findMany({
-    where: { 
-        members: {
-            some: {
-                userId
-            },
-        }
-    },
-    include: {
-      members: true,
-    },
-  })
+	return prisma.chapter.findMany({
+	  where: { 
+	      members: {
+	          some: {
+	              userId
+	          },
+	      }
+	  },
+	  include: {
+	    members: true,
+	  },
+	})
 }
 
 /** TODO v2
@@ -112,7 +112,7 @@ export async function getChaptersByUserId(
 //     invitedEmail: string, 
 //     inviterId: string
 // ) {
-    
+	  
 //   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
 //   return prisma.chapterInvitation.create({
@@ -173,8 +173,8 @@ export async function getChaptersByUserId(
 
 
 export type UpdateChapterData = {
-  name?: string
-  description?: string
+	name?: string
+	description?: string
 }
 
 /**
@@ -182,16 +182,16 @@ export type UpdateChapterData = {
  * Caller is responsible for validating that the user is an admin of the chapter
  */
 export async function updateChapter(
-  id: string,
-  chapterData: UpdateChapterData
+	id: string,
+	chapterData: UpdateChapterData
 ) {
-  return prisma.chapter.update({
-    where: { id },
-    data: {
-      ...chapterData
-    },
-    include: { members: true },
-  })
+	return prisma.chapter.update({
+	  where: { id },
+	  data: {
+	    ...chapterData
+	  },
+	  include: { members: true },
+	})
 }
 
 /**
@@ -199,11 +199,11 @@ export async function updateChapter(
  * Caller is responsible for validating that the user is the creator
  */
 export async function deleteChapter(
-  id: string,
+	id: string,
 ) {
-  return prisma.chapter.delete({
-    where: { id },
-  })
+	return prisma.chapter.delete({
+	  where: { id },
+	})
 }
 // }
 

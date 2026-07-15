@@ -2,100 +2,100 @@
 
 /* ── Tailwind v4 Custom Theme ─────────────────────────────── */
 @theme {
-  /* Palette inspired by The Social Forest */
-  --color-forest:          #3d5a54;
-  --color-forest-deep:     #2a3f3b;
-  --color-forest-light:    #eef2f0;
-  --color-terracotta:      #d4967d;
-  --color-terracotta-dark: #b8775f;
-  --color-cream:           #f5f2ee;
-  --color-stone:           #3f4a49;
-  --color-stone-muted:     #6b7a79;
-  --color-warm-border:     #ddd8d3;
+	/* Palette inspired by The Social Forest */
+	--color-forest:          #3d5a54;
+	--color-forest-deep:     #2a3f3b;
+	--color-forest-light:    #eef2f0;
+	--color-terracotta:      #d4967d;
+	--color-terracotta-dark: #b8775f;
+	--color-cream:           #f5f2ee;
+	--color-stone:           #3f4a49;
+	--color-stone-muted:     #6b7a79;
+	--color-warm-border:     #ddd8d3;
 
-  --font-heading: 'Lora', Georgia, 'Times New Roman', serif;
-  --font-sans:    'Pontano Sans', system-ui, sans-serif;
-  --font-mono:    ui-monospace, Consolas, monospace;
+	--font-heading: 'Lora', Georgia, 'Times New Roman', serif;
+	--font-sans:    'Pontano Sans', system-ui, sans-serif;
+	--font-mono:    ui-monospace, Consolas, monospace;
 }
 
 /* ── CSS Variables ─────────────────────────────────────────── */
 :root {
-  --text:       #3f4a49;
-  --text-muted: #6b7a79;
-  --text-h:     #2a3f3b;
-  --bg:         #f5f2ee;
-  --bg-card:    #ffffff;
-  --border:     #ddd8d3;
-  --forest:     #3d5a54;
-  --terracotta: #d4967d;
-  --shadow:     0 1px 3px rgba(0,0,0,0.07), 0 4px 14px rgba(0,0,0,0.05);
+	--text:       #3f4a49;
+	--text-muted: #6b7a79;
+	--text-h:     #2a3f3b;
+	--bg:         #f5f2ee;
+	--bg-card:    #ffffff;
+	--border:     #ddd8d3;
+	--forest:     #3d5a54;
+	--terracotta: #d4967d;
+	--shadow:     0 1px 3px rgba(0,0,0,0.07), 0 4px 14px rgba(0,0,0,0.05);
 
-  font-family: var(--font-sans);
-  font-size: 17px;
-  line-height: 1.6;
-  letter-spacing: 0.01em;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+	font-family: var(--font-sans);
+	font-size: 17px;
+	line-height: 1.6;
+	letter-spacing: 0.01em;
+	color: var(--text);
+	background: var(--bg);
+	font-synthesis: none;
+	text-rendering: optimizeLegibility;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 /* ── Base ──────────────────────────────────────────────────── */
 body {
-  margin: 0;
-  background: var(--bg);
+	margin: 0;
+	background: var(--bg);
 }
 
 #root {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+	min-height: 100svh;
+	display: flex;
+	flex-direction: column;
 }
 
 /* ── Typography ────────────────────────────────────────────── */
 h1, h2, h3, h4 {
-  font-family: var(--font-heading);
-  color: var(--text-h);
-  font-weight: 500;
+	font-family: var(--font-heading);
+	color: var(--text-h);
+	font-weight: 500;
 }
 
 h1 {
-  font-size: 2rem;
-  line-height: 1.2;
-  letter-spacing: -0.02em;
-  margin: 0;
+	font-size: 2rem;
+	line-height: 1.2;
+	letter-spacing: -0.02em;
+	margin: 0;
 }
 
 h1.font-heading {
-  color: var(--bg-card);
+	color: var(--bg-card);
 }
 
 h2 {
-  font-size: 1.5rem;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
-  margin: 0 0 0.5rem;
+	font-size: 1.5rem;
+	line-height: 1.25;
+	letter-spacing: -0.01em;
+	margin: 0 0 0.5rem;
 }
 
 h3 {
-  font-size: 1.125rem;
-  line-height: 1.35;
-  margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.35;
+	margin: 0;
 }
 
 p {
-  margin: 0;
+	margin: 0;
 }
 
 /* ── Focus ring ────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--terracotta);
-  outline-offset: 2px;
+	outline: 2px solid var(--terracotta);
+	outline-offset: 2px;
 }
 
 
 button {
-  cursor: pointer;
+	cursor: pointer;
 }
