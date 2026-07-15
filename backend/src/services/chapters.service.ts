@@ -32,12 +32,17 @@ export async function createChapter(
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function getChapterById(
-  id: string
+  id: string,
+  includeUsers?: boolean
 ) {
   return prisma.chapter.findUnique({
     where: { id },
     include: {
-      members: true,
+      members: {
+        include: {
+          user: !!includeUsers
+        }
+      }
     },
   })
 }

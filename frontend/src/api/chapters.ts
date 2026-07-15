@@ -1,27 +1,10 @@
 import { supabase } from '../lib/supabase'
+import type { Chapter } from './types'
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Not authenticated')
   return { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
-}
-
-export interface ChapterMember {
-  id: string
-  userId: string
-  chapterId: string
-  role: 'ADMIN' | 'MEMBER'
-  joinedAt: string
-}
-
-export interface Chapter {
-  id: string
-  name: string
-  description: string | null
-  creatorId: string
-  createdAt: string
-  updatedAt: string
-  members: ChapterMember[]
 }
 
 export async function getChapters(): Promise<Chapter[]> {

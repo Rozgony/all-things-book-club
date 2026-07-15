@@ -38,8 +38,8 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string
-
-    const chapter = await getChapterById(id)
+    const includeUsers = true;
+    const chapter = await getChapterById(id,includeUsers)
     if (!chapter) throw new AppError(404, 'chapter not found')
     if (!chapter.members.some(member => member.userId === req.userId)) throw new AppError(403, 'you can only see your own chapters')
 

@@ -6,14 +6,6 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   return { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
 }
 
-export interface UserProfile {
-  id: string
-  email: string
-  name: string | null
-  avatarUrl: string | null
-  timezone: string
-}
-
 export async function getMyProfile(): Promise<UserProfile> {
   const headers = await getAuthHeaders()
   const res = await fetch('/api/users/me', { headers })
