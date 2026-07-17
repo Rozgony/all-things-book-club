@@ -23,4 +23,11 @@ export interface Chapter {
 	createdAt: string
 	updatedAt: string
 	members: ChapterMember[]
+	visibility: 'ACCEPTING_MEMBERS' | 'INVITE_ONLY' | 'MEMBERS_ONLY'
+}
+
+export const visibilityReadable = {
+	ACCEPTING_MEMBERS: 'Accepting Members (Public)',
+	INVITE_ONLY: 'Invite Only (Public)',
+	MEMBERS_ONLY: 'Members Only (Private)'
 }

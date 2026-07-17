@@ -32,7 +32,7 @@ export async function createChapter(data: { name: string; description?: string }
 	return res.json()
 }
 
-export async function updateChapter(id: string, data: { name?: string; description?: string }): Promise<Chapter> {
+export async function updateChapter(id: string, data: { name?: string; description?: string,  visibility?: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`/api/chapters/${id}`, {
 	  method: 'PATCH',

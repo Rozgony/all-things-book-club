@@ -1,19 +1,20 @@
-import { ChapterMemberRole } from '@prisma/client';
+import { ChapterMemberRole, VisibilityLevel } from '@prisma/client';
 import { prisma } from '../lib/prisma'
 
 /**
  * Create a new chapter
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
-export async function createChapter(
+export async function createMeeting(
 	creatorId: string,
-	data: { name: string; description?: string }
+	data: { name: string; description?: string, visibility?: VisibilityLevel }
 ) {
 	return prisma.chapter.create({
 	  data: {
 	    name: data.name,
 	    description: data.description,
 	    creatorId,
+		visibility: data.visibility,
 	    members: {
 	      create: {
 	        userId: creatorId,
@@ -63,7 +64,11 @@ export async function getChaptersByUserId(
 	      }
 	  },
 	  include: {
-	    members: true,
+	    members: {
+			include: {
+	        	user: true
+	      	}
+		}
 	  },
 	})
 }
@@ -175,6 +180,7 @@ export async function getChaptersByUserId(
 export type UpdateChapterData = {
 	name?: string
 	description?: string
+	visibility?: VisibilityLevel
 }
 
 /**
@@ -205,7 +211,5 @@ export async function deleteChapter(
 	  where: { id },
 	})
 }
-// }
-
 
 // TODO LATER: getChapterInvitationsByChapter(chapterId: string) - list pending invites for a chapter

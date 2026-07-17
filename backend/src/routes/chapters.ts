@@ -14,10 +14,10 @@ const router = Router()
 // POST / — create a chapter
 router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
-	  const { name, description } = req.body
+	  const { name, description, visibility } = req.body
 	  if (!name) throw new AppError(400, 'name is required')
 
-	  const chapter = await createChapter(req.userId!, { name, description })
+	  const chapter = await createChapter(req.userId!, { name, description, visibility })
 	  res.status(201).json(chapter)
 	} catch (err) {
 	  next(err)
@@ -65,8 +65,8 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 	  if (!membership) throw new AppError(403, 'you are not a member of this chapter')
 	  if (membership.role !== 'ADMIN') throw new AppError(403, 'only admins can update chapters')
 
-	  const { name, description } = req.body
-	  const updated = await updateChapter(req.params.id, { name, description })
+	  const { name, description, visibility } = req.body
+	  const updated = await updateChapter(req.params.id, { name, description, visibility })
 	  res.json(updated)
 	} catch (err) {
 	  next(err)

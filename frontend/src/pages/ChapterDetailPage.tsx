@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { Nav } from '../components/Nav'
 import { getChapter, updateChapter, deleteChapter } from '../api/chapters'
-import type { Chapter } from '../api/types'
+import { visibilityReadable, type Chapter, type ChapterVisibility } from '../api/types'
 
 export function ChapterDetailPage() {
 	const { id } = useParams<{ id: string }>()
@@ -17,6 +17,7 @@ export function ChapterDetailPage() {
 	const [editing, setEditing] = useState(false)
 	const [editName, setEditName] = useState('')
 	const [editDescription, setEditDescription] = useState('')
+	const [editVisibility, setEditVisibility] = useState<ChapterVisibility>('MEMBERS_ONLY')
 	const [saving, setSaving] = useState(false)
 	const [editError, setEditError] = useState<string | null>(null)
 
@@ -30,6 +31,7 @@ export function ChapterDetailPage() {
 	      console.log(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
+	      setEditVisibility(chapter.visibility ?? '')
 	    })
 	    .catch(() => setError('Failed to load chapter'))
 	    .finally(() => setLoading(false))
@@ -44,7 +46,7 @@ export function ChapterDetailPage() {
 	  setSaving(true)
 	  setEditError(null)
 	  try {
-	    const updated = await updateChapter(id, { name: editName, description: editDescription || undefined })
+	    const updated = await updateChapter(id, { name: editName, description: editDescription || undefined, visibility: editVisibility })
 	    setChapter(updated)
 	    setEditing(false)
 	  } catch {
@@ -81,7 +83,7 @@ export function ChapterDetailPage() {
 
 	return (
 	  <div className="min-h-screen bg-cream">
-	    <Nav showLogout={true} showProfile={true} />
+	    <Nav showLogout={true} showProfile={true} showChapters={true} />
 
 	    <main className="max-w-2xl mx-auto px-4 py-10">
 	      {editing ? (
@@ -106,6 +108,16 @@ export function ChapterDetailPage() {
 	              className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 	            />
 	          </div>
+				<div>
+					<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Description</label>
+					<select
+						value={editVisibility}
+						onChange={e => setEditVisibility(e.target.value)}
+						className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+					>
+						{['ACCEPTING_MEMBERS','INVITE_ONLY','MEMBERS_ONLY'].map(value => (<option value={value}>{visibilityReadable[value]}</option>))}
+					</select>
+				</div>
 	          {editError && <p className="text-sm text-red-600">{editError}</p>}
 	          <div className="flex gap-3">
 	            <button
@@ -125,6 +137,7 @@ export function ChapterDetailPage() {
 	          <div className="flex justify-between items-start">
 	            <div>
 	              <h2 className="font-heading text-forest-deep">{chapter.name}</h2>
+	              <h4 className="font-heading text-forest-deep">{visibilityReadable[chapter.visibility]}</h4>
 	              {chapter.description && (
 	                <p className="text-stone-muted mt-2">{chapter.description}</p>
 	              )}
@@ -157,7 +170,7 @@ export function ChapterDetailPage() {
 	        <ul className="divide-y divide-warm-border">
 	          {chapter.members.map(member => (
 	            <li key={member.id} className="py-3 flex justify-between items-center">
-	              <span className="text-sm text-stone">{member.user.name}</span>
+	              <span className="text-sm text-stone">{member.user?.name}</span>
 	              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
 	                member.role === 'ADMIN'
 	                  ? 'bg-forest-light text-forest'
