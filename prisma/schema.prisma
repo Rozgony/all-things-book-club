@@ -59,13 +59,14 @@ model User {
 // - Each chapter needs its own dhwata taxonomy (themes)
 // - Chapters can be public or private (handled via Row-Level Security in Supabase)
 model Chapter {
-	id          String    @id @default(cuid())
+	id          String            @id @default(cuid())
 	name        String                         // Chapter name (e.g., "NYC Book Club")
 	description String?                        // Optional description of chapter's focus
 	creatorId   String                         // User who created this chapter
-	creator     User      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-	createdAt   DateTime  @default(now())
-	updatedAt   DateTime  @updatedAt
+	creator     User              @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+	createdAt   DateTime          @default(now())
+	updatedAt   DateTime          @updatedAt
+  visibility	VisibilityLevel		@default(MEMBERS_ONLY)
 
 	// Relationships (one chapter → many members, meetings, themes)
 	members         ChapterMember[]            // All members of this chapter
@@ -76,6 +77,14 @@ model Chapter {
 	@@index([creatorId])
 	@@index([createdAt])
 	@@schema("public")
+}
+
+enum VisibilityLevel {
+  ACCEPTING_MEMBERS
+  INVITE_ONLY
+  MEMBERS_ONLY
+
+  @@schema("public")
 }
 
 // ============================================================================
