@@ -15,6 +15,12 @@ export interface ChapterMember {
 	users?: UserProfile[]
 }
 
+export enum VisibilityLevel {
+	ACCEPTING_MEMBERS = 'ACCEPTING_MEMBERS',
+	INVITE_ONLY = 'INVITE_ONLY',
+	MEMBERS_ONLY = 'MEMBERS_ONLY'
+}
+
 export interface Chapter {
 	id: string
 	name: string
@@ -23,11 +29,36 @@ export interface Chapter {
 	createdAt: string
 	updatedAt: string
 	members: ChapterMember[]
-	visibility: 'ACCEPTING_MEMBERS' | 'INVITE_ONLY' | 'MEMBERS_ONLY'
+	visibility: VisibilityLevel
 }
 
 export const visibilityReadable = {
 	ACCEPTING_MEMBERS: 'Accepting Members (Public)',
 	INVITE_ONLY: 'Invite Only (Public)',
 	MEMBERS_ONLY: 'Members Only (Private)'
+}
+
+export enum MeetingStatus {
+	SCHEDULED = 'SCHEDULED',
+	ACTIVE = 'ACTIVE',
+	COMPLETED = 'COMPLETED',
+	CANCELLED = 'CANCELLED'
+}
+
+export interface Meeting {
+	id: string
+	chapterId: string
+	scheduledAt: string
+	duration: number
+	status: MeetingStatus
+	recurringGroupId: string | null
+	createdAt: string
+	updatedAt: string
+}
+
+export const meetingStatusReadable = {
+	SCHEDULED: 'Scheduled',
+	ACTIVE: 'Active Now',
+	COMPLETED: 'Completed',
+	CANCELLED: 'Cancelled'
 }

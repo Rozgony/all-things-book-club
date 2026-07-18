@@ -1,13 +1,12 @@
-import { ChapterMemberRole, VisibilityLevel } from '@prisma/client';
 import { prisma } from '../lib/prisma'
 
 /**
  * Create a new chapter
  * Caller is responsible for validating that the creator exists and has proper permissions
  */
-export async function createMeeting(
+export async function createChapter(
 	creatorId: string,
-	data: { name: string; description?: string, visibility?: VisibilityLevel }
+	data: { name: string; description?: string, visibility?: string }
 ) {
 	return prisma.chapter.create({
 	  data: {
@@ -180,7 +179,7 @@ export async function getChaptersByUserId(
 export type UpdateChapterData = {
 	name?: string
 	description?: string
-	visibility?: VisibilityLevel
+	visibility?: string
 }
 
 /**

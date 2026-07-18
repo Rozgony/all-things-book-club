@@ -134,3 +134,8 @@ When deploying to Supabase:
 3. Verify in Supabase dashboard: Database → Schema
 
 The `_prisma_migrations` table tracks applied migrations automatically.
+
+
+### Do Not Do
+`db pull` unless you need to sync from the database
+`db push` because that would overwrite the database

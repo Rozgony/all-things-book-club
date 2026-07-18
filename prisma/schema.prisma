@@ -200,8 +200,6 @@ model Meeting {
 	id              String    @id @default(cuid())
 	chapterId       String
 	chapter         Chapter   @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-	title           String                  // Meeting title (e.g., "December Discussion")
-	description     String?
 	scheduledAt     DateTime                // When meeting is scheduled (includes time)
 	duration        Int       @default(60)  // Duration in minutes
 	status          MeetingStatus @default(SCHEDULED)
