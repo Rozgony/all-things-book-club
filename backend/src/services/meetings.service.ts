@@ -24,7 +24,8 @@ export async function createMeeting(
 export async function getMeetingById(
 	id: string,
 	includeNotes?: boolean,
-	includeTopics?: boolean
+	includeTopics?: boolean,
+	includeChapter?: boolean
 ) {
 		console.log('getMeetingById id: '+id)
 
@@ -32,7 +33,8 @@ export async function getMeetingById(
 	  	where: { id },
 	  	include: {
 	    	discussionNotes: !!includeNotes,
-			topics: !!includeTopics
+			topics: !!includeTopics,
+			chapter: !!includeChapter
 	  	}
 	})
 }

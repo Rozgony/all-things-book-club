@@ -49,7 +49,8 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 		console.log('id: '+id)
 		const includeNotes = true;
 		const includeTopics = true;
-		const meeting = await getMeetingById(id,includeNotes,includeTopics)
+		const includeChapter = true;
+		const meeting = await getMeetingById(id,includeNotes,includeTopics,includeChapter)
 		if (!meeting) throw new AppError(404, 'meeting not found')
 
 		res.json(meeting)

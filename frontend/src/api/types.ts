@@ -54,6 +54,8 @@ export interface Meeting {
 	recurringGroupId: string | null
 	createdAt: string
 	updatedAt: string
+	chapter?: Chapter
+	topics?: Topic[]
 }
 
 export const meetingStatusReadable = {
@@ -62,3 +64,20 @@ export const meetingStatusReadable = {
 	COMPLETED: 'Completed',
 	CANCELLED: 'Cancelled'
 }
+
+export type TopicStatus = 'PENDING' | 'SELECTED' | 'DISCUSSED'
+
+export interface Topic {
+	id: string
+	meetingId: string
+	title: string
+	description: string | null
+	createdById: string | null
+	wheelStatus: TopicStatus
+	createdAt: string
+	updatedAt: string
+}
+
+// export interface MeetingWithTopics extends Meeting {
+// 	topics: Topic[]
+// }

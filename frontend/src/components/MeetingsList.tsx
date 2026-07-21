@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { type Meeting, meetingStatusReadable } from '../api/types'
 import { createMeeting } from '../api/meetings'
 
@@ -22,6 +23,7 @@ function formatMeetingDate(dateString: string) {
 }
 
 export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, isAdmin }: MeetingsListProps) {
+	const navigate = useNavigate()
 	const upcomingAndActive = meetings
 		.filter(m => m.status === 'SCHEDULED' || m.status === 'ACTIVE')
 		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
@@ -115,7 +117,11 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, i
 			) : upcomingAndActive.length > 0 ? (
 				<ul className="divide-y divide-warm-border">
 					{upcomingAndActive.map(meeting => (
-						<li key={meeting.id} className="py-3 flex justify-between items-center">
+						<li
+							key={meeting.id}
+							className="py-3 flex justify-between items-center cursor-pointer hover:bg-cream/50 -mx-2 px-2 rounded transition-colors"
+							onClick={() => navigate(`/meetings/${meeting.id}`)}
+						>
 							<div>
 								<p className="text-sm text-stone font-medium">{formatMeetingDate(meeting.scheduledAt)}</p>
 								<p className="text-xs text-stone-muted">{meeting.duration} minutes</p>
