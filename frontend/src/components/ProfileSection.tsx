@@ -49,7 +49,7 @@ export function ProfileSection({
 					</div>
 					<button
 						onClick={onEditClick}
-						className="mt-2 py-2 px-5 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors"
+						className="mt-2 py-2 px-5 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-dark transition-colors"
 					>
 						Edit profile
 					</button>
@@ -79,14 +79,14 @@ export function ProfileSection({
 						<button
 							type="submit"
 							disabled={saving}
-							className="py-2 px-5 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+							className="py-2 px-5 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-dark transition-colors disabled:opacity-50"
 						>
 							{saving ? 'Saving…' : 'Save'}
 						</button>
 						<button
 							type="button"
 							onClick={onCancel}
-							className="py-2 px-4 bg-white text-stone-muted text-sm border border-warm-border rounded hover:bg-cream transition-colors"
+							className="py-2 px-4 bg-terracotta text-white text-sm border border-warm-border rounded hover:bg-terracotta-dark transition-colors"
 						>
 							Cancel
 						</button>

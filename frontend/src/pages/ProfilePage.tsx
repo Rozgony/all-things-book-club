@@ -83,7 +83,7 @@ export function ProfilePage() {
 	        <h2 className="font-heading text-forest-deep">My Chapters</h2>
 	        <button
 	          onClick={() => setShowForm(v => !v)}
-	          className="px-4 py-2 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors"
+	          className={`px-4 py-2 ${showForm ? 'bg-terracotta hover:bg-terracotta-dark' : 'bg-forest hover:bg-forest-dark'} text-white text-sm tracking-wide rounded transition-colors`}
 	        >
 	          {showForm ? 'Cancel' : '+ New Chapter'}
 	        </button>

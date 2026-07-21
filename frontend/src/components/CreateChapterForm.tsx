@@ -56,14 +56,14 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 	      <button
 	        type="submit"
 	        disabled={creating}
-	        className="px-4 py-2 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+	        className="px-4 py-2 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-dark transition-colors disabled:opacity-50"
 	      >
 	        {creating ? 'Creating…' : 'Create Chapter'}
 	      </button>
 	      <button
 	        type="button"
 	        onClick={onCancel}
-	        className="px-4 py-2 bg-white text-stone-muted text-sm border border-warm-border rounded hover:bg-cream transition-colors"
+	        className="px-4 py-2 bg-terracotta text-white text-sm border border-warm-border rounded hover:bg-terracotta transition-colors"
 	      >
 	        Cancel
 	      </button>
