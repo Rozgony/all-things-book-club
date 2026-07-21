@@ -125,34 +125,35 @@ export function MeetingPage() {
 	const pendingTopics = meeting?.topics?.filter(t => t.wheelStatus === 'PENDING') || []
 	const discussedTopics = meeting?.topics?.filter(t => t.wheelStatus === 'DISCUSSED') || []
 
+	/* 
+		TODO
+		- move topics to the left side
+		- incorporate date and duration into topics area to free up top space
+		- this also allows a better left to right flow
+		- allow the wheel to be taller
+		- make sure the chapter name and link to chapter page makes sense
+	*/
 	return (
 		<div className="min-h-screen bg-cream">
 			<Nav showLogout={true} showProfile={true} showChapters={true} />
 
-			<main className="max-w-4xl mx-auto px-4 py-10">
+			<main className="max-w-5gl mx-auto px-4 py-10">
 				{/* Header */}
-				<div className="mb-8">
-					<button onClick={() => navigate(-1)} className="text-sm text-stone-muted hover:text-stone mb-3 inline-block">
-						{meeting.chapter?.name || ''} Chapter
-					</button>
-					<h2 className="font-heading text-forest-deep">{formatDate(meeting.scheduledAt)}</h2>
-					<p className="text-stone-muted text-sm">{meeting.duration} minutes</p>
-				</div>
+				{/* <div className="mb-8">
+
+				</div> */}
 
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-					{/* Wheel */}
-					<div className="bg-white rounded border border-warm-border p-6 flex flex-col items-center" style={{ boxShadow: 'var(--shadow)' }}>
-						<h3 className="font-heading text-forest-deep mb-4 self-start">Spin the Wheel</h3>
-						<SpinWheel
-							topics={meeting.topics}
-							spinning={spinning}
-							onSpinStart={() => setSpinning(true)}
-							onSpinEnd={handleSpinEnd}
-						/>
-					</div>
-
 					{/* Topics panel */}
 					<div className="space-y-6">
+						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+							<h2 className="font-heading text-forest-deep">
+								{formatDate(meeting.scheduledAt)}
+							</h2>
+							<button onClick={() => navigate(-1)} className="text-med underline text-stone-muted hover:text-stone mb-3 inline-block">
+								{meeting.chapter?.name || ''} Chapter
+							</button>
+						</div>
 						{/* Add topic */}
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 							<h3 className="font-heading text-forest-deep mb-4">Topics</h3>
@@ -207,6 +208,17 @@ export function MeetingPage() {
 								</ul>
 							</div>
 						)}
+					</div>
+					{/* Wheel */}
+					{/* <div className="bg-white rounded border border-warm-border p-6 flex flex-col items-center" style={{ boxShadow: 'var(--shadow)' }}> */}
+					<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+						{/* <h3 className="font-heading text-forest-deep mb-4 self-start">Spin the Wheel</h3> */}
+						<SpinWheel
+							topics={meeting.topics || []}
+							spinning={spinning}
+							onSpinStart={() => setSpinning(true)}
+							onSpinEnd={handleSpinEnd}
+						/>
 					</div>
 				</div>
 			</main>
