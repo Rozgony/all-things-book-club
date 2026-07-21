@@ -6,6 +6,7 @@ import { getMyProfile, updateMyProfile } from '../api/users'
 import { getChapters } from '../api/chapters'
 import { type UserProfile, type Chapter } from '../api/types'
 import { CreateChapterForm } from '../components/CreateChapterForm'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ProfilePage() {
 	const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -55,7 +56,10 @@ export function ProfilePage() {
 	}
 
 	if (!profile) {
-	  return <div className="flex items-center justify-center min-h-screen text-stone-muted">Loading profile…</div>
+	  return <div className="flex flex-col items-center justify-center min-h-screen">
+				<div>Loading profile…</div>
+				<LoadingSpinner />
+			</div>
 	}
 
 	return (

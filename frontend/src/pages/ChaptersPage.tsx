@@ -4,6 +4,7 @@ import { CreateChapterForm } from '../components/CreateChapterForm'
 import { getChapters } from '../api/chapters'
 import { type Chapter } from '../api/types'
 import { ChapterCard } from '../components/ChapterCard'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ChaptersPage() {
 	const [chapters, setChapters] = useState<Chapter[]>([])
@@ -34,7 +35,7 @@ export function ChaptersPage() {
 	        <h2 className="font-heading text-forest-deep">All Chapters</h2>
 	        <button
 	          onClick={() => setShowForm(v => !v)}
-	          className="px-4 py-2 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors"
+	          className="px-4 py-2 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-dark transition-colors"
 	        >
 	          {showForm ? 'Cancel' : '+ New Chapter'}
 	        </button>
@@ -50,7 +51,10 @@ export function ChaptersPage() {
 	      {error && <p className="text-red-600 mb-4">{error}</p>}
 
 	      {loadingChapters ? (
-	        <p className="text-stone-muted">Loading chapters…</p>
+			<div className="flex flex-col items-center justify-center min-h-screen">
+				<div>Loading chapters…</div>
+				<LoadingSpinner />
+			</div>
 	      ) : chapters.length === 0 ? (
 	        <div className="bg-white rounded border border-warm-border p-10 text-center text-stone-muted" style={{ boxShadow: 'var(--shadow)' }}>
 	          <p className="mb-2 text-lg font-heading text-forest-deep">No chapters yet.</p>

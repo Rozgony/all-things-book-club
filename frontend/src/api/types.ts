@@ -45,6 +45,11 @@ export enum MeetingStatus {
 	CANCELLED = 'CANCELLED'
 }
 
+export enum SpinnerSize { 
+	LG = 'LG',
+	SM = 'SM' 
+}
+
 export interface Meeting {
 	id: string
 	chapterId: string

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { type Topic } from '../api/types'
+import { MeetingStatus, type Meeting, type Topic } from '../api/types'
+import { ConfirmModal } from './ConfirmModal'
 
 interface SpinWheelProps {
 	topics: Topic[]
 	onSpinEnd: (topic: Topic) => void
 	spinning: boolean
+	updateMeetingStatus: (status: MeetingStatus) => void
+	meeting: Meeting
 	onSpinStart: () => void
 }
 
@@ -14,7 +17,7 @@ const COLORS = [
 	'#6B8E7A', '#C4956A', '#7A8E6B', '#B07850', '#8E7A6B',
 ]
 
-export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWheelProps) {
+export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeetingStatus, meeting }: SpinWheelProps) {
 	const svgRef = useRef<SVGSVGElement>(null)
 	const rotationRef = useRef(0)
 
@@ -22,6 +25,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 		window.innerWidth > 900 ? window.innerWidth / 2 - 72 : window.innerWidth - 72
 
 	const [wheelSize, setWheelSize] = useState(getWheelSize)
+	const [showStartMeeting, setShowStartMeeting] = useState(false)
 
 	useEffect(() => {
 		const handleResize = () => setWheelSize(getWheelSize())
@@ -74,8 +78,23 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 				if (words.length <= 2) {
 					text.text(d.data.title)
 				} else {
-					text.append('tspan').attr('x', 0).attr('dy', '-0.6em').text(words.slice(0, 2).join(' '))
-					text.append('tspan').attr('x', 0).attr('dy', '1.2em').text(words.slice(2, 4).join(' '))
+					let dyArray = []
+					if (words.length <= 4) {
+						dyArray = [`-0.6em`,'',`1.2em`,'']
+					} else if (words.length <= 6) {
+						dyArray = [`-1em`,'',`1.2em`,'',`1.2em`,'']
+					} else if (words.length <= 8) {
+						dyArray = [`-1.6em`,'',`1.2em`,'',`1.2em`,'',`1.2em`,'']
+					} else {
+						dyArray = [`-2.8em`,'',`1.2em`,'',`1.2em`,'',`1.2em`,'',`1.2em`,'',`1.2em`,'']
+					}
+					const wordsLength = words.length < 12 ? words.length : 12
+					for (let index = 0; index < wordsLength; index += 2) {
+						const wordOne = words[index];
+						const wordTwo = words[index+1] ? ` ${words[index+1]}` : ''
+						console.log('dyArray[index]: '+dyArray[index]);
+						text.append('tspan').attr('x', 0).attr('dy', dyArray[index]).text(`${wordOne}${wordTwo}`)
+					}
 				}
 			})
 
@@ -83,6 +102,10 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 
 	const handleSpin = () => {
 		console.log('handleSpin',{spinning,pendingTopics});
+		if (meeting.status !== 'ACTIVE') {
+			setShowStartMeeting(true);
+			return;
+		}
 		if (spinning || pendingTopics.length === 0) return
 		onSpinStart()
 
@@ -125,7 +148,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 	if (pendingTopics.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center w-full h-64 text-stone-muted">
-				<p className="text-lg font-heading">No topics left to spin!</p>
+				{ topics.length !== 0 ? <p className="text-lg font-heading">No topics left to spin!</p> : null }
 				<p className="text-sm mt-1">Add topics below to get started.</p>
 			</div>
 		)
@@ -136,7 +159,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 			<button
 				onClick={handleSpin}
 				disabled={spinning}
-				className="px-4 py-2 bg-terracotta text-white font-heading tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50 text-lg absolute z-50"
+				className="px-4 py-2 bg-forest text-white font-heading tracking-wide rounded hover:bg-forest-dark transition-colors disabled:opacity-50 text-lg absolute z-50"
 			>
 				{spinning ? 'Spinning…' : 'Spin!'}
 			</button>
@@ -147,6 +170,19 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 				</div>
 				<svg ref={svgRef} viewBox={`0 0 ${size} ${size}`} width={wheelSize} height={wheelSize} style={{ display: 'block' }} />
 			</div>
+			{ showStartMeeting ? <ConfirmModal
+				header="Start Meeting?"
+				bodyText=""
+				confirmText="Yes"
+				cancelText="No"
+				confirmColor="bg-forest"
+				onConfirm={() => {
+					updateMeetingStatus(MeetingStatus.ACTIVE)
+					setShowStartMeeting(false)
+				}}
+				onCancel={() => setShowStartMeeting(false)}
+				confirming={false}
+			/> : null }
 		</div>
 	)
 }

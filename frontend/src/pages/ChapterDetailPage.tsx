@@ -7,6 +7,7 @@ import { MeetingsList } from '../components/MeetingsList'
 import { getChapter, updateChapter, deleteChapter } from '../api/chapters'
 import { getMeetingsByChapterId } from '../api/meetings'
 import { type Chapter, VisibilityLevel, type Meeting } from '../api/types'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ChapterDetailPage() {
 	const { id } = useParams<{ id: string }>()
@@ -74,10 +75,9 @@ export function ChapterDetailPage() {
 	}
 
 	const handleDelete = async () => {
-	  if (!id || !window.confirm(`Delete "${chapter?.name}"? This cannot be undone.`)) return
 	  setDeleting(true)
 	  try {
-	    await deleteChapter(id)
+	    await deleteChapter(id!)
 	    navigate('/chapters')
 	  } catch {
 	    setError('Failed to delete chapter')
@@ -86,7 +86,10 @@ export function ChapterDetailPage() {
 	}
 
 	if (loading) {
-	  return <div className="flex items-center justify-center min-h-screen text-stone-muted">Loading chapter…</div>
+		return <div className="flex flex-col items-center justify-center min-h-screen">
+				<div>Loading chapter…</div>
+				<LoadingSpinner />
+			</div>	
 	}
 
 	if (error || !chapter) {
@@ -129,6 +132,7 @@ export function ChapterDetailPage() {
 					loading={meetingsLoading}
 					isAdmin={isAdmin}
 					onMeetingCreated={meeting => setMeetings(prev => [...prev, meeting])}
+					onMeetingDeleted={id => setMeetings(prev => prev.filter(m => m.id !== id))}
 				/>
 
 				<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>

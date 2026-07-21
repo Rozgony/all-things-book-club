@@ -3,9 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Nav } from '../components/Nav'
 import { SpinWheel } from '../components/SpinWheel'
 import { TopicModal } from '../components/TopicModal'
+import { LoadingSpinner } from '../components/LoadingSpinner'
 import { getMeeting, createTopic, updateTopicStatus, deleteTopic } from '../api/topics'
+import { updateMeeting } from '../api/meetings'
 // import { type MeetingWithTopics, type Topic } from '../api/types'
-import { type Meeting, type Topic } from '../api/types'
+import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../api/types'
+import { MeetingStatusBadge } from '../components/MeetingStatusBadge'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
@@ -21,6 +24,61 @@ export function MeetingPage() {
 	const [newTopicTitle, setNewTopicTitle] = useState('')
 	const [addingTopic, setAddingTopic] = useState(false)
 	const [addError, setAddError] = useState<string | null>(null)
+
+	const [editingDate, setEditingDate] = useState(false)
+	const [editDateValue, setEditDateValue] = useState('')
+	const [savingDate, setSavingDate] = useState(false)
+
+	const [savingStatus, setSavingStatus] = useState(false)
+
+	const toDatetimeLocal = (iso: string) => {
+		const d = new Date(iso)
+		const pad = (n: number) => String(n).padStart(2, '0')
+		return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+	}
+
+	const handleEditDateStart = () => {
+		if (!meeting) return
+		setEditDateValue(toDatetimeLocal(meeting.scheduledAt))
+		setEditingDate(true)
+	}
+
+	const handleSaveDate = async () => {
+		if (!meeting || !editDateValue) return
+		setSavingDate(true)
+		try {
+			const updated = await updateMeeting(meeting.id, { scheduledAt: new Date(editDateValue).toISOString() })
+			setMeeting(prev => prev ? { ...prev, scheduledAt: updated.scheduledAt } : prev)
+			setEditingDate(false)
+		} catch {
+			// silent — keep modal open
+		} finally {
+			setSavingDate(false)
+		}
+	}
+
+	const handleStatusUpdate = async (status?: MeetingStatus) => {
+		if (!meeting) return
+		setSavingStatus(true)
+		let newStatus;
+		if(status) {
+			newStatus = status; 
+		} else if (meeting.status === MeetingStatus.ACTIVE) {
+			newStatus = MeetingStatus.COMPLETED
+		} else  {
+			newStatus = MeetingStatus.ACTIVE
+		}
+		console.log('newStatus: '+newStatus);
+		try {
+			const updated = await updateMeeting(meeting.id, { status: newStatus })
+			setMeeting(prev => prev ? { ...prev, status: updated.status } : prev)
+		} catch (e) {
+			// silent — keep modal open
+			console.error(e)
+		} finally {
+			setSavingStatus(false)
+		}
+	}
 
 	useEffect(() => {
 		if (!id) return
@@ -111,7 +169,12 @@ export function MeetingPage() {
 		}
 	}
 
-	if (loading) return <div className="flex items-center justify-center min-h-screen text-stone-muted">Loading meeting…</div>
+	if (loading) return (
+		<div className="flex flex-col items-center justify-center min-h-screen">
+			<div>Loading Meeting…</div>
+			<LoadingSpinner />
+		</div>
+	)
 
 	if (error || !meeting) {
 		return (
@@ -134,9 +197,57 @@ export function MeetingPage() {
 					{/* Topics panel */}
 					<div className="space-y-6">
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
-							<h2 className="font-heading text-forest-deep">
-								{formatDate(meeting.scheduledAt)}
-							</h2>
+						{editingDate ? (
+							<div className="flex items-center gap-2 flex-wrap">
+								<input
+									type="datetime-local"
+									value={editDateValue}
+									onChange={e => setEditDateValue(e.target.value)}
+									className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+								/>
+								<button
+									onClick={handleSaveDate}
+									disabled={savingDate}
+									className="px-3 py-1.5 bg-terracotta text-white text-sm rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+								>
+									{savingDate ? 'Saving…' : 'Save'}
+								</button>
+								<button
+									onClick={() => setEditingDate(false)}
+									className="px-3 py-1.5 border border-warm-border text-stone-muted text-sm rounded hover:bg-cream transition-colors"
+								>
+									Cancel
+								</button>
+							</div>
+						) : (
+							<div className="flex items-center justify-between gap-2">
+								<h2 className="font-heading text-forest-deep">
+									{formatDate(meeting.scheduledAt)}
+								</h2>
+								{
+									['SCHEDULED','ACTIVE'].includes(meeting.status) ? (
+										<button
+											onClick={handleEditDateStart}
+											className="text-stone-muted hover:text-stone transition-colors p-1"
+											title="Edit date"
+										>
+											<div className="rotate-90">✏️</div>
+										</button>
+										) : null
+								}
+								<MeetingStatusBadge status={meeting.status}></MeetingStatusBadge>
+								<button
+									onClick={() => handleStatusUpdate()}
+									className={`flex items-center justify-center mx-2 px-1.5 py-1.5 min-w-24 ${meeting.status === MeetingStatus.ACTIVE ? 'bg-terracotta hover:bg-terracotta-dark' : 'bg-forest hover:bg-forest-dark'} text-white text-sm rounded transition-colors disabled:opacity-50`}
+								>
+									{ savingStatus ? (
+										 <LoadingSpinner size={SpinnerSize.SM} />
+									) : (
+										meeting.status === MeetingStatus.ACTIVE ? 'End Meeting' : 'Start Meeting'
+									)}
+								</button>
+							</div>
+						)}
 							<button onClick={() => navigate(-1)} className="text-med underline text-stone-muted hover:text-stone mb-3 inline-block">
 								{meeting.chapter?.name || ''} Chapter
 							</button>
@@ -147,6 +258,7 @@ export function MeetingPage() {
 							<form onSubmit={handleAddTopic} className="flex gap-2 mb-4">
 								<input
 									type="text"
+									maxLength={48}
 									value={newTopicTitle}
 									onChange={e => setNewTopicTitle(e.target.value)}
 									placeholder="Add a topic…"
@@ -155,7 +267,7 @@ export function MeetingPage() {
 								<button
 									type="submit"
 									disabled={addingTopic || !newTopicTitle.trim()}
-									className="px-4 py-2 bg-terracotta text-white text-sm rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+									className="px-4 py-2 bg-forest text-white text-sm rounded hover:bg-forst-dark transition-colors disabled:opacity-50"
 								>
 									Add
 								</button>
@@ -197,14 +309,14 @@ export function MeetingPage() {
 						)}
 					</div>
 					{/* Wheel */}
-					{/* <div className="bg-white rounded border border-warm-border p-6 flex flex-col items-center" style={{ boxShadow: 'var(--shadow)' }}> */}
 					<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
-						{/* <h3 className="font-heading text-forest-deep mb-4 self-start">Spin the Wheel</h3> */}
 						<SpinWheel
 							topics={meeting.topics || []}
 							spinning={spinning}
 							onSpinStart={() => setSpinning(true)}
 							onSpinEnd={handleSpinEnd}
+							meeting={meeting}
+							updateMeetingStatus={handleStatusUpdate}
 						/>
 					</div>
 				</div>

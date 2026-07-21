@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { type Meeting, meetingStatusReadable } from '../api/types'
+import { type Meeting } from '../api/types'
+import { MeetingCard } from './MeetingCard'
 import { createMeeting } from '../api/meetings'
 
 interface MeetingsListProps {
@@ -8,24 +8,17 @@ interface MeetingsListProps {
 	meetings: Meeting[]
 	loading: boolean
 	onMeetingCreated: (meeting: Meeting) => void
+	onMeetingDeleted?: (id: string) => void
 	isAdmin: boolean
 }
 
-function formatMeetingDate(dateString: string) {
-	const date = new Date(dateString)
-	return date.toLocaleDateString('en-US', {
-		weekday: 'short',
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit'
-	})
-}
-
-export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, isAdmin }: MeetingsListProps) {
-	const navigate = useNavigate()
+export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, onMeetingDeleted, isAdmin }: MeetingsListProps) {
 	const upcomingAndActive = meetings
 		.filter(m => m.status === 'SCHEDULED' || m.status === 'ACTIVE')
+		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+	
+	const pastMeetings = meetings
+		.filter(m => m.status === 'COMPLETED' || m.status === 'CANCELLED')
 		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
 
 	const [showForm, setShowForm] = useState(false)
@@ -33,6 +26,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, i
 	const [duration, setDuration] = useState(60)
 	const [saving, setSaving] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
+	const [viewPastMeetings, setViewPastMeetings] = useState(false)
 
 	const handleCreate = async (e: React.FormEvent) => {
 		e.preventDefault()
@@ -114,30 +108,42 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, i
 
 			{loading ? (
 				<p className="text-stone-muted text-sm">Loading meetings…</p>
-			) : upcomingAndActive.length > 0 ? (
-				<ul className="divide-y divide-warm-border">
-					{upcomingAndActive.map(meeting => (
-						<li
-							key={meeting.id}
-							className="py-3 flex justify-between items-center cursor-pointer hover:bg-cream/50 -mx-2 px-2 rounded transition-colors"
-							onClick={() => navigate(`/meetings/${meeting.id}`)}
-						>
-							<div>
-								<p className="text-sm text-stone font-medium">{formatMeetingDate(meeting.scheduledAt)}</p>
-								<p className="text-xs text-stone-muted">{meeting.duration} minutes</p>
-							</div>
-							<span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-								meeting.status === 'ACTIVE'
-									? 'bg-red-100 text-red-700'
-									: 'bg-terracotta-light text-terracotta'
-							}`}>
-								{meetingStatusReadable[meeting.status]}
-							</span>
-						</li>
-					))}
-				</ul>
 			) : (
-				<p className="text-stone-muted text-sm">No upcoming meetings scheduled</p>
+				<div className="min-h-36">
+					<div className="flex">
+						<button 
+							className={`min-w-36 px-4 py-2 ${viewPastMeetings ? 'bg-cream text-forest' : 'bg-forest text-white'} border-warm-border  font-heading tracking-wide rounded-tl hover:${viewPastMeetings ? 'bg-cream-dark' : 'bg-forest-dark'} transition-colors`}
+							onClick={() => setViewPastMeetings(false)}>
+								Upcoming
+						</button>
+						<button 
+							className={`min-w-36 px-4 py-2 ${viewPastMeetings ? 'bg-forst text-white' : 'bg-cream text-forest'} border-warm-border font-heading tracking-wide rounded-tr hover:${viewPastMeetings ? 'bg-forest-dark' : 'bg-cream-dark'} transition-colors`}
+							onClick={() => setViewPastMeetings(true)}>
+								Past
+						</button>
+					</div>
+					{ 
+						viewPastMeetings ? 
+						<ul className="divide-y divide-warm-border">
+							{pastMeetings.length > 0 ? (
+								pastMeetings.map(meeting => (
+									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />
+								))
+							) : (
+								<p className="py-4 text-stone-muted text-sm">No past meetings</p>
+							)}
+						</ul> :
+						<ul className="divide-y divide-warm-border">
+							{upcomingAndActive.length > 0 ? (
+								upcomingAndActive.map(meeting => (
+									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />
+								))
+							) : (
+								<p className="py-4 text-stone-muted text-sm">No upcoming meetings scheduled</p>
+							)}
+						</ul>
+					}
+				</div>
 			)}
 		</div>
 	)

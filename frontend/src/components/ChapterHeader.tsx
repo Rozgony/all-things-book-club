@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { visibilityReadable, type Chapter, type VisibilityLevel } from '../api/types'
+import { ConfirmModal } from './ConfirmModal'
 
 interface ChapterHeaderProps {
 	chapter: Chapter
@@ -39,6 +41,7 @@ export function ChapterHeader({
 	onCancel,
 	onDelete,
 }: ChapterHeaderProps) {
+	const [showConfirm, setShowConfirm] = useState(false)
 	if (editing) {
 		return (
 			<form onSubmit={onSave} className="bg-white rounded border border-warm-border p-6 space-y-4 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
@@ -111,12 +114,23 @@ export function ChapterHeader({
 						</button>
 						{isCreator && (
 							<button
-								onClick={onDelete}
+								onClick={() => setShowConfirm(true)}
 								disabled={deleting}
 								className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
 							>
 								{deleting ? 'Deleting…' : 'Delete'}
 							</button>
+
+						)}
+						{showConfirm && (
+							<ConfirmModal
+								header="Delete Chapter?"
+								bodyText={<>This will permanently delete the the <span className="text-stone font-medium">{chapter.name}</span> chapter.</>}
+								confirmText="Delete"
+								onConfirm={onDelete}
+								onCancel={() => setShowConfirm(false)}
+								confirming={deleting}
+							/>
 						)}
 					</div>
 				)}
