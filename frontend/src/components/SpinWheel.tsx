@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { type Topic } from '../api/types'
 
@@ -17,6 +17,17 @@ const COLORS = [
 export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWheelProps) {
 	const svgRef = useRef<SVGSVGElement>(null)
 	const rotationRef = useRef(0)
+
+	const getWheelSize = () =>
+		window.innerWidth > 900 ? window.innerWidth / 2 - 72 : window.innerWidth - 72
+
+	const [wheelSize, setWheelSize] = useState(getWheelSize)
+
+	useEffect(() => {
+		const handleResize = () => setWheelSize(getWheelSize())
+		window.addEventListener('resize', handleResize)
+		return () => window.removeEventListener('resize', handleResize)
+	}, [])
 
 	const pendingTopics = topics.filter(t => t.wheelStatus === 'PENDING')
 	const size = 600
@@ -125,16 +136,16 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart }: SpinWhee
 			<button
 				onClick={handleSpin}
 				disabled={spinning}
-				className="px-8 py-3 bg-terracotta text-white font-heading tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50 text-lg absolute z-50"
+				className="px-4 py-2 bg-terracotta text-white font-heading tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50 text-lg absolute z-50"
 			>
 				{spinning ? 'Spinning…' : 'Spin!'}
 			</button>
 			<div className="relative flex flex-col items-center">
 				{/* Pointer triangle at right */}
-				<div className="absolute left-0 top-1/2 -translate-y-1/2 translate-x-1 z-10">
+				<div className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-10">
 					<div style={{ width: 0, height: 0, borderTop: '10px solid transparent', borderBottom: '10px solid transparent', borderLeft: '20px solid #C0876F' }} />
 				</div>
-				<svg ref={svgRef} width={size} height={size} style={{ display: 'block' }} />
+				<svg ref={svgRef} viewBox={`0 0 ${size} ${size}`} width={wheelSize} height={wheelSize} style={{ display: 'block' }} />
 			</div>
 		</div>
 	)

@@ -125,25 +125,12 @@ export function MeetingPage() {
 	const pendingTopics = meeting?.topics?.filter(t => t.wheelStatus === 'PENDING') || []
 	const discussedTopics = meeting?.topics?.filter(t => t.wheelStatus === 'DISCUSSED') || []
 
-	/* 
-		TODO
-		- move topics to the left side
-		- incorporate date and duration into topics area to free up top space
-		- this also allows a better left to right flow
-		- allow the wheel to be taller
-		- make sure the chapter name and link to chapter page makes sense
-	*/
 	return (
 		<div className="min-h-screen bg-cream">
 			<Nav showLogout={true} showProfile={true} showChapters={true} />
 
 			<main className="max-w-5gl mx-auto px-4 py-10">
-				{/* Header */}
-				{/* <div className="mb-8">
-
-				</div> */}
-
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+				<div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-8">
 					{/* Topics panel */}
 					<div className="space-y-6">
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
