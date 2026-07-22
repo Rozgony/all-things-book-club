@@ -1,12 +1,13 @@
 {
 	"scripts": {
-	  "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+		"dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
 	},
 	"devDependencies": {
-	  "concurrently": "^10.0.3",
-	  "prisma": "^5.22.0"
+		"concurrently": "^10.0.3",
+		"prisma": "^5.22.0"
 	},
 	"dependencies": {
-	  "@prisma/client": "^5.22.0"
+		"@prisma/client": "^5.22.0",
+		"supabase": "^2.109.1"
 	}
 }
