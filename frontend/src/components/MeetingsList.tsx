@@ -91,14 +91,14 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 						<button
 							type="submit"
 							disabled={saving}
-							className="px-4 py-2 bg-terracotta text-white text-sm tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+							className="px-4 py-2 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-deep transition-colors disabled:opacity-50"
 						>
 							{saving ? 'Scheduling…' : 'Schedule'}
 						</button>
 						<button
 							type="button"
 							onClick={() => { setShowForm(false); setFormError(null) }}
-							className="px-4 py-2 text-sm text-stone-muted hover:text-stone transition-colors"
+							className="px-4 py-2 text-sm text-terracotta hover:text-terracotta-dark border rounded border-terracotta transition-colors"
 						>
 							Cancel
 						</button>

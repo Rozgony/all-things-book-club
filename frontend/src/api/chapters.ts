@@ -1,5 +1,5 @@
 import { getAuthHeaders } from './auth'
-import type { Chapter } from './types'
+import type { Chapter, VisibilityLevel } from './types'
 
 export async function getChapters(): Promise<Chapter[]> {
 	const headers = await getAuthHeaders()
@@ -15,7 +15,7 @@ export async function getChapter(id: string): Promise<Chapter> {
 	return res.json()
 }
 
-export async function createChapter(data: { name: string; description?: string }): Promise<Chapter> {
+export async function createChapter(data: { name: string; description?: string, visibility: VisibilityLevel }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const res = await fetch('/api/chapters', {
 	  method: 'POST',

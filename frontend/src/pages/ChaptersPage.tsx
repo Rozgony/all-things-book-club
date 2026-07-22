@@ -14,9 +14,7 @@ export function ChaptersPage() {
 
 	useEffect(() => {
 	  getChapters()
-	    .then((chapters) => {
-			setChapters(chapters)
-		})
+	    .then((chapters) => setChapters(chapters))
 	    .catch(() => setError('Failed to load chapters'))
 	    .finally(() => setLoadingChapters(false))
 	}, [])
@@ -35,7 +33,7 @@ export function ChaptersPage() {
 	        <h2 className="font-heading text-forest-deep">All Chapters</h2>
 	        <button
 	          onClick={() => setShowForm(v => !v)}
-	          className={`px-4 py-2 ${showForm ? 'bg-terracotta hover:bg-terracotta-dark' : 'bg-forest hover:bg-forest-dark'} text-white text-sm tracking-wide rounded transition-colors`}
+	          className={`px-4 py-2 ${showForm ? 'text-terracotta hover:text-terracotta-dark border-terracotta' : 'text-forest hover:text-forest-deep border-forest'} border rounded text-sm tracking-wide transition-colors`}
 	        >
 	          {showForm ? 'Cancel' : '+ New Chapter'}
 	        </button>
@@ -51,7 +49,7 @@ export function ChaptersPage() {
 	      {error && <p className="text-red-600 mb-4">{error}</p>}
 
 	      {loadingChapters ? (
-			<div className="flex flex-col items-center justify-center min-h-screen">
+			<div className="flex flex-col items-center justify-center min-h-40">
 				<div>Loading chapters…</div>
 				<LoadingSpinner />
 			</div>

@@ -238,7 +238,7 @@ export function MeetingPage() {
 								<MeetingStatusBadge status={meeting.status}></MeetingStatusBadge>
 								<button
 									onClick={() => handleStatusUpdate()}
-									className={`flex items-center justify-center mx-2 px-1.5 py-1.5 min-w-24 ${meeting.status === MeetingStatus.ACTIVE ? 'bg-terracotta hover:bg-terracotta-dark' : 'bg-forest hover:bg-forest-dark'} text-white text-sm rounded transition-colors disabled:opacity-50`}
+									className={`flex items-center justify-center mx-2 px-1.5 py-1.5 min-w-24 ${meeting.status === MeetingStatus.ACTIVE ? 'text-terracotta hover:text-terracotta-dark border-terracotta' : 'text-forest hover:text-forest-deep border-forest'} text-sm border rounded transition-colors disabled:opacity-50`}
 								>
 									{ savingStatus ? (
 										 <LoadingSpinner size={SpinnerSize.SM} />

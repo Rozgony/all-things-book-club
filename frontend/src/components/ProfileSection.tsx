@@ -86,7 +86,7 @@ export function ProfileSection({
 						<button
 							type="button"
 							onClick={onCancel}
-							className="py-2 px-4 bg-terracotta text-white text-sm border border-warm-border rounded hover:bg-terracotta-dark transition-colors"
+							className="py-2 px-4 text-terracotta text-sm border rounded hover:text-terracotta-dark transition-colors"
 						>
 							Cancel
 						</button>
