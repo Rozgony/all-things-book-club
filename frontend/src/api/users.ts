@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import type { UserProfile } from './types'
 
 async function getAuthHeaders(): Promise<HeadersInit> {
 	const { data: { session } } = await supabase.auth.getSession()

@@ -86,3 +86,10 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 - Single Supabase project for all future related sites
 - User model is lean (profile data only) — universal across apps
 - When a second site is ready: add redirect URLs in Supabase dashboard, no schema changes needed
+
+---
+
+## New Stack & Hosting
+- Frontend: React on Vercel
+- Backend: Go on Railway
+- DB: Postgres on Supabase
