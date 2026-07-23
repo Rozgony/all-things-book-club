@@ -20,9 +20,6 @@
 	  "test": "vitest run",
 	  "test:watch": "vitest"
 	},
-	"prisma": {
-	  "schema": "../prisma/schema.prisma"
-	},
 	"repository": {
 	  "type": "git",
 	  "url": "y"
