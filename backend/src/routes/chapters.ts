@@ -49,12 +49,6 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 	}
 })
 
-// TODO v2: GET /invitations — get invitations for current user's email (getChapterInvitationsByEmail)
-// TODO v2: POST /invitations/:invitationId/accept — accept invite (acceptChapterInvitation)
-// TODO v2: POST /invitations/:invitationId/reject — reject invite (rejectChapterInvitation)
-// TODO v2: POST /:id/members — add member to chapter (addChapterMember, admin only)
-// TODO v2: POST /:id/invitations — create invitation (createChapterInvitation, member can invite)
-
 // PATCH /:id — update chapter name/description (admin only)
 router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
@@ -86,5 +80,11 @@ router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction
 	  next(err)
 	}
 })
+
+// TODO v2: GET /invitations — get invitations for current user's email (getChapterInvitationsByEmail)
+// TODO v2: POST /invitations/:invitationId/accept — accept invite (acceptChapterInvitation)
+// TODO v2: POST /invitations/:invitationId/reject — reject invite (rejectChapterInvitation)
+// TODO v2: POST /:id/members — add member to chapter (addChapterMember, admin only)
+// TODO v2: POST /:id/invitations — create invitation (createChapterInvitation, member can invite)
 
 export default router

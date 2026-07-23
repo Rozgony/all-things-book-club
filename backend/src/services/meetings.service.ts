@@ -2,7 +2,6 @@ import { prisma } from '../lib/prisma'
 
 /**
  * Create a new meeting
- * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function createMeeting(
 	data: { scheduledAt: Date; duration?: Number, chapterId?: string }
@@ -19,7 +18,6 @@ export async function createMeeting(
 
 /**
  * Get a meeting by Id
- * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function getMeetingById(
 	id: string,
@@ -41,7 +39,6 @@ export async function getMeetingById(
 
 /**
  * Get all of the Chapters that a User belongs to
- * Caller is responsible for validating that the creator exists and has proper permissions
  */
 export async function getMeetingsByChapterId(
 	chapterId: string,
@@ -70,7 +67,6 @@ export type UpdateMeetingData = {
 
 /**
  * Update the name or description of a Chapter
- * Caller is responsible for validating that the user is an admin of the chapter
  */
 export async function updateMeeting(
 	id: string,
@@ -90,7 +86,6 @@ export async function updateMeeting(
 
 /**
  * Delete a Chapter
- * Caller is responsible for validating that the user is the creator
  */
 export async function deleteMeeting(
 	id: string,
@@ -99,74 +94,3 @@ export async function deleteMeeting(
 	  where: { id },
 	})
 }
-
-/** TODO v2
- * Add a DiscussionNote to a Meeting (creates a DiscussionNote Junction Object)
- * Caller is responsible for validating that the creator exists and has proper permissions
- */
-// export async function addChapterMember(
-//   chapterId: string,
-//   userId: string, 
-//   role: ChapterMemberRole
-// ) {
-//     return prisma.chapterMember.create({
-//     data: { chapterId, userId, role }
-//     })
-// }
-
-/** TODO v2
- * Remove a DiscussionNote from a Meeting
- * Caller is responsible for validating that the creator exists and has proper permissions
- */
-// export async function removeChapterMember(
-//   chapterId: string,
-//   userId: string, 
-// ) {
-//   return prisma.chapter.update({
-//     where: { id: chapterId },
-//     data: {
-//         members: {
-//             deleteMany: { 
-//                 chapterId, 
-//                 userId 
-//             }
-//         }
-//     }
-//   })
-// }
-
-/** TODO v2
- * Add a Topic to a Meeting (creates a Topic Junction Object)
- * Caller is responsible for validating that the creator exists and has proper permissions
- */
-// export async function addChapterMember(
-//   chapterId: string,
-//   userId: string, 
-//   role: ChapterMemberRole
-// ) {
-//     return prisma.chapterMember.create({
-//     data: { chapterId, userId, role }
-//     })
-// }
-
-/** TODO v2
- * Remove a Topic from a Meeting
- * Caller is responsible for validating that the creator exists and has proper permissions
- */
-// export async function removeChapterMember(
-//   chapterId: string,
-//   userId: string, 
-// ) {
-//   return prisma.chapter.update({
-//     where: { id: chapterId },
-//     data: {
-//         members: {
-//             deleteMany: { 
-//                 chapterId, 
-//                 userId 
-//             }
-//         }
-//     }
-//   })
-// }
-
