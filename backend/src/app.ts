@@ -5,8 +5,12 @@ import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
 
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['*']
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: allowedOrigins,
 }))
 app.use(express.json())
 
