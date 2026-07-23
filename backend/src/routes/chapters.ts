@@ -58,7 +58,8 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 // PATCH /:id — update chapter name/description (admin only)
 router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
-	  const chapter = await getChapterById(req.params.id)
+	  const chapterId = req.params.id as string
+	  const chapter = await getChapterById(chapterId)
 	  if (!chapter) throw new AppError(404, 'chapter not found')
 
 	  const membership = chapter.members.find(m => m.userId === req.userId)
@@ -66,7 +67,7 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 	  if (membership.role !== 'ADMIN') throw new AppError(403, 'only admins can update chapters')
 
 	  const { name, description, visibility } = req.body
-	  const updated = await updateChapter(req.params.id, { name, description, visibility })
+	  const updated = await updateChapter(chapterId, { name, description, visibility })
 	  res.json(updated)
 	} catch (err) {
 	  next(err)
@@ -76,11 +77,12 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 // DELETE /:id — delete chapter (creator only)
 router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
-	  const chapter = await getChapterById(req.params.id)
+	  const chapterId = req.params.id as string
+	  const chapter = await getChapterById(chapterId)
 	  if (!chapter) throw new AppError(404, 'chapter not found')
 	  if (chapter.creatorId !== req.userId) throw new AppError(403, 'only the creator can delete this chapter')
 
-	  await deleteChapter(req.params.id)
+	  await deleteChapter(chapterId)
 	  res.status(204).send()
 	} catch (err) {
 	  next(err)

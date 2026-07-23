@@ -5,6 +5,9 @@ import { prisma } from '../lib/prisma'
 export interface AuthRequest extends Request {
 	userId?: string
 	userEmail?: string
+	user?: {
+		id: string
+	}
 }
 
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {

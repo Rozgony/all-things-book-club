@@ -1,5 +1,7 @@
 import { getAuthHeaders } from './auth'
-import type { Chapter, VisibilityLevel } from './types'
+import type { Chapter } from './types'
+import { VisibilityLevel } from '@prisma/client'
+
 
 export async function getChapters(): Promise<Chapter[]> {
 	const headers = await getAuthHeaders()

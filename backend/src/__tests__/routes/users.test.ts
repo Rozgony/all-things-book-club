@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import app from '../../app'
+import { supabase } from '../../lib/supabase'
+import { prisma } from '../../lib/prisma'
 
 vi.mock('../../lib/supabase', () => ({
 	supabase: {
@@ -19,9 +21,6 @@ vi.mock('../../lib/prisma', () => ({
 	  },
 	},
 }))
-
-import { supabase } from '../../lib/supabase'
-import { prisma } from '../../lib/prisma'
 
 const mockUser = { id: 'user-123', email: 'test@example.com', name: null, avatarUrl: null, timezone: 'UTC', createdAt: new Date(), updatedAt: new Date() }
 

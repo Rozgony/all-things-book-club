@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { visibilityReadable, type Chapter, type VisibilityLevel } from '../api/types'
+import { visibilityReadable, type Chapter } from '../api/types'
+import { VisibilityLevel } from '@prisma/client'
 import { ConfirmModal } from './ConfirmModal'
 
 interface ChapterHeaderProps {

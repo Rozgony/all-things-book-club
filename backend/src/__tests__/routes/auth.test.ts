@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import app from '../../app'
+import { supabase } from '../../lib/supabase'
+import { prisma } from '../../lib/prisma'
 
 vi.mock('../../lib/supabase', () => ({
 	supabase: {
@@ -17,9 +19,6 @@ vi.mock('../../lib/prisma', () => ({
 	  },
 	},
 }))
-
-import { supabase } from '../../lib/supabase'
-import { prisma } from '../../lib/prisma'
 
 beforeEach(() => {
 	vi.clearAllMocks()
