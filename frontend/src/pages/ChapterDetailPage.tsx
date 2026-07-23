@@ -6,8 +6,7 @@ import { ChapterHeader } from '../components/ChapterHeader'
 import { MeetingsList } from '../components/MeetingsList'
 import { getChapter, updateChapter, deleteChapter } from '../api/chapters'
 import { getMeetingsByChapterId } from '../api/meetings'
-import { type Chapter, type Meeting } from '../api/types'
-import { VisibilityLevel } from '@prisma/client'
+import { type Chapter, type Meeting, type VisibilityLevel } from '../api/types'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ChapterDetailPage() {
