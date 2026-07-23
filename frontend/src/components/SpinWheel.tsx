@@ -92,7 +92,6 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 					for (let index = 0; index < wordsLength; index += 2) {
 						const wordOne = words[index];
 						const wordTwo = words[index+1] ? ` ${words[index+1]}` : ''
-						console.log('dyArray[index]: '+dyArray[index]);
 						text.append('tspan').attr('x', 0).attr('dy', dyArray[index]).text(`${wordOne}${wordTwo}`)
 					}
 				}
@@ -101,7 +100,6 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 	}, [pendingTopics.map(t => t.id).join(',')])
 
 	const handleSpin = () => {
-		console.log('handleSpin',{spinning,pendingTopics});
 		if (meeting.status !== 'ACTIVE') {
 			setShowStartMeeting(true);
 			return;

@@ -34,7 +34,6 @@ export function ChapterDetailPage() {
 	  getChapter(id)
 	    .then(chapter => {
 	      setChapter(chapter)
-	      console.log(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
 	      setEditVisibility(chapter.visibility ?? 'MEMBERS_ONLY')

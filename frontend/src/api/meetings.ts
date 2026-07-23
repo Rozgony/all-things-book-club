@@ -9,7 +9,6 @@ export async function getMeetingsByChapterId(chapterId: string): Promise<Meeting
 		method: 'GET',
 		headers,
 	})
-	console.log({response});
 	if (!response.ok) throw new Error(`Failed to fetch meetings: ${response.statusText}`)
 	return response.json()
 }
