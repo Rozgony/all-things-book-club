@@ -1,3 +1,4 @@
+import { VisibilityLevel } from '@prisma/client';
 import { prisma } from '../lib/prisma'
 
 /**
@@ -5,7 +6,7 @@ import { prisma } from '../lib/prisma'
  */
 export async function createChapter(
 	creatorId: string,
-	data: { name: string; description?: string, visibility?: string }
+	data: { name: string; description?: string, visibility: VisibilityLevel }
 ) {
 	return prisma.chapter.create({
 	  data: {
@@ -73,7 +74,7 @@ export async function getChaptersByUserId(
 export type UpdateChapterData = {
 	name?: string
 	description?: string
-	visibility?: string
+	visibility?: VisibilityLevel
 }
 
 /**

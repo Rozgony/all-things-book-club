@@ -1,4 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { prisma } from '../../lib/prisma'
+import { createChapter } from '../../services/chapters.service'
+import { VisibilityLevel } from '@prisma/client'
 
 vi.mock('../../lib/prisma', () => ({
 	prisma: {
@@ -23,9 +26,6 @@ vi.mock('../../lib/prisma', () => ({
 	},
 }))
 
-import { prisma } from '../../lib/prisma'
-import { createChapter } from '../../services/chapters.service'
-
 // Fixtures
 const mockMember = {
 	id: 'member-123',
@@ -43,6 +43,7 @@ const mockChapter = {
 	createdAt: new Date(),
 	updatedAt: new Date(),
 	members: [mockMember],
+	visibility: VisibilityLevel.MEMBERS_ONLY
 }
 
 beforeEach(() => {
@@ -53,13 +54,14 @@ describe('createChapter', () => {
 	it('creates a chapter and seeds creator as ADMIN member', async () => {
 	  vi.mocked(prisma.chapter.create).mockResolvedValueOnce(mockChapter)
 
-	  const result = await createChapter('user-123', { name: 'Test Chapter' })
+	  const result = await createChapter('user-123', { name: 'Test Chapter', visibility: VisibilityLevel.MEMBERS_ONLY })
 
 	  expect(prisma.chapter.create).toHaveBeenCalledWith({
 	    data: {
 	      name: 'Test Chapter',
 	      description: undefined,
 	      creatorId: 'user-123',
+		  visibility: VisibilityLevel.MEMBERS_ONLY,
 	      members: {
 	        create: { userId: 'user-123', role: 'ADMIN' },
 	      },

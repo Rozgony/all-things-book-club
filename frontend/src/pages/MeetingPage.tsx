@@ -68,7 +68,6 @@ export function MeetingPage() {
 		} else  {
 			newStatus = MeetingStatus.ACTIVE
 		}
-		console.log('newStatus: '+newStatus);
 		try {
 			const updated = await updateMeeting(meeting.id, { status: newStatus })
 			setMeeting(prev => prev ? { ...prev, status: updated.status } : prev)
@@ -84,7 +83,6 @@ export function MeetingPage() {
 		if (!id) return
 		getMeeting(id)
 			.then((meeting) => {
-				console.log({meeting});
 				setMeeting(meeting)
 			})
 			.catch(() => setError('Failed to load meeting'))

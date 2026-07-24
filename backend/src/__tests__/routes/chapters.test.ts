@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import request from 'supertest'
 import app from '../../app'
+import { supabase } from '../../lib/supabase'
+import { prisma } from '../../lib/prisma'
+import { createChapter, getChapterById, getChaptersByUserId, updateChapter, deleteChapter } from '../../services/chapters.service'
+import { Chapter, ChapterMember, User, VisibilityLevel } from '@prisma/client'
 
 vi.mock('../../lib/supabase', () => ({
 	supabase: {
@@ -31,35 +35,53 @@ vi.mock('../../services/chapters.service', () => ({
 	deleteChapter: vi.fn(),
 }))
 
-import { supabase } from '../../lib/supabase'
-import { prisma } from '../../lib/prisma'
-import { createChapter, getChapterById, getChaptersByUserId, updateChapter, deleteChapter } from '../../services/chapters.service'
-
 // Fixtures
-const mockMember = {
+const mockUser: User = {
+	id: 'user-123',
+	email: 'test@example.com',
+	name: 'Test User',
+	avatarUrl: null,
+	timezone: 'UTC',
+	createdAt: new Date(),
+	updatedAt: new Date(),
+}
+
+const mockUser2: User = {
+	id: 'user-234',
+	email: 'other@example.com',
+	name: 'Other User',
+	avatarUrl: null,
+	timezone: 'UTC',
+	createdAt: new Date(),
+	updatedAt: new Date(),
+}
+
+const mockMember: ChapterMember & { user: User } = {
 	id: 'member-123',
 	userId: 'user-123',
 	chapterId: 'chapter-123',
-	role: 'ADMIN' as const,
+	role: 'ADMIN',
 	joinedAt: new Date(),
+	user: mockUser,
 }
 
-const mockMember2 = {
+const mockMember2: ChapterMember & { user: User } = {
 	id: 'member-234',
 	userId: 'user-234',
 	chapterId: 'chapter-234',
-	role: 'ADMIN' as const,
+	role: 'ADMIN',
 	joinedAt: new Date(),
+	user: mockUser2,
 }
 
-
-const mockChapter = {
+const mockChapter: Chapter & { members: (ChapterMember & { user: User })[] } = {
 	id: 'chapter-123',
 	name: 'Test Chapter',
 	description: null,
 	creatorId: 'user-123',
 	createdAt: new Date(),
 	updatedAt: new Date(),
+	visibility: 'MEMBERS_ONLY',
 	members: [mockMember],
 }
 
@@ -94,11 +116,11 @@ describe('POST /api/chapters', () => {
 	it('creates and returns a chapter with 201', async () => {
 	  vi.mocked(createChapter).mockResolvedValueOnce(mockChapter)
 
-	  const res = await authenticatedRequest('post', '/api/chapters').send({ name: 'Test Chapter' })
+	  const res = await authenticatedRequest('post', '/api/chapters').send({ name: 'Test Chapter', visibility: VisibilityLevel.MEMBERS_ONLY })
 
 	  expect(res.status).toBe(201)
 	  expect(res.body.id).toBe('chapter-123')
-	  expect(createChapter).toHaveBeenCalledWith('user-123', { name: 'Test Chapter', description: undefined })
+	  expect(createChapter).toHaveBeenCalledWith('user-123', { name: 'Test Chapter', description: undefined, visibility: VisibilityLevel.MEMBERS_ONLY })
 	})
 })
 
@@ -137,7 +159,7 @@ describe('GET /api/chapters/:id', () => {
 
 	  expect(res.status).toBe(404)
 	  expect(res.body.id).toBe(undefined)
-	  expect(getChapterById).toHaveBeenCalledWith('chapter-12345')
+	  expect(getChapterById).toHaveBeenCalledWith('chapter-12345', true)
 	})
 
 	it('returns a 403 if not a member', async () => {
@@ -147,7 +169,7 @@ describe('GET /api/chapters/:id', () => {
 
 	  expect(res.status).toBe(403)
 	  expect(res.body.id).toBe(undefined)
-	  expect(getChapterById).toHaveBeenCalledWith('chapter-123')
+	  expect(getChapterById).toHaveBeenCalledWith('chapter-123',true)
 	})
 
 	it('returns a 200 with a chapter', async () => {
@@ -157,7 +179,7 @@ describe('GET /api/chapters/:id', () => {
 
 	  expect(res.status).toBe(200)
 	  expect(res.body.id).toBe('chapter-123')
-	  expect(getChapterById).toHaveBeenCalledWith('chapter-123')
+	  expect(getChapterById).toHaveBeenCalledWith('chapter-123', true)
 	})
 })
 

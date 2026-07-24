@@ -32,13 +32,14 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 // PATCH /:id — update topic wheel status
 router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
-		const topic = await getTopicById(req.params.id)
+		const topicId = req.params.id as string
+		const topic = await getTopicById(topicId)
 		if (!topic) throw new AppError(404, 'Topic not found')
 
 		const { wheelStatus } = req.body
 		if (!wheelStatus) throw new AppError(400, 'wheelStatus is required')
 
-		const updated = await updateTopicStatus(req.params.id, wheelStatus as TopicStatus)
+		const updated = await updateTopicStatus(topicId, wheelStatus as TopicStatus)
 		res.json(updated)
 	} catch (err) {
 		next(err)
@@ -48,10 +49,11 @@ router.patch('/:id', async (req: AuthRequest, res: Response, next: NextFunction)
 // DELETE /:id — delete a topic
 router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
 	try {
-		const topic = await getTopicById(req.params.id)
+		const topicId = req.params.id as string
+		const topic = await getTopicById(topicId)
 		if (!topic) throw new AppError(404, 'Topic not found')
 
-		await deleteTopic(req.params.id)
+		await deleteTopic(topicId)
 		res.status(204).send()
 	} catch (err) {
 		next(err)

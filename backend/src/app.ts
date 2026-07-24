@@ -5,7 +5,13 @@ import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
 
-app.use(cors())
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',')
+  : ['*']
+
+app.use(cors({
+  origin: allowedOrigins,
+}))
 app.use(express.json())
 
 app.get('/health', (_, res) => res.json({ status: 'ok' }))

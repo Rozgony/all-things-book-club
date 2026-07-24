@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma'
  * Create a new meeting
  */
 export async function createMeeting(
-	data: { scheduledAt: Date; duration?: Number, chapterId?: string }
+	data: { scheduledAt: Date; duration?: number, chapterId: string }
 ) {
 	console.log({data});
 	return prisma.meeting.create({
@@ -59,7 +59,7 @@ export async function getMeetingsByChapterId(
 
 export type UpdateMeetingData = {
 	scheduledAt?: Date
-	duration?: Number
+	duration?: number
 	status?: 'SCHEDULED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED'
 	discussionNotes: any
 	topics: any

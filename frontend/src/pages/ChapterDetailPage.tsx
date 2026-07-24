@@ -6,7 +6,7 @@ import { ChapterHeader } from '../components/ChapterHeader'
 import { MeetingsList } from '../components/MeetingsList'
 import { getChapter, updateChapter, deleteChapter } from '../api/chapters'
 import { getMeetingsByChapterId } from '../api/meetings'
-import { type Chapter, VisibilityLevel, type Meeting } from '../api/types'
+import { type Chapter, type Meeting, type VisibilityLevel } from '../api/types'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ChapterDetailPage() {
@@ -34,7 +34,6 @@ export function ChapterDetailPage() {
 	  getChapter(id)
 	    .then(chapter => {
 	      setChapter(chapter)
-	      console.log(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
 	      setEditVisibility(chapter.visibility ?? 'MEMBERS_ONLY')

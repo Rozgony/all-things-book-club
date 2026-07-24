@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Request, Response, NextFunction } from 'express'
+import { requireAuth } from '../../middleware/auth'
+import { supabase } from '../../lib/supabase'
+import { prisma } from '../../lib/prisma'
 
 vi.mock('../../lib/supabase', () => ({
 	supabase: {
@@ -16,10 +19,6 @@ vi.mock('../../lib/prisma', () => ({
 	  },
 	},
 }))
-
-import { requireAuth } from '../../middleware/auth'
-import { supabase } from '../../lib/supabase'
-import { prisma } from '../../lib/prisma'
 
 const mockRes = () => {
 	const res = {} as Response
