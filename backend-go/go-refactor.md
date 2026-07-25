@@ -28,17 +28,21 @@
 - ✅ `PATCH /api/meetings/{id}`
 - ✅ `DELETE /api/meetings/{id}`
 
-**Learning** 
-- ✅ Where and when does the encryption happens
-
 **Topics** (service + handler + routes)
-- ⬜ `POST /api/topics`
-- ⬜ `PATCH /api/topics/{id}`
-- ⬜ `DELETE /api/topics/{id}`
+- ✅ `POST /api/topics`
+- ✅ `PATCH /api/topics/{id}`
+- ✅ `DELETE /api/topics/{id}`
+
+**Themes** (service + handler + routes)
+- ✅ `Get /api/chapters/{id}/themes`
+- ✅ `POST /api/chapters/{id}/themes`
+- ✅ `POST /api/topics/{id}/themes`
+- ✅ `DELETE /api/topics/{id}/themes/{themeId}`
 
 **Users** (service + handler + routes)
-- ⬜ `GET /api/users/me`
-- ⬜ `PATCH /api/users/me`
+- ✅ `GET /api/users/me`
+- ✅ `PATCH /api/users/me`
+- ✅ `DELETE /api/users/me`
 
 **Auth**
 - ⬜ `POST /api/auth/verify`

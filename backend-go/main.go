@@ -31,11 +31,17 @@ func main() {
 	chapterService := services.NewChapterService(pool)
 	memberService := services.NewMemberService(pool)
 	meetingService := services.NewMeetingService(pool)
+	topicService := services.NewTopicService(pool)
+	themeService := services.NewThemeService(pool)
+	userService := services.NewUserService(pool)
 
 	// Initialize handlers from services
 	chapterHandler := routes.NewChapterHandler(chapterService)
 	memberHandler := routes.NewMemberHandler(memberService)
 	meetingHandler := routes.NewMeetingHandler(meetingService)
+	topicHandler := routes.NewTopicHandler(topicService)
+	themeHandler := routes.NewThemeHandler(themeService)
+	userHandler := routes.NewUserHandler(userService)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -48,10 +54,6 @@ func main() {
 	// Protected routes (auth required)
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAuth(cfg.JWTSecret))
-		r.Get("/api/me", func(w http.ResponseWriter, req *http.Request) {
-			userID := middleware.UserIDFromContext(req.Context())
-			fmt.Fprintf(w, `{"userID":"%s"}`, userID)
-		})
 
 		// Chapters
 		r.Get("/api/chapters", chapterHandler.List)
@@ -65,10 +67,25 @@ func main() {
 		
 		// Meetings
 		r.Post("/api/meetings", meetingHandler.Create)
-		r.Get("/api/meetings/{id}", meetingHandler.GetByID)
 		r.Get("/api/meetings/chapter/{id}", meetingHandler.GetByChapterID)
+		r.Get("/api/meetings/{id}", meetingHandler.GetByID)
 		r.Patch("/api/meetings/{id}", meetingHandler.Update)
 		r.Delete("/api/meetings/{id}", meetingHandler.Delete)
+
+		// Topics
+		r.Post("/api/topics", topicHandler.Create)
+		r.Patch("/api/topics/{id}", topicHandler.Update)
+		r.Delete("/api/topics/{id}", topicHandler.Delete)
+
+		// Themes
+		r.Get("/api/chapters/{id}/themes", themeHandler.ListByChapter)
+		r.Post("/api/topics/{id}/themes", themeHandler.LinkToTopic)
+		r.Delete("/api/topics/{id}/themes/{themeId}", themeHandler.RemoveFromTopic)
+
+		// User
+		r.Get("/api/users/me", userHandler.GetByID)
+		r.Patch("/api/users/me", userHandler.Update)
+		r.Delete("/api/users/me", userHandler.Update)
 	})
 
 	addr := ":" + cfg.Port
