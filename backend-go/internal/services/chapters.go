@@ -6,6 +6,8 @@ import (
 
 	"github.com/all-things-book-club/internal/crypto"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/all-things-book-club/internal/db"
 )
 
 // CreateChapterInput is the data the client sends when creating a chapter.
@@ -46,6 +48,8 @@ func NewChapterService(db *pgxpool.Pool) *ChapterService {
 
 // ListForUser returns all chapters the given user is a member of.
 func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chapter, error) {
+	
+	// Note: No membership check since its part of the query
 	rows, err := s.db.Query(ctx, `
 		SELECT c.id, c.name, c.creator_id, c.is_public, c.created_at
 		FROM chapters c
@@ -122,6 +126,7 @@ func (s *ChapterService) Create(ctx context.Context, input CreateChapterInput, c
 }
 
 func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID string) (*Chapter, error) {
+	// Note: No membership check since its part of the query
 	var ch Chapter
 	err := s.db.QueryRow(ctx, `
 		SELECT c.id, c.name, c.creator_id, c.is_public, c.created_at
@@ -136,9 +141,17 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	return &ch, nil
 }
 
-func (s *ChapterService) Update(ctx context.Context, input CreateChapterInput, chapterID string) (*Chapter, error) {
+func (s *ChapterService) Update(ctx context.Context, input CreateChapterInput, chapterID string, userID string) (*Chapter, error) {
+	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("MeetingService.Create: %w", err)
+	}
+	if !ok {
+		return nil, ErrNotMember
+	}
+
 	var ch Chapter
-	err := s.db.QueryRow(ctx, `
+	err = s.db.QueryRow(ctx, `
 		UPDATE chapters
 		SET name = $1, is_public = $2, encrypted_blob = $3, nonce = $4, updated_at = now()
 		WHERE id = $5
@@ -151,8 +164,15 @@ func (s *ChapterService) Update(ctx context.Context, input CreateChapterInput, c
 	return &ch, nil
 }
 
-func (s *ChapterService) Delete(ctx context.Context, chapterID string) error {
-	_, err := s.db.Exec(ctx, `DELETE FROM chapters WHERE id = $1`, chapterID)
+func (s *ChapterService) Delete(ctx context.Context, chapterID string, userID string) error {
+	ok, err := db.IsAdmin(ctx, s.db, chapterID, userID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.Create: %w", err)
+	}
+	if !ok {
+		return ErrNotMember
+	}
+	_, err = s.db.Exec(ctx, `DELETE FROM chapters WHERE id = $1`, chapterID)
 	if err != nil {
 		return fmt.Errorf("ChapterService.Delete: %w", err)
 	}

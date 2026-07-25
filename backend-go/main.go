@@ -30,10 +30,12 @@ func main() {
 	// Initialize services from the database pool
 	chapterService := services.NewChapterService(pool)
 	memberService := services.NewMemberService(pool)
+	meetingService := services.NewMeetingService(pool)
 
 	// Initialize handlers from services
 	chapterHandler := routes.NewChapterHandler(chapterService)
 	memberHandler := routes.NewMemberHandler(memberService)
+	meetingHandler := routes.NewMeetingHandler(meetingService)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -60,6 +62,13 @@ func main() {
 
 		// Members
 		r.Post("/api/members", memberHandler.Create)
+		
+		// Meetings
+		r.Post("/api/meetings", meetingHandler.Create)
+		r.Get("/api/meetings/{id}", meetingHandler.GetByID)
+		r.Get("/api/meetings/chapter/{id}", meetingHandler.GetByChapterID)
+		r.Patch("/api/meetings/{id}", meetingHandler.Update)
+		r.Delete("/api/meetings/{id}", meetingHandler.Delete)
 	})
 
 	addr := ":" + cfg.Port

@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/all-things-book-club/internal/middleware"
@@ -78,8 +79,9 @@ func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	chapterID := chi.URLParam(r, "id")
+	userID := middleware.UserIDFromContext(r.Context())
 
-	chapter, err := h.chapters.Update(r.Context(), input, chapterID)
+	chapter, err := h.chapters.Update(r.Context(), input, chapterID, userID)
 	if err != nil {
 		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 		return
@@ -91,8 +93,9 @@ func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 func (h *ChapterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	chapterID := chi.URLParam(r, "id")
+	userID := middleware.UserIDFromContext(r.Context())
 
-	err := h.chapters.Delete(r.Context(), chapterID)
+	err := h.chapters.Delete(r.Context(), chapterID, userID)
 	if err != nil {
 		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
 		return
