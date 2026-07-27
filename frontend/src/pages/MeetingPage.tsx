@@ -4,8 +4,8 @@ import { Nav } from '../components/Nav'
 import { SpinWheel } from '../components/SpinWheel'
 import { TopicModal } from '../components/TopicModal'
 import { LoadingSpinner } from '../components/LoadingSpinner'
-import { getMeeting, createTopic, updateTopicStatus, deleteTopic } from '../api/topics'
-import { updateMeeting } from '../api/meetings'
+import { createTopic, updateTopicStatus, deleteTopic } from '../api/topics'
+import { updateMeeting, getMeetingById } from '../api/meetings'
 // import { type MeetingWithTopics, type Topic } from '../api/types'
 import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../api/types'
 import { MeetingStatusBadge } from '../components/MeetingStatusBadge'
@@ -81,7 +81,7 @@ export function MeetingPage() {
 
 	useEffect(() => {
 		if (!id) return
-		getMeeting(id)
+		getMeetingById(id)
 			.then((meeting) => {
 				setMeeting(meeting)
 			})
