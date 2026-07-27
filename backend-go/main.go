@@ -83,6 +83,7 @@ func main() {
 		r.Delete("/api/topics/{id}/themes/{themeId}", themeHandler.RemoveFromTopic)
 
 		// User
+		r.Get("/api/users/me/salt", userHandler.GetSalt)
 		r.Get("/api/users/me", userHandler.GetByID)
 		r.Patch("/api/users/me", userHandler.Update)
 		r.Delete("/api/users/me", userHandler.Update)

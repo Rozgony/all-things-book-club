@@ -40,6 +40,7 @@ type Meeting struct {
 	Status    			string  `json:"status"`
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
+	Topics				[]*Topic `json:"topics"`
 }
 
 func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID string) (*Meeting, error) {
@@ -90,6 +91,25 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	}
 	if !ok {
 		return nil, db.ErrNotMember
+	}
+
+	// Fetch topics for this meeting
+	rows, err := s.db.Query(ctx, `
+		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at, updated_at
+		FROM topics
+		WHERE meeting_id = $1
+	`, meetingID)
+	if err != nil {
+		return nil, fmt.Errorf("MeetingService.GetByID: fetch topics: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var t Topic
+		if err := rows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("MeetingService.GetByID: scan topic: %w", err)
+		}
+		m.Topics = append(m.Topics, &t)
 	}
 
 	return &m, nil

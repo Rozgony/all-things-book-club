@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/all-things-book-club/internal/crypto"
 	"github.com/all-things-book-club/internal/db"
 )
 
@@ -28,6 +30,39 @@ type User struct {
 	Nonce         []byte `json:"nonce"`
 	CreatedAt     string `json:"createdAt"`
 	UpdatedAt     string `json:"updatedAt"`
+}
+
+// GetOrCreateSalt returns the user's key derivation salt, creating one if it doesn't exist yet.
+// The frontend uses this salt with the user's password to derive their encryption key.
+func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (string, error) {
+	// Try to get existing salt
+	var salt string
+	err := s.db.QueryRow(ctx, `
+		SELECT key_derivation_salt FROM users WHERE id = $1
+	`, userID).Scan(&salt)
+
+	// Salt exists — return it
+	if err == nil && salt != "" {
+		return salt, nil
+	}
+
+	// No salt yet — generate one and upsert the user row
+	saltBytes, err := crypto.RandomBytes(32)
+	if err != nil {
+		return "", fmt.Errorf("UserService.GetOrCreateSalt: generate salt: %w", err)
+	}
+	salt = hex.EncodeToString(saltBytes)
+
+	_, err = s.db.Exec(ctx, `
+		INSERT INTO users (id, key_derivation_salt, created_at, updated_at)
+		VALUES ($1, $2, now(), now())
+		ON CONFLICT (id) DO UPDATE SET key_derivation_salt = EXCLUDED.key_derivation_salt
+	`, userID, salt)
+	if err != nil {
+		return "", fmt.Errorf("UserService.GetOrCreateSalt: upsert: %w", err)
+	}
+
+	return salt, nil
 }
 
 func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error) {

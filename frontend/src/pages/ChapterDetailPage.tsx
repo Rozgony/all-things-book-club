@@ -102,7 +102,7 @@ export function ChapterDetailPage() {
 
 	return (
 	  	<div className="min-h-screen bg-cream">
-			<Nav showLogout={true} showProfile={true} showChapters={true} />
+			<Nav showLogout={true} showProfile={true} />
 
 			<main className="max-w-2xl mx-auto px-4 py-10">
 				<ChapterHeader

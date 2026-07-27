@@ -25,12 +25,14 @@ type TopicInput struct {
 }
 
 type Topic struct {
-	ID            string `json:"id"`
-	ChapterID     string `json:"chapterId"`
-	EncryptedBlob []byte `json:"encryptedBlob"`
-	Nonce         []byte `json:"nonce"`
-	CreatedAt     string `json:"createdAt"`
-	UpdatedAt     string `json:"updatedAt"`
+	ID            string  `json:"id"`
+	ChapterID     string  `json:"chapterId"`
+	MeetingID     *string `json:"meetingId"`
+	Status        string  `json:"status"`
+	EncryptedBlob []byte  `json:"encryptedBlob"`
+	Nonce         []byte  `json:"nonce"`
+	CreatedAt     string  `json:"createdAt"`
+	UpdatedAt     string  `json:"updatedAt"`
 }
 
 func (s *TopicService) Create(ctx context.Context, input TopicInput, userID string) (*Topic, error) {

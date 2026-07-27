@@ -2,6 +2,10 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Nav } from '../components/Nav'
+import { deriveUserKey } from '../lib/crypto'
+import { setUserKey } from '../lib/keyStore'
+
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
 export function LoginPage() {
 	const [email, setEmail] = useState('')
@@ -15,15 +19,35 @@ export function LoginPage() {
 	  setError(null)
 	  setLoading(true)
 
-	  const { error } = await supabase.auth.signInWithPassword({ email, password })
+	  // Step 1: Authenticate with Supabase
+	  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password })
 
-	  if (error) {
-	    setError(error.message)
-	  } else {
-	    navigate('/profile')
+	  if (authError) {
+	    setError(authError.message)
+	    setLoading(false)
+	    return
 	  }
 
+	  // Step 2: Fetch (or create) the user's key derivation salt from our backend
+	  const saltRes = await fetch(`${API_BASE}/users/me/salt`, {
+	    headers: { Authorization: `Bearer ${authData.session?.access_token}` }
+	  })
+
+	  if (!saltRes.ok) {
+	    setError('Failed to initialize encryption. Please try again.')
+	    setLoading(false)
+	    return
+	  }
+
+	  const { salt } = await saltRes.json()
+
+	  // Step 3: Derive the user's encryption key from their password + salt
+	  // This is deterministic — same password + salt = same key on any device
+	  const key = await deriveUserKey(password, salt)
+	  setUserKey(key)
+
 	  setLoading(false)
+	  navigate('/profile')
 	}
 
 	return (

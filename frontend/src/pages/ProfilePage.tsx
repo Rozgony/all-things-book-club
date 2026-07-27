@@ -64,7 +64,7 @@ export function ProfilePage() {
 
 	return (
 	  <div className="min-h-screen bg-cream">
-	    <Nav showLogout={true} showChapters={true} />
+	    <Nav showLogout={true} />
 	    <ProfileSection
 	      profile={profile}
 	      editing={editing}

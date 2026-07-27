@@ -18,6 +18,19 @@ func NewUserHandler(s *services.UserService) *UserHandler {
 	return &UserHandler{users: s}
 }
 
+func (h *UserHandler) GetSalt(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+
+	salt, err := h.users.GetOrCreateSalt(r.Context(), userID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"salt": salt})
+}
+
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 

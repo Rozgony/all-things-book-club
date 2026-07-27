@@ -45,17 +45,22 @@
 - ✅ `DELETE /api/users/me`
 
 **Database**
-- ⬜ Write SQL migrations for the new E2EE schema (chapters, chapter_members, meetings, topics, etc.)
-- ⬜ Run migrations against Supabase
+- ✅ Write SQL migrations for the new E2EE schema (chapters, chapter_members, meetings, topics, etc.)
 
 **Cleanup**
 - ✅ Error handler middleware (map `pgx.ErrNoRows` → 404, etc.)
 - ✅ Rename `CreateChapterInput` → `UpdateChapterInput` for PATCH handler
-- ⬜ Add .env file for local development
+- ✅ Add .env file for local development
 
 **Learning** 
 - ✅ Where and when does the encryption happens
 
+**Migrate Frontend** 
+- ✅ Encryption set up
+- ⬜ Encryption & Decryption of data before send
+- ⬜ Change password UI
+
 **Deploy**
-- ⬜ Set up Railway to run the Go app and deploy it
+- ⬜ Run migrations against Supabase
+- ⬜ Set up Railway and Vercel to run the Go app and deploy it
 - ⬜ Delete the Express app code

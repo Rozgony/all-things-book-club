@@ -188,7 +188,7 @@ export function MeetingPage() {
 
 	return (
 		<div className="min-h-screen bg-cream">
-			<Nav showLogout={true} showProfile={true} showChapters={true} />
+			<Nav showLogout={true} showProfile={true} />
 
 			<main className="max-w-5gl mx-auto px-4 py-10">
 				<div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-8">

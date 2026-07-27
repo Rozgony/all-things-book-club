@@ -22,14 +22,18 @@ export enum VisibilityLevel {
 }
 
 export interface Chapter {
-	id: string
-	name: string
-	description: string | null
-	creatorId: string
-	createdAt: string
-	updatedAt: string
-	members: ChapterMember[]
-	visibility: VisibilityLevel
+  id: string
+  creatorId: string
+  isPublic: boolean
+  encryptedBlob: string | null
+  nonce: string | null
+  encryptedChapterKey: string | null
+  keyNonce: string | null
+  createdAt: string
+  updatedAt: string
+  // Decrypted fields — populated client-side after decryption
+  name: string
+  description: string | null
 }
 
 export const visibilityReadable = {
@@ -74,13 +78,16 @@ export type TopicStatus = 'PENDING' | 'SELECTED' | 'DISCUSSED'
 
 export interface Topic {
 	id: string
-	meetingId: string
-	title: string
-	description: string | null
+	chapterId: string
 	createdById: string | null
 	wheelStatus: TopicStatus
 	createdAt: string
 	updatedAt: string
+	encryptedBlob?: string
+	nonce?: string
+	// Decrypted fields — populated client-side after decryption
+	title: string
+	description: string | null
 }
 
 // export interface MeetingWithTopics extends Meeting {
