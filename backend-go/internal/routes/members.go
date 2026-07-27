@@ -17,17 +17,17 @@ func NewMemberHandler(s *services.MemberService) *MemberHandler {
 
 func (h *MemberHandler) Create(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.CreateMemberInput
+	var input services.MemberInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
 	member, err := h.members.Create(r.Context(), input)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 

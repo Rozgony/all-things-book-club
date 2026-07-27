@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +18,7 @@ func NewTopicService(db *pgxpool.Pool) *TopicService {
 	return &TopicService{db: db}
 }
 
-type CreateTopicInput struct {
+type TopicInput struct {
 	ChapterID     string `json:"chapterId"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
@@ -34,9 +33,7 @@ type Topic struct {
 	UpdatedAt     string `json:"updatedAt"`
 }
 
-var ErrTopicNotFound = errors.New("topic not found")
-
-func (s *TopicService) Create(ctx context.Context, input CreateTopicInput, userID string) (*Topic, error) {
+func (s *TopicService) Create(ctx context.Context, input TopicInput, userID string) (*Topic, error) {
 	topicID, err := crypto.GenerateID()
 	if err != nil {
 		return nil, fmt.Errorf("TopicService.Create: generate topic ID: %w", err)
@@ -48,7 +45,7 @@ func (s *TopicService) Create(ctx context.Context, input CreateTopicInput, userI
 		return nil, fmt.Errorf("TopicService.Create: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var t Topic
@@ -65,7 +62,7 @@ func (s *TopicService) Create(ctx context.Context, input CreateTopicInput, userI
 	return &t, nil
 }
 
-func (s *TopicService) Update(ctx context.Context, input CreateTopicInput, topicID string, userID string) (*Topic, error) {
+func (s *TopicService) Update(ctx context.Context, input TopicInput, topicID string, userID string) (*Topic, error) {
 	// Get the topic's chapter first to verify membership
 	var chapterID string
 	err := s.db.QueryRow(ctx, `
@@ -81,7 +78,7 @@ func (s *TopicService) Update(ctx context.Context, input CreateTopicInput, topic
 		return nil, fmt.Errorf("TopicService.Update: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var t Topic
@@ -115,7 +112,7 @@ func (s *TopicService) Delete(ctx context.Context, topicID string, userID string
 		return fmt.Errorf("TopicService.Delete: %w", err)
 	}
 	if !ok {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 
 	_, err = s.db.Exec(ctx, `DELETE FROM topics WHERE id = $1`, topicID)

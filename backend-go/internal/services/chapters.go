@@ -10,9 +10,9 @@ import (
 	"github.com/all-things-book-club/internal/db"
 )
 
-// CreateChapterInput is the data the client sends when creating a chapter.
+// ChapterInput is the data the client sends when creating a chapter.
 // The server stores name plaintext, and the encrypted blob opaquely.
-type CreateChapterInput struct {
+type ChapterInput struct {
 	Name          string `json:"name"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
@@ -82,7 +82,7 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 // Create inserts a new chapter and adds the creator as an ADMIN member.
 // This runs both inserts in a transaction — if the membership insert fails,
 // the chapter insert is rolled back. You never want a chapter with no members.
-func (s *ChapterService) Create(ctx context.Context, input CreateChapterInput, creatorID string) (*Chapter, error) {
+func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creatorID string) (*Chapter, error) {
 	chapterID, err := crypto.GenerateID()
 	if err != nil {
 		return nil, fmt.Errorf("ChapterService.Create: generate chapter ID: %w", err)
@@ -141,13 +141,13 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	return &ch, nil
 }
 
-func (s *ChapterService) Update(ctx context.Context, input CreateChapterInput, chapterID string, userID string) (*Chapter, error) {
+func (s *ChapterService) Update(ctx context.Context, input ChapterInput, chapterID string, userID string) (*Chapter, error) {
 	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.Create: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var ch Chapter
@@ -170,7 +170,7 @@ func (s *ChapterService) Delete(ctx context.Context, chapterID string, userID st
 		return fmt.Errorf("MeetingService.Create: %w", err)
 	}
 	if !ok {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 	_, err = s.db.Exec(ctx, `DELETE FROM chapters WHERE id = $1`, chapterID)
 	if err != nil {

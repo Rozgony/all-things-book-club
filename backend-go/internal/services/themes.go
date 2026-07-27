@@ -26,9 +26,9 @@ type Theme struct {
 	CreatedAt     string `json:"createdAt"`
 }
 
-// CreateThemeInput is used when the frontend creates a brand new theme.
+// ThemeInput is used when the frontend creates a brand new theme.
 // The name is encrypted client-side before sending.
-type CreateThemeInput struct {
+type ThemeInput struct {
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
 }
@@ -49,7 +49,7 @@ func (s *ThemeService) ListByChapter(ctx context.Context, chapterID string, user
 		return nil, fmt.Errorf("ThemeService.ListByChapter: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	rows, err := s.db.Query(ctx, `
@@ -93,7 +93,7 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 		return fmt.Errorf("ThemeService.LinkToTopic: %w", err)
 	}
 	if !ok {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 
 	themeID := input.ThemeID
@@ -171,7 +171,7 @@ func (s *ThemeService) RemoveFromTopic(ctx context.Context, topicID string, them
 		return fmt.Errorf("ThemeService.RemoveFromTopic: %w", err)
 	}
 	if !ok {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 
 	_, err = s.db.Exec(ctx, `

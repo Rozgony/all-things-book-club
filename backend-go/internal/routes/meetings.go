@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -21,23 +20,19 @@ func NewMeetingHandler(s *services.MeetingService) *MeetingHandler {
 
 func (h *MeetingHandler) Create(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.CreateMeetingInput
+	var input services.MeetingInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
 	userID := middleware.UserIDFromContext(r.Context())
 
 	meeting, err := h.meetings.Create(r.Context(), input, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -51,12 +46,8 @@ func (h *MeetingHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	meeting, err := h.meetings.GetByID(r.Context(), meetingID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -69,12 +60,8 @@ func (h *MeetingHandler) GetByChapterID(w http.ResponseWriter, r *http.Request) 
 	userID := middleware.UserIDFromContext(r.Context())
 
 	meetings, err := h.meetings.GetByChapterID(r.Context(), meetingID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -84,11 +71,11 @@ func (h *MeetingHandler) GetByChapterID(w http.ResponseWriter, r *http.Request) 
 
 func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.CreateMeetingInput
+	var input services.MeetingInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
@@ -96,12 +83,8 @@ func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	meeting, err := h.meetings.Update(r.Context(), input, meetingID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -115,7 +98,7 @@ func (h *MeetingHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err := h.meetings.Delete(r.Context(), meetingID, userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 

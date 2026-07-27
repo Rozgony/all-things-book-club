@@ -2,7 +2,6 @@ package routes
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -26,12 +25,8 @@ func (h *ThemeHandler) ListByChapter(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	themes, err := h.themes.ListByChapter(r.Context(), chapterID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -46,7 +41,7 @@ func (h *ThemeHandler) LinkToTopic(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
@@ -54,12 +49,8 @@ func (h *ThemeHandler) LinkToTopic(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	err = h.themes.LinkToTopic(r.Context(), input, topicID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -74,12 +65,8 @@ func (h *ThemeHandler) RemoveFromTopic(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 
 	err := h.themes.RemoveFromTopic(r.Context(), topicID, themeID, userID)
-	if errors.Is(err, services.ErrNotMember) {
-		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
-		return
-	}
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 

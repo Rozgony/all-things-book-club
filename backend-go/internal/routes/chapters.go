@@ -23,7 +23,7 @@ func (h *ChapterHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	chapters, err := h.chapters.ListForUser(r.Context(), userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -33,11 +33,11 @@ func (h *ChapterHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.CreateChapterInput
+	var input services.ChapterInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
@@ -45,7 +45,7 @@ func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	chapter, err := h.chapters.Create(r.Context(), input, userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func (h *ChapterHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	chapter, err := h.chapters.GetByID(r.Context(), chapterID, userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -70,11 +70,11 @@ func (h *ChapterHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.CreateChapterInput
+	var input services.ChapterInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
-		http.Error(w, `{"error":"invalid request body"}`, http.StatusBadRequest)
+		handleError(w, badRequest(err))
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *ChapterHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	chapter, err := h.chapters.Update(r.Context(), input, chapterID, userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 
@@ -97,7 +97,7 @@ func (h *ChapterHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err := h.chapters.Delete(r.Context(), chapterID, userID)
 	if err != nil {
-		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		handleError(w, err)
 		return
 	}
 

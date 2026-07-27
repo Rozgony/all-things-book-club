@@ -2,10 +2,13 @@ package db
 
 import (
     "context"
+    "errors"
     "fmt"
 
     "github.com/jackc/pgx/v5/pgxpool"
 )
+
+var ErrNotMember = errors.New("user is not a member of this chapter")
 
 // IsMember checks whether a user belongs to a chapter.
 // Exported (capitalized) so other packages can import and use it.

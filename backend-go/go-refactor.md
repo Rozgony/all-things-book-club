@@ -44,16 +44,13 @@
 - ✅ `PATCH /api/users/me`
 - ✅ `DELETE /api/users/me`
 
-**Auth**
-- ⬜ `POST /api/auth/verify`
-
 **Database**
 - ⬜ Write SQL migrations for the new E2EE schema (chapters, chapter_members, meetings, topics, etc.)
 - ⬜ Run migrations against Supabase
 
 **Cleanup**
-- ⬜ Error handler middleware (map `pgx.ErrNoRows` → 404, etc.)
-- ⬜ Rename `CreateChapterInput` → `UpdateChapterInput` for PATCH handler
+- ✅ Error handler middleware (map `pgx.ErrNoRows` → 404, etc.)
+- ✅ Rename `CreateChapterInput` → `UpdateChapterInput` for PATCH handler
 - ⬜ Add .env file for local development
 
 **Learning** 

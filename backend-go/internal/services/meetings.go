@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -21,9 +20,9 @@ func NewMeetingService(db *pgxpool.Pool) *MeetingService {
 	return &MeetingService{db: db}
 }
 
-// CreateMeetingInput is the data the client sends when creating a member.
+// MeetingInput is the data the client sends when creating a member.
 // The server stores name plaintext, and the encrypted blob opaquely.
-type CreateMeetingInput struct {
+type MeetingInput struct {
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
 	ChapterID      		string  `json:"chapterId"`
@@ -43,9 +42,7 @@ type Meeting struct {
 	Nonce         		[]byte 	`json:"nonce"`
 }
 
-var ErrNotMember = errors.New("user is not a member of this chapter")
-
-func (s *MeetingService) Create(ctx context.Context, input CreateMeetingInput, userID string) (*Meeting, error) {
+func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID string) (*Meeting, error) {
 	meetingID, err := crypto.GenerateID()
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.Create: generate member ID: %w", err)
@@ -57,7 +54,7 @@ func (s *MeetingService) Create(ctx context.Context, input CreateMeetingInput, u
 		return nil, fmt.Errorf("MeetingService.Create: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var m Meeting
@@ -78,11 +75,9 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	var m Meeting
 	err := s.db.QueryRow(ctx, `
-		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, nonce, encrypted_blob
-		FROM meetings m
-		JOIN topics t ON t.meeting_id = m.id
-		WHERE m.id = $1
-		RETURNING id, chapter_id, duration, scheduled_at, recurring_group_id, status, nonce, encrypted_blob
+		SELECT id, chapter_id, duration, scheduled_at, recurring_group_id, status, nonce, encrypted_blob
+		FROM meetings
+		WHERE id = $1
 	`, meetingID).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob)
 	if err != nil {
@@ -94,54 +89,60 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", memberErr)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	return &m, nil
 }
 
-func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, userID string) (*Meeting, error) {
+func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, userID string) ([]*Meeting, error) {
 
 	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByChapterID: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
-	var m Meeting
-	err = s.db.QueryRow(ctx, `
-		SELECT m.id, m.chapter_id, m.scheduled_at, m.duration, m.recurring_group_id, m.status, nonce, encrypted_blob
-		FROM meetings m
-		JOIN topics t ON t.meeting_id = m.id
-		WHERE m.chapter_id = $1
-		RETURNING id, chapter_id, duration, scheduled_at, status, nonce, encrypted_blob
-	`, chapterID).
-		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.Status, &m.Nonce, &m.EncryptedBlob)
+	rows, err := s.db.Query(ctx, `
+		SELECT id, chapter_id, scheduled_at, duration, recurring_group_id, status, nonce, encrypted_blob
+		FROM meetings
+		WHERE chapter_id = $1
+	`, chapterID)
 	if err != nil {
-		return nil, fmt.Errorf("MeetingService.GetByChapterID: %w", err)
+		return nil, fmt.Errorf("MeetingService.GetByChapterID: query: %w", err)
+	}
+	defer rows.Close()
+
+	meetings := []*Meeting{}
+	for rows.Next() {
+		var m Meeting
+		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob); err != nil {
+			return nil, fmt.Errorf("MeetingService.GetByChapterID: scan: %w", err)
+		}
+		meetings = append(meetings, &m)
 	}
 
-	return &m, nil
+	return meetings, nil
 }
 
-func (s *MeetingService) Update(ctx context.Context, input CreateMeetingInput, meetingID string, userID string) (*Meeting, error) {
+func (s *MeetingService) Update(ctx context.Context, input MeetingInput, meetingID string, userID string) (*Meeting, error) {
 		// Verify the caller is a member of the chapter
 	ok, err := db.IsMember(ctx, s.db, input.ChapterID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.Update: %w", err)
 	}
 	if !ok {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var m Meeting
 	err = s.db.QueryRow(ctx, `
 		UPDATE meetings
-		SET scheduled_at = $1, duration = $2, recurrin_grou_id = $3, encrypted_blob = $4, nonce = $5, updated_at = now()
+		SET scheduled_at = $1, duration = $2, recurrin_group_id = $3, encrypted_blob = $4, nonce = $5, updated_at = now()
 		WHERE id = $6
-		RETURNING id, scheduled_at, duration, recurrin_grou_id, encrypted_blob, nonce
+		RETURNING id, scheduled_at, duration, recurrin_group_id, encrypted_blob, nonce
 	`, input.ScheduledAt, input.Duration, input.RecurringGroupId, input.EncryptedBlob, input.Nonce, meetingID).
 		Scan(&m.ID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.EncryptedBlob, &m.Nonce)
 	if err != nil {
@@ -157,7 +158,6 @@ func (s *MeetingService) Delete(ctx context.Context, meetingID string, userID st
 		SELECT m.id, m.chapter_id
 		FROM meetings m
 		WHERE m.id = $1
-		RETURNING chapter_id
 	`, meetingID).
 		Scan(&m.ChapterID)
 	if err != nil {
@@ -169,10 +169,10 @@ func (s *MeetingService) Delete(ctx context.Context, meetingID string, userID st
 		return fmt.Errorf("MeetingService.Delete: %w", adminErr)
 	}
 	if !ok {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 
-	_, deleteErr := s.db.Exec(ctx, `DELETE FROM chapters WHERE id = $1`, meetingID)
+	_, deleteErr := s.db.Exec(ctx, `DELETE FROM meetings WHERE id = $1`, meetingID)
 	if deleteErr != nil {
 		return fmt.Errorf("MeetingService.Delete: %w", deleteErr)
 	}

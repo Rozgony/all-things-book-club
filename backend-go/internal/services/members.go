@@ -24,9 +24,9 @@ const (
     RoleMember ChapterMemberRole = "MEMBER"
 )
 
-// CreateMemberInput is the data the client sends when creating a member.
+// MemberInput is the data the client sends when creating a member.
 // The server stores name plaintext, and the encrypted blob opaquely.
-type CreateMemberInput struct {
+type MemberInput struct {
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
 	UserId         string   `json:"userId"`
@@ -47,7 +47,7 @@ type ChapterMember struct {
 	JoinedAt       string   `json:"joinedAt"`
 }
 
-func (s *MemberService) Create(ctx context.Context, input CreateMemberInput) (*ChapterMember, error) {
+func (s *MemberService) Create(ctx context.Context, input MemberInput) (*ChapterMember, error) {
 	memberID, err := crypto.GenerateID()
 	if err != nil {
 		return nil, fmt.Errorf("MemberService.Create: generate member ID: %w", err)

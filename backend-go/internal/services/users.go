@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/all-things-book-club/internal/db"
 )
 
 type UserService struct {
@@ -16,7 +17,7 @@ func NewUserService(db *pgxpool.Pool) *UserService {
 	return &UserService{db: db}
 }
 
-type UpdateUserInput struct {
+type UserInput struct {
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
 }
@@ -28,8 +29,6 @@ type User struct {
 	CreatedAt     string `json:"createdAt"`
 	UpdatedAt     string `json:"updatedAt"`
 }
-
-var ErrUserNotFound = errors.New("User not found")
 
 func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error) {
 	var u User
@@ -45,9 +44,9 @@ func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error)
 	return &u, nil
 }
 
-func (s *UserService) Update(ctx context.Context, input UpdateUserInput, userIdParam string, userID string) (*User, error) {
+func (s *UserService) Update(ctx context.Context, input UserInput, userIdParam string, userID string) (*User, error) {
 	if userIdParam != userID {
-		return nil, ErrNotMember
+		return nil, db.ErrNotMember
 	}
 
 	var u User
@@ -67,7 +66,7 @@ func (s *UserService) Update(ctx context.Context, input UpdateUserInput, userIdP
 
 func (s *UserService) Delete(ctx context.Context, userIdParam string, userID string) error {
 	if userIdParam != userID {
-		return ErrNotMember
+		return db.ErrNotMember
 	}
 	_, err := s.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	if err != nil {
