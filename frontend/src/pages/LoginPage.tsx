@@ -44,7 +44,7 @@ export function LoginPage() {
 	  // Step 3: Derive the user's encryption key from their password + salt
 	  // This is deterministic — same password + salt = same key on any device
 	  const key = await deriveUserKey(password, salt)
-	  setUserKey(key)
+	  await setUserKey(key)
 
 	  setLoading(false)
 	  navigate('/profile')

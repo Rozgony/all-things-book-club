@@ -13,8 +13,14 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes))
 }
 
-function fromBase64(str: string): Uint8Array {
-  return Uint8Array.from(atob(str), c => c.charCodeAt(0))
+function fromBase64(str: string): Uint8Array<ArrayBuffer> {
+  const binary = atob(str)
+  const buf = new ArrayBuffer(binary.length)
+  const bytes = new Uint8Array(buf)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
 }
 
 // ─── Key Derivation ──────────────────────────────────────────────────────────
@@ -46,7 +52,7 @@ export async function deriveUserKey(password: string, saltHex: string): Promise<
     { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
-    false,       // not extractable — key never leaves the browser as raw bytes
+    true,        // extractable — needed to export to sessionStorage for reload support
     ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
   )
 }

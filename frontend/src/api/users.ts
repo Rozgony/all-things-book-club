@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase'
 import type { UserProfile } from './types'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
 async function getAuthHeaders(): Promise<HeadersInit> {
 	const { data: { session } } = await supabase.auth.getSession()

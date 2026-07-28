@@ -31,15 +31,10 @@ export interface Chapter {
   keyNonce: string | null
   createdAt: string
   updatedAt: string
+  members?: ChapterMember[]
   // Decrypted fields — populated client-side after decryption
   name: string
   description: string | null
-}
-
-export const visibilityReadable = {
-	ACCEPTING_MEMBERS: 'Accepting Members (Public)',
-	INVITE_ONLY: 'Invite Only (Public)',
-	MEMBERS_ONLY: 'Members Only (Private)'
 }
 
 export enum MeetingStatus {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { createChapter } from '../api/chapters'
-import { VisibilityLevel, visibilityReadable, type Chapter } from '../api/types'
+import { VisibilityLevel, type Chapter } from '../api/types'
 
 interface CreateChapterFormProps {
 	onChapterCreated: (chapter: Chapter) => void
@@ -52,18 +52,6 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 					className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 				/>
 	    	</div>
-			<div>
-				<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Visibility</label>
-				<select
-					value={editVisibility}
-					onChange={e => setEditVisibility(e.target.value as VisibilityLevel)}
-					className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-				>
-					{['ACCEPTING_MEMBERS', 'INVITE_ONLY', 'MEMBERS_ONLY'].map(value => (
-						<option key={value} value={value}>{visibilityReadable[value as VisibilityLevel]}</option>
-					))}
-				</select>
-			</div>
 	    	{formError && <p className="text-sm text-red-600">{formError}</p>}
 			<div className="flex gap-3">
 				<button

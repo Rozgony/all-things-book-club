@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { visibilityReadable, type Chapter, VisibilityLevel } from '../api/types'
+import { type Chapter } from '../api/types'
 
 import { ConfirmModal } from './ConfirmModal'
 
@@ -8,7 +8,6 @@ interface ChapterHeaderProps {
 	editing: boolean
 	editName: string
 	editDescription: string
-	editVisibility: string
 	editError: string | null
 	saving: boolean
 	deleting: boolean
@@ -17,7 +16,6 @@ interface ChapterHeaderProps {
 	onEdit: () => void
 	onEditNameChange: (value: string) => void
 	onEditDescriptionChange: (value: string) => void
-	onEditVisibilityChange: (value: string) => void
 	onSave: (e: React.FormEvent) => void
 	onCancel: () => void
 	onDelete: () => void
@@ -28,7 +26,6 @@ export function ChapterHeader({
 	editing,
 	editName,
 	editDescription,
-	editVisibility,
 	editError,
 	saving,
 	deleting,
@@ -37,7 +34,6 @@ export function ChapterHeader({
 	onEdit,
 	onEditNameChange,
 	onEditDescriptionChange,
-	onEditVisibilityChange,
 	onSave,
 	onCancel,
 	onDelete,
@@ -66,18 +62,6 @@ export function ChapterHeader({
 						className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 					/>
 				</div>
-				<div>
-					<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Visibility</label>
-					<select
-						value={editVisibility}
-						onChange={e => onEditVisibilityChange(e.target.value)}
-						className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-					>
-						{['ACCEPTING_MEMBERS', 'INVITE_ONLY', 'MEMBERS_ONLY'].map(value => (
-							<option key={value} value={value}>{visibilityReadable[value as VisibilityLevel]}</option>
-						))}
-					</select>
-				</div>
 				{editError && <p className="text-sm text-red-600">{editError}</p>}
 				<div className="flex gap-3">
 					<button
@@ -100,7 +84,6 @@ export function ChapterHeader({
 			<div className="flex justify-between items-start">
 				<div>
 					<h2 className="font-heading text-forest-deep">{chapter.name}</h2>
-					<h4 className="font-heading text-forest-deep">{visibilityReadable[chapter.visibility]}</h4>
 					{chapter.description && (
 						<p className="text-stone-muted mt-2">{chapter.description}</p>
 					)}

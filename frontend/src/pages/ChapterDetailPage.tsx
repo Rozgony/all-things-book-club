@@ -4,9 +4,9 @@ import { useAuthStore } from '../store/authStore'
 import { Nav } from '../components/Nav'
 import { ChapterHeader } from '../components/ChapterHeader'
 import { MeetingsList } from '../components/MeetingsList'
-import { getChapter, updateChapter, deleteChapter } from '../api/chapters'
+import { getChapterAndSetKey, updateChapter, deleteChapter } from '../api/chapters'
 import { getMeetingsByChapterId } from '../api/meetings'
-import { type Chapter, type Meeting, type VisibilityLevel } from '../api/types'
+import { type Chapter, type Meeting } from '../api/types'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function ChapterDetailPage() {
@@ -23,7 +23,6 @@ export function ChapterDetailPage() {
 	const [editing, setEditing] = useState(false)
 	const [editName, setEditName] = useState('')
 	const [editDescription, setEditDescription] = useState('')
-	const [editVisibility, setEditVisibility] = useState<string>('MEMBERS_ONLY')
 	const [saving, setSaving] = useState(false)
 	const [editError, setEditError] = useState<string | null>(null)
 
@@ -31,12 +30,11 @@ export function ChapterDetailPage() {
 
 	useEffect(() => {
 	  if (!id) return
-	  getChapter(id)
+	  getChapterAndSetKey(id)
 	    .then(chapter => {
 	      setChapter(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
-	      setEditVisibility(chapter.visibility ?? 'MEMBERS_ONLY')
 	      
 	      // Fetch meetings for this chapter
 	      setMeetingsLoading(true)
@@ -54,7 +52,7 @@ export function ChapterDetailPage() {
 	    .finally(() => setLoading(false))
 	}, [id])
 
-	const isAdmin = chapter?.members.some(m => m.userId === user?.id && m.role === 'ADMIN') ?? false
+	const isAdmin = chapter?.members?.some(m => m.userId === user?.id && m.role === 'ADMIN') ?? false
 	const isCreator = chapter?.creatorId === user?.id
 
 	const handleSave = async (e: React.FormEvent) => {
@@ -63,7 +61,7 @@ export function ChapterDetailPage() {
 	  setSaving(true)
 	  setEditError(null)
 	  try {
-	    const updated = await updateChapter(id, { name: editName, description: editDescription || undefined, visibility: editVisibility as VisibilityLevel })
+	    const updated = await updateChapter(id, { name: editName, description: editDescription || undefined})
 	    setChapter(updated)
 	    setEditing(false)
 	  } catch {
@@ -110,7 +108,6 @@ export function ChapterDetailPage() {
 					editing={editing}
 					editName={editName}
 					editDescription={editDescription}
-					editVisibility={editVisibility}
 					editError={editError}
 					saving={saving}
 					deleting={deleting}
@@ -119,7 +116,6 @@ export function ChapterDetailPage() {
 					onEdit={() => setEditing(true)}
 					onEditNameChange={setEditName}
 					onEditDescriptionChange={setEditDescription}
-					onEditVisibilityChange={setEditVisibility}
 					onSave={handleSave}
 					onCancel={() => setEditing(false)}
 					onDelete={handleDelete}
@@ -137,7 +133,7 @@ export function ChapterDetailPage() {
 				<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 					<h3 className="font-heading text-forest-deep mb-4">Members</h3>
 					<ul className="divide-y divide-warm-border">
-					{chapter.members.map(member => (
+					{chapter?.members?.map(member => (
 						<li key={member.id} className="py-3 flex justify-between items-center">
 						{/* @ts-ignore: Property 'user' does not exist on type 'ChapterMember' */}
 						<span className="text-sm text-stone">{member.user?.name}</span>

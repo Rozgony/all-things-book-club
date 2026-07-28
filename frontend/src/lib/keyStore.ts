@@ -1,20 +1,51 @@
 /**
  * In-memory key store for the current session.
  *
- * Keys are never persisted to disk — they live only in memory.
- * If the user closes the tab, they must re-derive their key on next login.
- *
- * CryptoKey objects are non-extractable (except chapterKeys which need wrapping),
- * so even if someone inspects the JS heap they can't read the raw key bytes.
+ * The user key is also mirrored to sessionStorage (as an exported JWK string)
+ * so it survives page reloads within the same tab. sessionStorage is cleared
+ * when the tab closes. Chapter keys are not persisted — they are re-derived
+ * from the encrypted chapter key in the DB using the restored user key.
  */
+
+import type { Chapter } from "../api/types"
+import { decryptChapterKey } from "./crypto"
+
+const USER_KEY_SESSION_KEY = 'atbc_user_key'
 
 let userKey: CryptoKey | null = null
 const chapterKeys = new Map<string, CryptoKey>()
 
 // ─── User Key ────────────────────────────────────────────────────────────────
 
-export function setUserKey(key: CryptoKey): void {
+export async function setUserKey(key: CryptoKey): Promise<void> {
   userKey = key
+  // Export and persist to sessionStorage so the key survives a page reload
+  const jwk = await crypto.subtle.exportKey('jwk', key)
+  sessionStorage.setItem(USER_KEY_SESSION_KEY, JSON.stringify(jwk))
+}
+
+/**
+ * Attempts to restore the user key from sessionStorage.
+ * Call this once on app startup before rendering protected content.
+ * Returns true if the key was successfully restored, false otherwise.
+ */
+export async function restoreUserKey(): Promise<boolean> {
+  const raw = sessionStorage.getItem(USER_KEY_SESSION_KEY)
+  if (!raw) return false
+  try {
+    const jwk = JSON.parse(raw) as JsonWebKey
+    userKey = await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      { name: 'AES-GCM' },
+      true,
+      ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
+    )
+    return true
+  } catch {
+    sessionStorage.removeItem(USER_KEY_SESSION_KEY)
+    return false
+  }
 }
 
 export function getUserKey(): CryptoKey {
@@ -28,6 +59,7 @@ export function hasUserKey(): boolean {
 
 export function clearUserKey(): void {
   userKey = null
+  sessionStorage.removeItem(USER_KEY_SESSION_KEY)
 }
 
 // ─── Chapter Keys ─────────────────────────────────────────────────────────────
@@ -48,5 +80,13 @@ export function hasChapterKey(chapterId: string): boolean {
 
 export function clearAll(): void {
   userKey = null
+  sessionStorage.removeItem(USER_KEY_SESSION_KEY)
   chapterKeys.clear()
+}
+
+export async function getAndSetChapterKey(chapter: Chapter): Promise<CryptoKey> {
+	const userKey = getUserKey();
+	const chapterKey = await decryptChapterKey(chapter.encryptedChapterKey!, chapter.keyNonce!, userKey)
+	setChapterKey(chapter.id, chapterKey);
+	return chapterKey
 }

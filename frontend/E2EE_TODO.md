@@ -1,31 +1,31 @@
 # E2EE Frontend To-Do
 
 ## api/topics.ts
-- [ ] Fix `API_BASE` port: `3000` → `8080`
-- [ ] `createTopic`: encrypt `{ title, description }` with `getChapterKey(chapterId)` before sending — send `encryptedBlob + nonce`, not plaintext. Needs `chapterId` (look it up from meeting or pass it in).
-- [ ] `updateTopicStatus`: currently only sends `wheelStatus` (plaintext — this is fine, server needs it). No blob change needed unless you also allow editing title/description.
-- [ ] Add `getTopicsByMeeting(meetingId)` if topics ever need to be fetched independently (currently they come embedded in `getMeetingById`).
+- [x] Fix `API_BASE` port: `3000` → `8080`
+- [x] `createTopic`: encrypt `{ title, description }` with `getChapterKey(chapterId)` before sending — send `encryptedBlob + nonce`, not plaintext. Needs `chapterId` (look it up from meeting or pass it in).
+- [x] `updateTopicStatus`: currently only sends `wheelStatus` (plaintext — this is fine, server needs it). No blob change needed unless you also allow editing title/description.
+- [-] Add `getTopicsByMeeting(meetingId)` if topics ever need to be fetched independently (currently they come embedded in `getMeetingById`).
 
 ## api/chapters.ts
-- [ ] `updateChapter`: currently sends plaintext `{ name, description }` — needs to encrypt with `getChapterKey(id)` and send `encryptedBlob + nonce` instead (marked TODO in the file).
+- [x] `updateChapter`: currently sends plaintext `{ name, description }` — needs to encrypt with `getChapterKey(id)` and send `encryptedBlob + nonce` instead (marked TODO in the file).
 
 ## api/users.ts
-- [ ] Confirm `API_BASE` points to port `8080`.
+- [x] Confirm `API_BASE` points to port `8080`.
 
 ## Key Store / Session
-- [ ] On page reload, the in-memory key store (`keyStore.ts`) is wiped. Users will see encrypted blobs instead of content. You need a strategy for this:
-  - **Option A**: Re-derive the key on reload by prompting for password again (re-login flow).
-  - **Option B**: Store the derived key in `sessionStorage` (survives reload, cleared on tab close).
-  - **Option C**: Redirect to login if `hasUserKey()` is false on any protected page.
+- [x] On page reload, the in-memory key store (`keyStore.ts`) is wiped. Users will see encrypted blobs instead of content. You need a strategy for this:
+  - [x] **Option A**: Re-derive the key on reload by prompting for password again (re-login flow).
+  - [x] **Option B**: Store the derived key in `sessionStorage` (survives reload, cleared on tab close).
+  - [x] **Option C**: Redirect to login if `hasUserKey()` is false on any protected page.
 
 ## Chapter Key Bootstrap
-- [ ] `getChapters` / `getChapter`: the chapter key is fetched from `chapter_members.encrypted_chapter_key` + `key_nonce`, but this decryption step is not implemented yet. Currently `getChapterKey(id)` assumes the key is already in the store (set during `createChapter`). On a fresh session you need to:
+- [x] `getChapters` / `getChapter`: the chapter key is fetched from `chapter_members.encrypted_chapter_key` + `key_nonce`, but this decryption step is not implemented yet. Currently `getChapterKey(id)` assumes the key is already in the store (set during `createChapter`). On a fresh session you need to:
   1. Fetch the chapter (which includes `encryptedChapterKey` + `keyNonce`)
   2. Call `decryptChapterKey(encryptedChapterKey, keyNonce, userKey)` to recover the chapter key
   3. Call `setChapterKey(chapter.id, key)` before decrypting content
 
 ## pages/MeetingPage.tsx
-- [ ] `createTopic` call passes `meetingId` and plaintext `title` — update once `api/topics.ts` is updated for E2EE. Will also need the `chapterId` (available from `meeting.chapterId`).
+- [x] `createTopic` call passes `meetingId` and plaintext `title` — update once `api/topics.ts` is updated for E2EE. Will also need the `chapterId` (available from `meeting.chapterId`).
 
 ## Themes (not yet started)
 - [ ] Create `api/themes.ts`:

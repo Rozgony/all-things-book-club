@@ -1,7 +1,7 @@
 import { getAuthHeaders } from './auth'
 import type { Chapter } from './types'
 import { generateChapterKey, encryptChapterKey, encrypt, decrypt } from '../lib/crypto'
-import { getUserKey, setChapterKey, getChapterKey } from '../lib/keyStore'
+import { getUserKey, setChapterKey, getChapterKey, getAndSetChapterKey } from '../lib/keyStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
@@ -21,7 +21,7 @@ export async function getChapters(): Promise<Chapter[]> {
 	// Decrypt each chapter's content using the stored chapter key
 	return Promise.all(chapters.map(async (chapter) => {
 		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
-		const key = getChapterKey(chapter.id)
+		const key = await getAndSetChapterKey(chapter)
 		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key)
 		return { ...chapter, name: content.name, description: content.description ?? null }
 	}))
@@ -60,16 +60,15 @@ export async function createChapter(data: { name: string; description?: string; 
 	return { ...chapter, name: data.name, description: data.description ?? null }
 	}
 
-export async function getChapter(id: string): Promise<Chapter> {
+export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`${API_BASE}/chapters/${id}`, { headers })
 	if (!res.ok) throw new Error('Failed to fetch chapter')
 	const chapter: Chapter = await res.json()
-
+	if (!chapter.encryptedChapterKey && !chapter.keyNonce) throw 'Could not decrypt chapter'
 	if (!chapter.encryptedBlob || !chapter.nonce) return chapter
-
-	const key = getChapterKey(chapter.id)
-	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key)
+	const chapterKey = await getAndSetChapterKey(chapter)
+	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey)
 	return { ...chapter, name: content.name, description: content.description ?? null }
 }
 
