@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -26,7 +27,7 @@ type MeetingInput struct {
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
 	ChapterID      		string  `json:"chapterId"`
-	ScheduledAt       	string  `json:"scheduledAt"`
+	ScheduledAt       	time.Time  `json:"scheduledAt"`
 	Duration       		int  	`json:"duration"`
 	RecurringGroupId    string  `json:"recurringGroupId"`
 }
@@ -34,7 +35,7 @@ type MeetingInput struct {
 type Meeting struct {
 	ID      			string  `json:"id"`
 	ChapterID      		string  `json:"chapterId"`
-	ScheduledAt       	string  `json:"scheduledAt"`
+	ScheduledAt       	time.Time  `json:"scheduledAt"`
 	Duration       		int  	`json:"duration"`
 	RecurringGroupId    *string `json:"recurringGroupId"`
 	Status    			string  `json:"status"`

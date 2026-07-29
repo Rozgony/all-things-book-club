@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	// "log"
 
 	"github.com/go-chi/chi/v5"
 

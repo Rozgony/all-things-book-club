@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -31,8 +32,8 @@ type Topic struct {
 	Status        string  `json:"status"`
 	EncryptedBlob []byte  `json:"encryptedBlob"`
 	Nonce         []byte  `json:"nonce"`
-	CreatedAt     string  `json:"createdAt"`
-	UpdatedAt     string  `json:"updatedAt"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
 }
 
 func (s *TopicService) Create(ctx context.Context, input TopicInput, userID string) (*Topic, error) {

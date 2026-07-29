@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -23,7 +24,7 @@ type Theme struct {
 	ChapterID     string `json:"chapterId"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
-	CreatedAt     string `json:"createdAt"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 // ThemeInput is used when the frontend creates a brand new theme.

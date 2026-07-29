@@ -84,9 +84,18 @@ export function clearAll(): void {
   chapterKeys.clear()
 }
 
-export async function getAndSetChapterKey(chapter: Chapter): Promise<CryptoKey> {
+export async function getAndSetChapterKey(chapter: Chapter): Promise<CryptoKey | null> {
 	const userKey = getUserKey();
-	const chapterKey = await decryptChapterKey(chapter.encryptedChapterKey!, chapter.keyNonce!, userKey)
-	setChapterKey(chapter.id, chapterKey);
-	return chapterKey
+	console.log('--- ---> userKey: ',{userKey});
+	console.log('--- ---> chapter.encryptedChapterKey: '+chapter.encryptedChapterKey);
+	console.log('--- ---> chapter.keyNonce: '+chapter.keyNonce);
+	try {
+		const chapterKey = await decryptChapterKey(chapter.encryptedChapterKey!, chapter.keyNonce!, userKey)
+		console.log('--- ---> chapterKey: ',{chapterKey});
+		setChapterKey(chapter.id, chapterKey);
+		return chapterKey
+	} catch (error) {
+		console.log('--------> getAndSetChapterKey',{error})
+		return null
+	}
 }

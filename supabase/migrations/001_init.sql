@@ -14,11 +14,12 @@ CREATE TYPE topic_status AS ENUM ('PENDING', 'SELECTED', 'DISCUSSED');
 -- ============================================================
 
 CREATE TABLE users (
-    id              TEXT PRIMARY KEY,           -- Supabase Auth UID
-    encrypted_blob  BYTEA,                      -- encrypted profile (name, avatar, etc.)
-    nonce           BYTEA,                      -- AES-GCM nonce for decryption
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+    id                  TEXT PRIMARY KEY,           -- Supabase Auth UID
+    key_derivation_salt TEXT,                       -- random salt for client-side key derivation
+    encrypted_blob      BYTEA,                      -- encrypted profile (name, avatar, etc.)
+    nonce               BYTEA,                      -- AES-GCM nonce for decryption
+    created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- ============================================================

@@ -17,12 +17,17 @@ export async function getChapters(): Promise<Chapter[]> {
 	const res = await fetch(`${API_BASE}/chapters`, { headers })
 	if (!res.ok) throw new Error('Failed to fetch chapters')
 	const chapters: Chapter[] = await res.json()
+// console.log({chapters});
 
 	// Decrypt each chapter's content using the stored chapter key
 	return Promise.all(chapters.map(async (chapter) => {
-		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
+		console.log('encrypted',{chapter});
+
+		// if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 		const key = await getAndSetChapterKey(chapter)
-		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key)
+		console.log('---> key',key);
+		const content = await decrypt<ChapterContent>(chapter.encryptedBlob!, chapter.nonce!, key)
+		console.log('---> decrypted',{...chapter,...content});
 		return { ...chapter, name: content.name, description: content.description ?? null }
 	}))
 }
@@ -65,6 +70,7 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 	const res = await fetch(`${API_BASE}/chapters/${id}`, { headers })
 	if (!res.ok) throw new Error('Failed to fetch chapter')
 	const chapter: Chapter = await res.json()
+console.log({chapter});
 	if (!chapter.encryptedChapterKey && !chapter.keyNonce) throw 'Could not decrypt chapter'
 	if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 	const chapterKey = await getAndSetChapterKey(chapter)
