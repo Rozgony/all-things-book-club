@@ -13,14 +13,26 @@ import (
 
 // ChapterInput is the data the client sends when creating a chapter.
 // The server stores name plaintext, and the encrypted blob opaquely.
-type ChapterInput struct {
-	EncryptedBlob []byte `json:"encryptedBlob"`
-	Nonce         []byte `json:"nonce"`
-	IsPublic      bool   `json:"isPublic"`
+type CreateChapterInput struct {
+	EncryptedChapterBlob 	[]byte `json:"encryptedChapterBlob"`
+	ChapterNonce         	[]byte `json:"chapterNonce"`
+	EncryptedMemberBlob 	[]byte `json:"encryptedMemberBlob"`
+	MemberNonce         	[]byte `json:"memberNonce"`
+	IsPublic      			bool   `json:"isPublic"`
 	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's public key.
 	// Only the creator can decrypt it using their private key (never sent to the server).
-	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
-	KeyNonce            []byte `json:"keyNonce"`
+	EncryptedChapterKey 	[]byte `json:"encryptedChapterKey"`
+	KeyNonce            	[]byte `json:"keyNonce"`
+}
+
+type ChapterInput struct {
+	EncryptedBlob 			[]byte `json:"encryptedBlob"`
+	Nonce         			[]byte `json:"nonce"`
+	IsPublic      			bool   `json:"isPublic"`
+	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's public key.
+	// Only the creator can decrypt it using their private key (never sent to the server).
+	EncryptedChapterKey 	[]byte `json:"encryptedChapterKey"`
+	KeyNonce            	[]byte `json:"keyNonce"`
 }
 
 // Chapter represents a book club chapter returned from the database.
@@ -87,7 +99,7 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 // Create inserts a new chapter and adds the creator as an ADMIN member.
 // This runs both inserts in a transaction — if the membership insert fails,
 // the chapter insert is rolled back. You never want a chapter with no members.
-func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creatorID string) (*Chapter, *ChapterMember, error) {
+func (s *ChapterService) Create(ctx context.Context, input CreateChapterInput, creatorID string) (*Chapter, *ChapterMember, error) {
 	chapterID, err := crypto.GenerateID()
 	if err != nil {
 		return nil, nil, fmt.Errorf("ChapterService.Create: generate chapter ID: %w", err)
@@ -109,7 +121,7 @@ func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creator
 		INSERT INTO chapters (id, creator_id, is_public, encrypted_blob, nonce, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, now(), now())
 		RETURNING id, creator_id, is_public, created_at, encrypted_blob, nonce
-	`, chapterID, creatorID, input.IsPublic, input.EncryptedBlob, input.Nonce).
+	`, chapterID, creatorID, input.IsPublic, input.EncryptedChapterBlob, input.ChapterNonce).
 		Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ChapterService.Create: insert chapter: %w", err)
@@ -117,10 +129,10 @@ func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creator
 
 	var cm ChapterMember
 	err = tx.QueryRow(ctx, `
-		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce)
-		VALUES ($1, $2, $3, 'ADMIN', now(), $4, $5)
+		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce, encrypted_blob, nonce)
+		VALUES ($1, $2, $3, 'ADMIN', now(), $4, $5, $6, $7)
 		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce
-	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce).
+	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce, input.EncryptedMemberBlob, input.MemberNonce).
 		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ChapterService.Create: insert member: %w", err)

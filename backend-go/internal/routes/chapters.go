@@ -38,7 +38,7 @@ type CreateResponse struct {
 
 func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	
-	var input services.ChapterInput
+	var input services.CreateChapterInput
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {

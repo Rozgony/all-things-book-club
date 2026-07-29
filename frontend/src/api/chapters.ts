@@ -32,7 +32,7 @@ type CreateResponse = {
 	chapterMember: ChapterMember
 }
 
-export async function createChapter(data: { name: string; description?: string; creatorName: string }): Promise<Chapter> {
+export async function createChapter(data: { name: string; description?: string; creatorName: string; creatorEmail: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const userKey = getUserKey()
 
@@ -43,8 +43,12 @@ export async function createChapter(data: { name: string; description?: string; 
 	const { encryptedChapterKey, keyNonce } = await encryptChapterKey(chapterKey, userKey)
 
 	// 3. Encrypt the chapter content (name, description) with the chapter key
-	const { encryptedBlob, nonce } = await encrypt(
+	const { encryptedBlob: encryptedChapterBlob, nonce: chpaterNonce } = await encrypt(
 		{ name: data.name, description: data.description },
+		chapterKey
+	)
+	const { encryptedBlob: encryptedMemberBlob, nonce: memberNonce } = await encrypt(
+		{ name: data.creatorName, email: data.creatorEmail },
 		chapterKey
 	)
 
@@ -52,7 +56,15 @@ export async function createChapter(data: { name: string; description?: string; 
 	const res = await fetch(`${API_BASE}/chapters`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify({ encryptedBlob, nonce, isPublic: false, encryptedChapterKey, keyNonce }),
+		body: JSON.stringify({ 
+			encryptedChapterBlob, 
+			chpaterNonce, 
+			encryptedMemberBlob, 
+			memberNonce, 
+			isPublic: false, 
+			encryptedChapterKey, 
+			keyNonce 
+		}),
 	})
 	if (!res.ok) throw new Error('Failed to create chapter')
 

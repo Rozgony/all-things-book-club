@@ -20,7 +20,12 @@ console.log({user});
 		setCreating(true)
 		setFormError(null)
 		try {
-			const chapter = await createChapter({ name: newName, description: newDescription || undefined, creatorName: user?.user_metadata.name })
+			const chapter = await createChapter({ 
+				name: newName, 
+				description: newDescription || undefined, 
+				creatorName: user?.user_metadata.full_name, // TODO: make sure this is correct
+				creatorEmail: user?.email! // TODO: make sure this is correct
+			})
 			onChapterCreated(chapter)
 			setNewName('')
 			setNewDescription('')
