@@ -14,8 +14,9 @@ import (
 type Config struct {
 	Port        string
 	DatabaseURL string
-	JWTSecret   string
+	SupabaseURL string
 	Env         string
+	FrontendURL string
 }
 
 // Load reads the .env file (if present) then pulls values from the environment.
@@ -31,8 +32,9 @@ func Load() *Config {
 	cfg := &Config{
 		Port:        getEnv("PORT", "8080"),
 		DatabaseURL: requireEnv("DATABASE_URL"),
-		JWTSecret:   requireEnv("JWT_SECRET"),
+		SupabaseURL: requireEnv("SUPABASE_URL"),
 		Env:         getEnv("ENV", "development"),
+		FrontendURL: getEnv("FRONTEND_URL", ""),
 	}
 
 	return cfg

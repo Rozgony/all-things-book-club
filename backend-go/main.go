@@ -11,6 +11,7 @@ import (
 	"github.com/all-things-book-club/internal/routes"
 	"github.com/all-things-book-club/internal/services"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/cors"
 	"github.com/all-things-book-club/internal/middleware"
 )
 
@@ -27,7 +28,19 @@ func main() {
 
 	r := chi.NewRouter()
 
-	// Initialize services from the database pool
+	allowedOrigins := []string{"http://localhost:5173"}
+	if cfg.FrontendURL != "" {
+		allowedOrigins = append(allowedOrigins, cfg.FrontendURL)
+	}
+
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   allowedOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: false,
+		MaxAge:           300,
+	}))
+
 	chapterService := services.NewChapterService(pool)
 	memberService := services.NewMemberService(pool)
 	meetingService := services.NewMeetingService(pool)
@@ -51,9 +64,14 @@ func main() {
 		})
 	})
 
+	requireAuth, err := middleware.NewRequireAuth(cfg.SupabaseURL)
+	if err != nil {
+		log.Fatalf("Failed to initialize auth middleware: %v", err)
+	}
+
 	// Protected routes (auth required)
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAuth(cfg.JWTSecret))
+		r.Use(requireAuth)
 
 		// Chapters
 		r.Get("/api/chapters", chapterHandler.List)
