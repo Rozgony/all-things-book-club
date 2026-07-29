@@ -117,7 +117,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 								Upcoming
 						</button>
 						<button 
-							className={`min-w-36 px-4 py-2 ${viewPastMeetings ? 'bg-forst text-white' : 'bg-cream text-forest'} border-warm-border font-heading tracking-wide rounded-tr hover:${viewPastMeetings ? 'bg-forest-dark' : 'bg-cream-dark'} transition-colors`}
+							className={`min-w-36 px-4 py-2 ${viewPastMeetings ? 'bg-forest text-white' : 'bg-cream text-forest'} border-warm-border font-heading tracking-wide rounded-tr hover:${viewPastMeetings ? 'bg-forest-dark' : 'bg-cream-dark'} transition-colors`}
 							onClick={() => setViewPastMeetings(true)}>
 								Past
 						</button>

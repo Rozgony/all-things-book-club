@@ -35,7 +35,7 @@ export function ChapterDetailPage() {
 	      setChapter(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
-	      
+	      console.log({chapter})
 	      // Fetch meetings for this chapter
 	      setMeetingsLoading(true)
 	      return getMeetingsByChapterId(id)
@@ -52,7 +52,7 @@ export function ChapterDetailPage() {
 	    .finally(() => setLoading(false))
 	}, [id])
 
-	const isAdmin = chapter?.members?.some(m => m.userId === user?.id && m.role === 'ADMIN') ?? false
+	const isAdmin = chapter?.chapterMembers?.some(m => m.userId === user?.id && m.role === 'ADMIN') ?? false
 	const isCreator = chapter?.creatorId === user?.id
 
 	const handleSave = async (e: React.FormEvent) => {
@@ -133,7 +133,7 @@ export function ChapterDetailPage() {
 				<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 					<h3 className="font-heading text-forest-deep mb-4">Members</h3>
 					<ul className="divide-y divide-warm-border">
-					{chapter?.members?.map(member => (
+					{chapter?.chapterMembers?.map(member => (
 						<li key={member.id} className="py-3 flex justify-between items-center">
 						{/* @ts-ignore: Property 'user' does not exist on type 'ChapterMember' */}
 						<span className="text-sm text-stone">{member.user?.name}</span>

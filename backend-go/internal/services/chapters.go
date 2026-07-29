@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"log"
 
 	"github.com/all-things-book-club/internal/crypto"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,13 +27,15 @@ type ChapterInput struct {
 // In Go, exported fields (capitalized) are what get serialized to JSON.
 // Unexported fields (lowercase) are invisible to encoding/json.
 type Chapter struct {
-	ID        		string 			`json:"id"`
-	CreatorID 		string 			`json:"creatorId"`
-	IsPublic  		bool   			`json:"isPublic"`
-	CreatedAt 		time.Time 		`json:"createdAt"`
-	EncryptedBlob 	[]byte 			`json:"encryptedBlob"`
-	Nonce 			[]byte 			`json:"nonce"`
-	ChapterMembers	[]ChapterMember	`json:"chapterMembers"`
+	ID                  string          `json:"id"`
+	CreatorID           string          `json:"creatorId"`
+	IsPublic            bool            `json:"isPublic"`
+	CreatedAt           time.Time       `json:"createdAt"`
+	EncryptedBlob       []byte          `json:"encryptedBlob"`
+	Nonce               []byte          `json:"nonce"`
+	EncryptedChapterKey []byte          `json:"encryptedChapterKey"`
+	KeyNonce            []byte          `json:"keyNonce"`
+	ChapterMembers      []ChapterMember `json:"chapterMembers"`
 }
 
 // ChapterService holds the database pool.
@@ -62,7 +63,6 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 		ORDER BY c.created_at DESC
 	`, userID)
 	if err != nil {
-				log.Printf("1 - ListForUser err %+v",err)
 		return nil, fmt.Errorf("ChapterService.ListForUser: %w", err)
 	}
 	defer rows.Close()
@@ -70,9 +70,7 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 	var chapters []Chapter
 	for rows.Next() {
 		var ch Chapter
-		var cm ChapterMember
-		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce, &cm.EncryptedChapterKey, &cm.KeyNonce); err != nil {
-			log.Printf("2 - ListForUser err %+v",err)
+		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce, &ch.EncryptedChapterKey, &ch.KeyNonce); err != nil {
 			return nil, fmt.Errorf("ChapterService.ListForUser scan: %w", err)
 		}
 		chapters = append(chapters, ch)
@@ -89,23 +87,20 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 // Create inserts a new chapter and adds the creator as an ADMIN member.
 // This runs both inserts in a transaction — if the membership insert fails,
 // the chapter insert is rolled back. You never want a chapter with no members.
-func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creatorID string) (*Chapter, error) {
+func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creatorID string) (*Chapter, *ChapterMember, error) {
 	chapterID, err := crypto.GenerateID()
 	if err != nil {
-		log.Printf("1 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: generate chapter ID: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: generate chapter ID: %w", err)
 	}
 	memberID, err := crypto.GenerateID()
 	if err != nil {
-		log.Printf("2 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: generate member ID: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: generate member ID: %w", err)
 	}
 
 	// Begin a transaction — both inserts must succeed or both are rolled back
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
-		log.Printf("3 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: begin transaction: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx) // no-op if tx.Commit() is called below
 
@@ -117,37 +112,37 @@ func (s *ChapterService) Create(ctx context.Context, input ChapterInput, creator
 	`, chapterID, creatorID, input.IsPublic, input.EncryptedBlob, input.Nonce).
 		Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
-				log.Printf("3 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: insert chapter: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: insert chapter: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, `
+	var cm ChapterMember
+	err = tx.QueryRow(ctx, `
 		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce)
 		VALUES ($1, $2, $3, 'ADMIN', now(), $4, $5)
-	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce)
+		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce
+	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce).
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce)
 	if err != nil {
-		log.Printf("4 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: insert member: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: insert member: %w", err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		log.Printf("5 - Create err %+v",err)
-		return nil, fmt.Errorf("ChapterService.Create: commit: %w", err)
+		return nil, nil, fmt.Errorf("ChapterService.Create: commit: %w", err)
 	}
 
-	return &ch, nil
+	return &ch, &cm, nil
 }
 
 func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID string) (*Chapter, error) {
 	// Note: No membership check since its part of the query
 	rows, err := s.db.Query(ctx, `
-		SELECT c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce, 
+		SELECT c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce,
+			my_cm.encrypted_chapter_key, my_cm.key_nonce,
 			cm.id, cm.user_id, cm.role, cm.joined_at
 		FROM chapters c
+		JOIN chapter_members my_cm ON my_cm.chapter_id = c.id AND my_cm.user_id = $2
 		JOIN chapter_members cm ON cm.chapter_id = c.id
-		WHERE c.id = $1 AND EXISTS (
-			SELECT 1 FROM chapter_members WHERE chapter_id = c.id AND user_id = $2
-		)
+		WHERE c.id = $1
 		ORDER BY cm.joined_at ASC
 	`, chapterID, userID)
 
@@ -163,8 +158,9 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 		var ch Chapter
 		var cm ChapterMember
 		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt,
-			&ch.EncryptedBlob, &ch.Nonce, 
-        	&cm.ID, &cm.UserId, &cm.Role, &cm.JoinedAt); err != nil {
+			&ch.EncryptedBlob, &ch.Nonce,
+			&ch.EncryptedChapterKey, &ch.KeyNonce,
+			&cm.ID, &cm.UserId, &cm.Role, &cm.JoinedAt); err != nil {
 				return nil, fmt.Errorf("scan: %w", err)
 		}
 		if _, exists := chapterMap[ch.ID]; !exists {

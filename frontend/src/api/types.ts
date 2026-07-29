@@ -15,12 +15,6 @@ export interface ChapterMember {
 	users?: UserProfile[]
 }
 
-export enum VisibilityLevel {
-	ACCEPTING_MEMBERS = 'ACCEPTING_MEMBERS',
-	INVITE_ONLY = 'INVITE_ONLY',
-	MEMBERS_ONLY = 'MEMBERS_ONLY'
-}
-
 export interface Chapter {
   id: string
   creatorId: string
@@ -31,7 +25,7 @@ export interface Chapter {
   keyNonce: string | null
   createdAt: string
   updatedAt: string
-  members?: ChapterMember[]
+  chapterMembers?: ChapterMember[]
   // Decrypted fields — populated client-side after decryption
   name: string
   description: string | null

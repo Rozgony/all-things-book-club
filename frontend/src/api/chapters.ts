@@ -1,5 +1,5 @@
 import { getAuthHeaders } from './auth'
-import type { Chapter } from './types'
+import type { Chapter, ChapterMember } from './types'
 import { generateChapterKey, encryptChapterKey, encrypt, decrypt } from '../lib/crypto'
 import { getUserKey, setChapterKey, getChapterKey, getAndSetChapterKey } from '../lib/keyStore'
 
@@ -17,22 +17,22 @@ export async function getChapters(): Promise<Chapter[]> {
 	const res = await fetch(`${API_BASE}/chapters`, { headers })
 	if (!res.ok) throw new Error('Failed to fetch chapters')
 	const chapters: Chapter[] = await res.json()
-// console.log({chapters});
 
 	// Decrypt each chapter's content using the stored chapter key
 	return Promise.all(chapters.map(async (chapter) => {
-		console.log('encrypted',{chapter});
-
-		// if (!chapter.encryptedBlob || !chapter.nonce) return chapter
+		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 		const key = await getAndSetChapterKey(chapter)
-		console.log('---> key',key);
-		const content = await decrypt<ChapterContent>(chapter.encryptedBlob!, chapter.nonce!, key)
-		console.log('---> decrypted',{...chapter,...content});
+		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key!)
 		return { ...chapter, name: content.name, description: content.description ?? null }
 	}))
 }
 
-export async function createChapter(data: { name: string; description?: string; isPublic: boolean }): Promise<Chapter> {
+type CreateResponse = {
+	chapter: Chapter
+	chapterMember: ChapterMember
+}
+
+export async function createChapter(data: { name: string; description?: string; creatorName: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const userKey = getUserKey()
 
@@ -52,18 +52,19 @@ export async function createChapter(data: { name: string; description?: string; 
 	const res = await fetch(`${API_BASE}/chapters`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify({ encryptedBlob, nonce, isPublic: data.isPublic, encryptedChapterKey, keyNonce }),
+		body: JSON.stringify({ encryptedBlob, nonce, isPublic: false, encryptedChapterKey, keyNonce }),
 	})
 	if (!res.ok) throw new Error('Failed to create chapter')
 
-	const chapter: Chapter = await res.json()
+	const createResponse: CreateResponse = await res.json()
+	const { chapter, chapterMember} = createResponse;
 
 	// 5. Store the chapter key in memory so we can decrypt content immediately
 	setChapterKey(chapter.id, chapterKey)
 
 	// 6. Return the chapter with decrypted fields for the UI
-	return { ...chapter, name: data.name, description: data.description ?? null }
-	}
+	return { ...chapter, name: data.name, description: data.description ?? null, members: [chapterMember] }
+}
 
 export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 	const headers = await getAuthHeaders()
@@ -74,7 +75,7 @@ console.log({chapter});
 	if (!chapter.encryptedChapterKey && !chapter.keyNonce) throw 'Could not decrypt chapter'
 	if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 	const chapterKey = await getAndSetChapterKey(chapter)
-	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey)
+	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
 	return { ...chapter, name: content.name, description: content.description ?? null }
 }
 

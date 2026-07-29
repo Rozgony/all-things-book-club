@@ -3,7 +3,6 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
-	// "log"
 
 	"github.com/go-chi/chi/v5"
 
@@ -32,6 +31,11 @@ func (h *ChapterHandler) List(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(chapters)
 }
 
+type CreateResponse struct {
+	Chapter       *services.Chapter       `json:"chapter"`
+	ChapterMember *services.ChapterMember `json:"member"`
+}
+
 func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 	
 	var input services.ChapterInput
@@ -44,15 +48,17 @@ func (h *ChapterHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	userID := middleware.UserIDFromContext(r.Context())
 
-	chapter, err := h.chapters.Create(r.Context(), input, userID)
+	chapter, member, err := h.chapters.Create(r.Context(), input, userID)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
+	createResponse := CreateResponse{Chapter: chapter, ChapterMember: member}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(chapter)
+	json.NewEncoder(w).Encode(createResponse)
 }
 
 func (h *ChapterHandler) GetByID(w http.ResponseWriter, r *http.Request) {

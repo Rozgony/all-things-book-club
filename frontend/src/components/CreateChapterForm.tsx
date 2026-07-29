@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createChapter } from '../api/chapters'
-import { VisibilityLevel, type Chapter } from '../api/types'
+import { type Chapter } from '../api/types'
+import { useAuthStore } from '../store/authStore'
 
 interface CreateChapterFormProps {
 	onChapterCreated: (chapter: Chapter) => void
@@ -9,17 +10,17 @@ interface CreateChapterFormProps {
 
 export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterFormProps) {
 	const [newName, setNewName] = useState('')
-	const [editVisibility, setEditVisibility] = useState<VisibilityLevel>(VisibilityLevel.MEMBERS_ONLY)
 	const [newDescription, setNewDescription] = useState('')
 	const [creating, setCreating] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
-
+	const user = useAuthStore((s) => s.user)
+console.log({user});
 	const handleCreate = async (e: React.FormEvent) => {
 		e.preventDefault()
 		setCreating(true)
 		setFormError(null)
 		try {
-			const chapter = await createChapter({ name: newName, description: newDescription || undefined, visibility: editVisibility })
+			const chapter = await createChapter({ name: newName, description: newDescription || undefined, creatorName: user?.user_metadata.name })
 			onChapterCreated(chapter)
 			setNewName('')
 			setNewDescription('')
