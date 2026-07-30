@@ -53,10 +53,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userIdParam := chi.URLParam(r, "id")
 	userID := middleware.UserIDFromContext(r.Context())
 
-	user, err := h.users.Update(r.Context(), input, userIdParam, userID)
+	user, err := h.users.Update(r.Context(), input, userID)
 	if err != nil {
 		handleError(w, err)
 		return
@@ -67,10 +66,9 @@ func (h *UserHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	userIdParam := chi.URLParam(r, "id")
 	userID := middleware.UserIDFromContext(r.Context())
 
-	err := h.users.Delete(r.Context(), userIdParam, userID)
+	err := h.users.Delete(r.Context(), userID)
 	if err != nil {
 		handleError(w, err)
 		return

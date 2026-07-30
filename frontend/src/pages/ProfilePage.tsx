@@ -39,9 +39,18 @@ export function ProfilePage() {
 	  e.preventDefault()
 	  setSaving(true)
 	  setError(null)
+
+	  if (!Intl.supportedValuesOf('timeZone').includes(timezone)) {
+	    setError('Invalid timezone. Please select a valid timezone from the list.')
+	    setSaving(false)
+	    return
+	  }
+
 	  try {
 	    const updated = await updateMyProfile({ name, timezone })
 	    setProfile(updated)
+		setName(updated.name ?? '')
+	    setTimezone(updated.timezone)
 	    setEditing(false)
 	  } catch {
 	    setError('Failed to save profile')

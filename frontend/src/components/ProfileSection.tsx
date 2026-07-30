@@ -30,15 +30,8 @@ export function ProfileSection({
 	return (
 		<div className="max-w-lg mx-auto mt-12 p-8 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 			<h2 className="font-heading text-forest-deep mb-7">Your Profile</h2>
-
-			{error && <p className="mb-4 text-sm text-red-600">{error}</p>}
-
 			{!editing ? (
 				<div className="space-y-5">
-					<div>
-						<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Email</p>
-						<p className="text-stone">{profile.email}</p>
-					</div>
 					<div>
 						<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Name</p>
 						<p className="text-stone">{profile.name ?? <span className="text-stone-muted italic">Not set</span>}</p>
@@ -69,12 +62,19 @@ export function ProfileSection({
 						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Timezone</label>
 						<input
 							type="text"
+							list="timezone-list"
 							value={timezone}
 							onChange={e => onTimezoneChange(e.target.value)}
 							placeholder="e.g. America/Los_Angeles"
 							className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 						/>
+						<datalist id="timezone-list">
+							{Intl.supportedValuesOf('timeZone').map(tz => (
+								<option key={tz} value={tz} />
+							))}
+						</datalist>
 					</div>
+					{error && <div className="mb-4 text-sm text-red-600">{error}</div>}
 					<div className="flex gap-3">
 						<button
 							type="submit"

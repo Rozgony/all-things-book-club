@@ -80,10 +80,7 @@ func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error)
 	return &u, nil
 }
 
-func (s *UserService) Update(ctx context.Context, input UserInput, userIdParam string, userID string) (*User, error) {
-	if userIdParam != userID {
-		return nil, db.ErrNotMember
-	}
+func (s *UserService) Update(ctx context.Context, input UserInput, userID string) (*User, error) {
 
 	var u User
 	err := s.db.QueryRow(ctx, `
@@ -94,16 +91,15 @@ func (s *UserService) Update(ctx context.Context, input UserInput, userIdParam s
 	`, input.EncryptedBlob, input.Nonce, userID).
 		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
+		log.Printf("Update err: %+v",err)
 		return nil, fmt.Errorf("UserService.Update: update user: %w", err)
 	}
 
 	return &u, nil
 }
 
-func (s *UserService) Delete(ctx context.Context, userIdParam string, userID string) error {
-	if userIdParam != userID {
-		return db.ErrNotMember
-	}
+func (s *UserService) Delete(ctx context.Context, userID string) error {
+
 	_, err := s.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	if err != nil {
 		return fmt.Errorf("UserService.Delete: delete user: %w", err)
