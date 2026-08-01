@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
-
 	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/services"
 )

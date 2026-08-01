@@ -8,6 +8,7 @@ import (
 
 	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/services"
+	"github.com/all-things-book-club/internal/db"
 )
 
 type MeetingHandler struct {
@@ -70,8 +71,14 @@ func (h *MeetingHandler) GetByChapterID(w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
-	
-	var input services.MeetingInput
+	var input struct {
+		Status           *string    `json:"status,omitempty"`
+		ScheduledAt      *int64     `json:"scheduledAt,omitempty"` // Unix timestamp
+		Duration         *int       `json:"duration,omitempty"`
+		RecurringGroupId *string    `json:"recurringGroupId,omitempty"`
+		EncryptedBlob    []byte     `json:"encryptedBlob,omitempty"`
+		Nonce            []byte     `json:"nonce,omitempty"`
+	}
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -82,7 +89,56 @@ func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	meetingID := chi.URLParam(r, "id")
 	userID := middleware.UserIDFromContext(r.Context())
 
-	meeting, err := h.meetings.Update(r.Context(), input, meetingID, userID)
+	// Verify user is a member of the chapter that owns this meeting
+	ok, err := db.IsMemberOfMeeting(r.Context(), h.meetings.GetDB(), meetingID, userID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !ok {
+		handleError(w, db.ErrNotMember)
+		return
+	}
+
+	// Apply updates based on what was provided
+	if input.Status != nil {
+		if err := h.meetings.UpdateStatus(r.Context(), meetingID, *input.Status); err != nil {
+			log.Printf("update meeting status %+v",err)
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.ScheduledAt != nil {
+		if err := h.meetings.UpdateScheduledAt(r.Context(), meetingID, *input.ScheduledAt); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.Duration != nil {
+		if err := h.meetings.UpdateDuration(r.Context(), meetingID, *input.Duration); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.RecurringGroupId != nil {
+		if err := h.meetings.UpdateRecurringGroupId(r.Context(), meetingID, input.RecurringGroupId); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.EncryptedBlob != nil {
+		if err := h.meetings.UpdateEncryptedData(r.Context(), meetingID, input.EncryptedBlob, input.Nonce); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	// Return updated meeting
+	meeting, err := h.meetings.GetByID(r.Context(), meetingID, userID)
 	if err != nil {
 		handleError(w, err)
 		return

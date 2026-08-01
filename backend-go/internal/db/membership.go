@@ -40,3 +40,35 @@ func IsAdmin(ctx context.Context, pool *pgxpool.Pool, chapterID string, userID s
     }
     return isAdmin, nil
 }
+
+// IsMemberOfMeeting checks whether a user is a member of the chapter that owns a meeting
+func IsMemberOfMeeting(ctx context.Context, pool *pgxpool.Pool, meetingID string, userID string) (bool, error) {
+    var exists bool
+    err := pool.QueryRow(ctx, `
+        SELECT EXISTS (
+            SELECT 1 FROM chapter_members cm
+            JOIN meetings m ON m.chapter_id = cm.chapter_id
+            WHERE m.id = $1 AND cm.user_id = $2
+        )
+    `, meetingID, userID).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("IsMemberOfMeeting: %w", err)
+    }
+    return exists, nil
+}
+
+// IsMemberOfTopic checks whether a user is a member of the chapter that owns a topic
+func IsMemberOfTopic(ctx context.Context, pool *pgxpool.Pool, topicID string, userID string) (bool, error) {
+    var exists bool
+    err := pool.QueryRow(ctx, `
+        SELECT EXISTS (
+            SELECT 1 FROM chapter_members cm
+            JOIN topics t ON t.chapter_id = cm.chapter_id
+            WHERE t.id = $1 AND cm.user_id = $2
+        )
+    `, topicID, userID).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("IsMemberOfTopic: %w", err)
+    }
+    return exists, nil
+}

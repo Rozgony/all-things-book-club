@@ -21,6 +21,11 @@ func NewMeetingService(db *pgxpool.Pool) *MeetingService {
 	return &MeetingService{db: db}
 }
 
+// GetDB returns the database pool for use in route handlers
+func (s *MeetingService) GetDB() *pgxpool.Pool {
+	return s.db
+}
+
 // MeetingInput is the data the client sends when creating a member.
 // The server stores name plaintext, and the encrypted blob opaquely.
 type MeetingInput struct {
@@ -29,7 +34,7 @@ type MeetingInput struct {
 	ChapterID      		string  `json:"chapterId"`
 	ScheduledAt       	time.Time  `json:"scheduledAt"`
 	Duration       		int  	`json:"duration"`
-	RecurringGroupId    string  `json:"recurringGroupId"`
+	RecurringGroupId    *string `json:"recurringGroupId"`
 }
 
 type Meeting struct {
@@ -42,6 +47,7 @@ type Meeting struct {
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
 	Topics				[]*Topic `json:"topics"`
+	ChapterMembers		[]*ChapterMember	`json:"chapterMember"`
 }
 
 func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID string) (*Meeting, error) {
@@ -76,26 +82,25 @@ func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID 
 func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID string) (*Meeting, error) {
 
 	var m Meeting
+	var cm ChapterMember
 	err := s.db.QueryRow(ctx, `
-		SELECT id, chapter_id, duration, scheduled_at, recurring_group_id, status, nonce, encrypted_blob
-		FROM meetings
-		WHERE id = $1
-	`, meetingID).
-		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob)
+		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
+			cm.id, cm.encrypted_chapter_key, cm.key_nonce
+		FROM meetings m
+		JOIN chapter_members cm ON cm.chapter_id = m.chapter_id AND cm.user_id = $2
+		WHERE m.id = $1
+	`, meetingID, userID).
+		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
+			&m.Status, &m.Nonce, &m.EncryptedBlob,
+			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", err)
 	}
 
-	ok, memberErr := db.IsMember(ctx, s.db, m.ChapterID, userID)
-	if memberErr != nil {
-		return nil, fmt.Errorf("MeetingService.GetByID: %w", memberErr)
-	}
-	if !ok {
-		return nil, db.ErrNotMember
-	}
+	m.ChapterMembers = append(m.ChapterMembers, &cm)
 
 	// Fetch topics for this meeting
-	rows, err := s.db.Query(ctx, `
+	topicRows, err := s.db.Query(ctx, `
 		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at, updated_at
 		FROM topics
 		WHERE meeting_id = $1
@@ -103,11 +108,11 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: fetch topics: %w", err)
 	}
-	defer rows.Close()
+	defer topicRows.Close()
 
-	for rows.Next() {
+	for topicRows.Next() {
 		var t Topic
-		if err := rows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := topicRows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByID: scan topic: %w", err)
 		}
 		m.Topics = append(m.Topics, &t)
@@ -148,28 +153,65 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 	return meetings, nil
 }
 
-func (s *MeetingService) Update(ctx context.Context, input MeetingInput, meetingID string, userID string) (*Meeting, error) {
-		// Verify the caller is a member of the chapter
-	ok, err := db.IsMember(ctx, s.db, input.ChapterID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("MeetingService.Update: %w", err)
-	}
-	if !ok {
-		return nil, db.ErrNotMember
-	}
-
-	var m Meeting
-	err = s.db.QueryRow(ctx, `
+func (s *MeetingService) UpdateStatus(ctx context.Context, meetingID string, status string) error {
+	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET scheduled_at = $1, duration = $2, recurrin_group_id = $3, encrypted_blob = $4, nonce = $5, updated_at = now()
-		WHERE id = $6
-		RETURNING id, scheduled_at, duration, recurrin_group_id, encrypted_blob, nonce
-	`, input.ScheduledAt, input.Duration, input.RecurringGroupId, input.EncryptedBlob, input.Nonce, meetingID).
-		Scan(&m.ID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.EncryptedBlob, &m.Nonce)
+		SET status = $1, updated_at = now()
+		WHERE id = $2
+	`, status, meetingID)
 	if err != nil {
-		return nil, fmt.Errorf("MeetingService.Update: %w", err)
+		return fmt.Errorf("MeetingService.UpdateStatus: %w", err)
 	}
-	return &m, nil
+	return nil
+}
+
+func (s *MeetingService) UpdateScheduledAt(ctx context.Context, meetingID string, scheduledAtUnix int64) error {
+	scheduledAt := time.Unix(0, scheduledAtUnix*int64(time.Millisecond))
+	_, err := s.db.Exec(ctx, `
+		UPDATE meetings
+		SET scheduled_at = $1, updated_at = now()
+		WHERE id = $2
+	`, scheduledAt, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateScheduledAt: %w", err)
+	}
+	return nil
+}
+
+func (s *MeetingService) UpdateDuration(ctx context.Context, meetingID string, duration int) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE meetings
+		SET duration = $1, updated_at = now()
+		WHERE id = $2
+	`, duration, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateDuration: %w", err)
+	}
+	return nil
+}
+
+func (s *MeetingService) UpdateRecurringGroupId(ctx context.Context, meetingID string, recurringGroupId *string) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE meetings
+		SET recurring_group_id = $1, updated_at = now()
+		WHERE id = $2
+	`, recurringGroupId, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateRecurringGroupId: %w", err)
+	}
+	return nil
+}
+
+func (s *MeetingService) UpdateEncryptedData(ctx context.Context, meetingID string, encryptedBlob []byte, nonce []byte) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE meetings
+		SET encrypted_blob = $1, nonce = $2, updated_at = now()
+		WHERE id = $3
+	`, encryptedBlob, nonce, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateEncryptedData: %w", err)
+	}
+	return nil
 }
 
 func (s *MeetingService) Delete(ctx context.Context, meetingID string, userID string) error {

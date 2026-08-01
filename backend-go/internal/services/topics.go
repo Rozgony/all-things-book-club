@@ -20,9 +20,11 @@ func NewTopicService(db *pgxpool.Pool) *TopicService {
 }
 
 type TopicInput struct {
+	MeetingID     string `json:"meetingId"`
 	ChapterID     string `json:"chapterId"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
+	Status		  string `json:"status"`
 }
 
 type Topic struct {
@@ -41,7 +43,6 @@ func (s *TopicService) Create(ctx context.Context, input TopicInput, userID stri
 	if err != nil {
 		return nil, fmt.Errorf("TopicService.Create: generate topic ID: %w", err)
 	}
-
 	// Verify the caller is a member of the chapter
 	ok, err := db.IsMember(ctx, s.db, input.ChapterID, userID)
 	if err != nil {
@@ -53,11 +54,11 @@ func (s *TopicService) Create(ctx context.Context, input TopicInput, userID stri
 
 	var t Topic
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO topics (id, chapter_id, encrypted_blob, nonce, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, now(), now())
-		RETURNING id, chapter_id, encrypted_blob, nonce, created_at, updated_at
-	`, topicID, input.ChapterID, input.EncryptedBlob, input.Nonce).
-		Scan(&t.ID, &t.ChapterID, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt)
+		INSERT INTO topics (id, chapter_id, meeting_id, encrypted_blob, nonce, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, 'PENDING', now(), now())
+		RETURNING id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at, updated_at
+	`, topicID, input.ChapterID, input.MeetingID, input.EncryptedBlob, input.Nonce).
+		Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("TopicService.Create: insert topic: %w", err)
 	}
@@ -65,52 +66,48 @@ func (s *TopicService) Create(ctx context.Context, input TopicInput, userID stri
 	return &t, nil
 }
 
-func (s *TopicService) Update(ctx context.Context, input TopicInput, topicID string, userID string) (*Topic, error) {
-	// Get the topic's chapter first to verify membership
-	var chapterID string
-	err := s.db.QueryRow(ctx, `
-		SELECT chapter_id FROM topics WHERE id = $1
-	`, topicID).Scan(&chapterID)
+func (s *TopicService) UpdateStatus(ctx context.Context, topicID string, status string, userID string) error {
+	ok, err := db.IsMemberOfTopic(ctx, s.db, topicID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("TopicService.Update: fetch topic: %w", err)
-	}
-
-	// Verify the caller is a member of the chapter
-	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
-	if err != nil {
-		return nil, fmt.Errorf("TopicService.Update: %w", err)
+		return fmt.Errorf("TopicService.UpdateStatus: %w", err)
 	}
 	if !ok {
-		return nil, db.ErrNotMember
+		return db.ErrNotMember
 	}
 
-	var t Topic
-	err = s.db.QueryRow(ctx, `
+	_, err = s.db.Exec(ctx, `
+		UPDATE topics
+		SET status = $1, updated_at = now()
+		WHERE id = $2
+	`, status, topicID)
+	if err != nil {
+		return fmt.Errorf("TopicService.UpdateStatus: %w", err)
+	}
+	return nil
+}
+
+func (s *TopicService) UpdateEncrypted(ctx context.Context, topicID string, encryptedBlob []byte, nonce []byte, userID string) error {
+	ok, err := db.IsMemberOfTopic(ctx, s.db, topicID, userID)
+	if err != nil {
+		return fmt.Errorf("TopicService.UpdateEncrypted: %w", err)
+	}
+	if !ok {
+		return db.ErrNotMember
+	}
+
+	_, err = s.db.Exec(ctx, `
 		UPDATE topics
 		SET encrypted_blob = $1, nonce = $2, updated_at = now()
 		WHERE id = $3
-		RETURNING id, chapter_id, encrypted_blob, nonce, created_at, updated_at
-	`, input.EncryptedBlob, input.Nonce, topicID).
-		Scan(&t.ID, &t.ChapterID, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt)
+	`, encryptedBlob, nonce, topicID)
 	if err != nil {
-		return nil, fmt.Errorf("TopicService.Update: update topic: %w", err)
+		return fmt.Errorf("TopicService.UpdateEncrypted: %w", err)
 	}
-
-	return &t, nil
+	return nil
 }
 
 func (s *TopicService) Delete(ctx context.Context, topicID string, userID string) error {
-	// Get the topic's chapter first to verify membership
-	var chapterID string
-	err := s.db.QueryRow(ctx, `
-		SELECT chapter_id FROM topics WHERE id = $1
-	`, topicID).Scan(&chapterID)
-	if err != nil {
-		return fmt.Errorf("TopicService.Delete: fetch topic: %w", err)
-	}
-
-	// Verify the caller is an admin of the chapter
-	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
+	ok, err := db.IsMemberOfTopic(ctx, s.db, topicID, userID)
 	if err != nil {
 		return fmt.Errorf("TopicService.Delete: %w", err)
 	}

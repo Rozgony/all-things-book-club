@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/all-things-book-club/internal/crypto"
-	"github.com/all-things-book-club/internal/db"
 )
 
 type UserService struct {
@@ -91,7 +90,6 @@ func (s *UserService) Update(ctx context.Context, input UserInput, userID string
 	`, input.EncryptedBlob, input.Nonce, userID).
 		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
-		log.Printf("Update err: %+v",err)
 		return nil, fmt.Errorf("UserService.Update: update user: %w", err)
 	}
 

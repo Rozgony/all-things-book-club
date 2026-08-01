@@ -6,7 +6,6 @@ import { TopicModal } from '../components/TopicModal'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { createTopic, updateTopicStatus, deleteTopic } from '../api/topics'
 import { updateMeeting, getMeetingById } from '../api/meetings'
-// import { type MeetingWithTopics, type Topic } from '../api/types'
 import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../api/types'
 import { MeetingStatusBadge } from '../components/MeetingStatusBadge'
 
@@ -14,7 +13,6 @@ export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
 
-	// const [meeting, setMeeting] = useState<MeetingWithTopics | null>(null)
 	const [meeting, setMeeting] = useState<Meeting | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
@@ -82,12 +80,10 @@ export function MeetingPage() {
 	useEffect(() => {
 		if (!id) return
 		getMeetingById(id)
-			.then((meeting) => {
-				setMeeting(meeting)
-			})
+			.then((meeting) => setMeeting(meeting))
 			.catch(() => setError('Failed to load meeting'))
 			.finally(() => setLoading(false))
-	}, [id])
+	}, [])
 
 	const formatDate = (dateString: string) =>
 		new Date(dateString).toLocaleDateString('en-US', {
@@ -104,7 +100,8 @@ export function MeetingPage() {
 			const topic = await createTopic(meeting?.chapterId!, id, newTopicTitle.trim())
 			setMeeting(prev => (prev && prev.topics) ? { ...prev, topics: [...prev.topics, topic] } : prev)
 			setNewTopicTitle('')
-		} catch {
+		} catch (e) {
+			console.log({e})
 			setAddError('Failed to add topic')
 		} finally {
 			setAddingTopic(false)
@@ -114,12 +111,12 @@ export function MeetingPage() {
 	const handleSpinEnd = async (topic: Topic) => {
 		setSpinning(false)
 		try {
-			const updated = await updateTopicStatus(topic.id, 'SELECTED')
+			await updateTopicStatus(topic.id, topic, 'SELECTED')
 			setMeeting(prev => prev ? {
 				...prev,
-				topics: prev.topics?.map(t => t.id === updated.id ? updated : t) || []
+				topics: prev.topics?.map(t => t.id === topic.id ? {...topic, status: 'SELECTED'} : t) || []
 			} : prev)
-			setSelectedTopic(updated)
+			setSelectedTopic(topic)
 		} catch {
 			setSelectedTopic(topic)
 		}
@@ -128,10 +125,10 @@ export function MeetingPage() {
 	const handleMarkDiscussed = async () => {
 		if (!selectedTopic) return
 		try {
-			const updated = await updateTopicStatus(selectedTopic.id, 'DISCUSSED')
+			await updateTopicStatus(selectedTopic.id, selectedTopic, 'DISCUSSED')
 			setMeeting(prev => prev ? {
 				...prev,
-				topics: prev.topics?.map(t => t.id === updated.id ? updated : t) || []
+				topics: prev.topics?.map(t => t.id === selectedTopic.id ? {...selectedTopic, status: 'DISCUSSED'} : t) || []
 			} : prev)
 		} catch {
 			// keep modal open, user can retry
@@ -143,10 +140,10 @@ export function MeetingPage() {
 	const handleSkip = async () => {
 		if (!selectedTopic) return
 		try {
-			const updated = await updateTopicStatus(selectedTopic.id, 'PENDING')
+			await updateTopicStatus(selectedTopic.id, selectedTopic, 'PENDING')
 			setMeeting(prev => prev ? {
 				...prev,
-				topics: prev.topics?.map(t => t.id === updated.id ? updated : t) || []
+				topics: prev.topics?.map(t => t.id === selectedTopic.id ? {...selectedTopic, status: 'PENDING'} : t) || []
 			} : prev)
 		} catch {
 			// silent
@@ -183,9 +180,8 @@ export function MeetingPage() {
 		)
 	}
 
-	const pendingTopics = meeting?.topics?.filter(t => t.wheelStatus === 'PENDING') || []
-	const discussedTopics = meeting?.topics?.filter(t => t.wheelStatus === 'DISCUSSED') || []
-
+	const pendingTopics = meeting?.topics?.filter(t => t.status === 'PENDING') || []
+	const discussedTopics = meeting?.topics?.filter(t => t.status === 'DISCUSSED') || []
 	return (
 		<div className="min-h-screen bg-cream">
 			<Nav showLogout={true} showProfile={true} />

@@ -14,7 +14,7 @@ export function ChapterDetailPage() {
 	const navigate = useNavigate()
 	const user = useAuthStore((s) => s.user)
 
-	const [chapter, setChapter] = useState<Chapter | null>(null)
+	const [chapter, setChapter] = useState<Partial<Chapter> | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [meetings, setMeetings] = useState<Meeting[]>([])
@@ -35,7 +35,6 @@ export function ChapterDetailPage() {
 	      setChapter(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
-	      console.log({chapter})
 	      // Fetch meetings for this chapter
 	      setMeetingsLoading(true)
 	      return getMeetingsByChapterId(id)
@@ -61,8 +60,9 @@ export function ChapterDetailPage() {
 	  setSaving(true)
 	  setEditError(null)
 	  try {
-	    const updated = await updateChapter(id, { name: editName, description: editDescription || undefined})
-	    setChapter(updated)
+	    const {name, description} = await updateChapter(id, { name: editName, description: editDescription || undefined})
+		const newChap = {...chapter,name,description};
+	    setChapter(newChap)
 	    setEditing(false)
 	  } catch {
 	    setEditError('Failed to update chapter')

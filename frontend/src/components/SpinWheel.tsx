@@ -33,7 +33,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 		return () => window.removeEventListener('resize', handleResize)
 	}, [])
 
-	const pendingTopics = topics.filter(t => t.wheelStatus === 'PENDING')
+	const pendingTopics = topics.filter(t => t.status === 'PENDING')
 	const size = 600
 	const radius = size / 2 - 10
 	const cx = size / 2

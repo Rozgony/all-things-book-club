@@ -41,7 +41,11 @@ func (h *TopicHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *TopicHandler) Update(w http.ResponseWriter, r *http.Request) {
-	var input services.TopicInput
+	var input struct {
+		Status        *string `json:"status,omitempty"`
+		EncryptedBlob []byte  `json:"encryptedBlob,omitempty"`
+		Nonce         []byte  `json:"nonce,omitempty"`
+	}
 
 	err := json.NewDecoder(r.Body).Decode(&input)
 	if err != nil {
@@ -52,14 +56,22 @@ func (h *TopicHandler) Update(w http.ResponseWriter, r *http.Request) {
 	topicID := chi.URLParam(r, "id")
 	userID := middleware.UserIDFromContext(r.Context())
 
-	topic, err := h.topics.Update(r.Context(), input, topicID, userID)
-	if err != nil {
-		handleError(w, err)
-		return
+	if input.Status != nil {
+		if err := h.topics.UpdateStatus(r.Context(), topicID, *input.Status, userID); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.EncryptedBlob != nil {
+		if err := h.topics.UpdateEncrypted(r.Context(), topicID, input.EncryptedBlob, input.Nonce, userID); err != nil {
+			handleError(w, err)
+			return
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(topic)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *TopicHandler) Delete(w http.ResponseWriter, r *http.Request) {

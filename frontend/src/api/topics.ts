@@ -16,21 +16,38 @@ export async function createTopic(chapterID: string, meetingId: string, title: s
 	const res = await fetch(`${API_BASE}/topics`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify({ meetingId, encryptedBlob, nonce })
+		body: JSON.stringify({ chapterID, meetingId, encryptedBlob, nonce })
 	})
+
 	if (!res.ok) throw new Error('Failed to create topic')
-	return res.json()
+	const response = await res.json()
+	return {
+		id: response.id,
+		title,
+		description: description || '',
+		createdAt: response.createdAt, 
+		updatedAt: response.updatedAt,
+		status: response.status,
+		chapterId: response.chapterId, 
+		meetingId: response.meetingId,
+		createdById: response.createdById,
+	} as Topic
 }
 
-export async function updateTopicStatus(id: string, wheelStatus: TopicStatus): Promise<Topic> {
+export async function updateTopicStatus(id: string, topic: Topic, status: TopicStatus): Promise<Topic> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`${API_BASE}/topics/${id}`, {
 		method: 'PATCH',
 		headers,
-		body: JSON.stringify({ wheelStatus })
+		body: JSON.stringify({ status })
 	})
 	if (!res.ok) throw new Error('Failed to update topic')
-	return res.json()
+
+	return {
+		...topic,
+		id,
+		status,
+	} as Topic
 }
 
 export async function deleteTopic(id: string): Promise<void> {

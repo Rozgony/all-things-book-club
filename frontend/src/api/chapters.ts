@@ -21,7 +21,7 @@ export async function getChapters(): Promise<Chapter[]> {
 	// Decrypt each chapter's content using the stored chapter key
 	return Promise.all(chapters.map(async (chapter) => {
 		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
-		const key = await getAndSetChapterKey(chapter)
+		const key = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key!)
 		return { ...chapter, name: content.name, description: content.description ?? null }
 	}))
@@ -75,18 +75,20 @@ export async function createChapter(data: { name: string; description?: string; 
 	setChapterKey(chapter.id, chapterKey)
 
 	// 6. Return the chapter with decrypted fields for the UI
-	return { ...chapter, name: data.name, description: data.description ?? null, members: [chapterMember] }
+	return { ...chapter, name: data.name, description: data.description ?? null, chapterMembers: [chapterMember] }
 }
 
 export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 	const headers = await getAuthHeaders()
+
 	const res = await fetch(`${API_BASE}/chapters/${id}`, { headers })
 	if (!res.ok) throw new Error('Failed to fetch chapter')
 	const chapter: Chapter = await res.json()
-console.log({chapter});
+
 	if (!chapter.encryptedChapterKey && !chapter.keyNonce) throw 'Could not decrypt chapter'
 	if (!chapter.encryptedBlob || !chapter.nonce) return chapter
-	const chapterKey = await getAndSetChapterKey(chapter)
+
+	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
 	return { ...chapter, name: content.name, description: content.description ?? null }
 }
@@ -114,6 +116,7 @@ export async function updateChapter(id: string, data: { name?: string; descripti
 
 	const key = getChapterKey(returnedChapter.id)
 	const content = await decrypt<ChapterContent>(returnedChapter.encryptedBlob, returnedChapter.nonce, key)
+
 	return { ...returnedChapter, name: content.name, description: content.description ?? null }
 }
 

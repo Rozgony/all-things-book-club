@@ -4,7 +4,7 @@ import { type Chapter } from '../api/types'
 import { ConfirmModal } from './ConfirmModal'
 
 interface ChapterHeaderProps {
-	chapter: Chapter
+	chapter: Partial<Chapter>
 	editing: boolean
 	editName: string
 	editDescription: string

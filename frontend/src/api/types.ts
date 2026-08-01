@@ -69,7 +69,7 @@ export interface Topic {
 	id: string
 	chapterId: string
 	createdById: string | null
-	wheelStatus: TopicStatus
+	status: TopicStatus
 	createdAt: string
 	updatedAt: string
 	encryptedBlob?: string
@@ -78,7 +78,3 @@ export interface Topic {
 	title: string
 	description: string | null
 }
-
-// export interface MeetingWithTopics extends Meeting {
-// 	topics: Topic[]
-// }

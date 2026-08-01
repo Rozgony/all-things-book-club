@@ -206,9 +206,9 @@ func (s *ChapterService) Update(ctx context.Context, input ChapterInput, chapter
 		UPDATE chapters
 		SET is_public = $1, encrypted_blob = $2, nonce = $3, updated_at = now()
 		WHERE id = $4
-		RETURNING id, creator_id, is_public, created_at
+		RETURNING id, creator_id, is_public, created_at, encrypted_blob, nonce
 	`, input.IsPublic, input.EncryptedBlob, input.Nonce, chapterID).
-		Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt)
+		Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("ChapterService.Update: %w", err)
 	}
