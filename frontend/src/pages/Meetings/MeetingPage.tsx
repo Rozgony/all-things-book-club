@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Nav } from '../components/Nav'
-import { SpinWheel } from '../components/SpinWheel'
-import { TopicModal } from '../components/TopicModal'
-import { LoadingSpinner } from '../components/LoadingSpinner'
-import { createTopic, updateTopicStatus, deleteTopic } from '../api/topics'
-import { updateMeeting, getMeetingById } from '../api/meetings'
-import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../api/types'
-import { MeetingStatusBadge } from '../components/MeetingStatusBadge'
+import { Nav } from '../../components/Nav'
+import { SpinWheel } from './SpinWheel'
+import { TopicModal } from './TopicModal'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { createTopic, updateTopicStatus, deleteTopic } from '../../api/topics'
+import { updateMeeting, getMeetingById } from '../../api/meetings'
+import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../../api/types'
+import { MeetingStatusBadge } from '../../components/MeetingStatusBadge'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()

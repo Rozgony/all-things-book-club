@@ -1,4 +1,4 @@
-import { type UserProfile } from '../api/types'
+import { type UserProfile } from '../../api/types'
 
 interface ProfileSectionProps {
 	profile: UserProfile

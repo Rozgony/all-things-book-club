@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { createChapter } from '../api/chapters'
-import { type Chapter } from '../api/types'
-import { useAuthStore } from '../store/authStore'
+import { createChapter } from '../../api/chapters'
+import { type Chapter } from '../../api/types'
+import { useAuthStore } from '../../store/authStore'
 
 interface CreateChapterFormProps {
 	onChapterCreated: (chapter: Chapter) => void

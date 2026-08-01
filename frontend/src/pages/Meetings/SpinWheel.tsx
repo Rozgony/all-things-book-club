@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
-import { MeetingStatus, type Meeting, type Topic } from '../api/types'
-import { ConfirmModal } from './ConfirmModal'
+import { MeetingStatus, type Meeting, type Topic } from '../../api/types'
+import { ConfirmModal } from '../../components/ConfirmModal'
 import { EmptySpinWheel } from './EmptySpinWheel'
 
 interface SpinWheelProps {

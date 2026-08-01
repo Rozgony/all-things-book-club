@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { type Chapter } from '../api/types'
+import { type Chapter } from '../../api/types'
 
-import { ConfirmModal } from './ConfirmModal'
+import { ConfirmModal } from '../../components/ConfirmModal'
 
 interface ChapterHeaderProps {
 	chapter: Partial<Chapter>

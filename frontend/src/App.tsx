@@ -1,9 +1,8 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage } from './pages/LoginPage'
-import { ProfilePage } from './pages/ProfilePage'
-// import { ChaptersPage } from './pages/ChaptersPage'
-import { ChapterDetailPage } from './pages/ChapterDetailPage'
-import { MeetingPage } from './pages/MeetingPage'
+import { LoginPage } from './pages/Home/LoginPage'
+import { ProfilePage } from './pages/Profile/ProfilePage'
+import { ChapterDetailPage } from './pages/ChapterDetail/ChapterDetailPage'
+import { MeetingPage } from './pages/Meetings/MeetingPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
@@ -18,14 +17,6 @@ function App() {
 	        </ProtectedRoute>
 	      }
 	    />
-	    {/* <Route
-	      path="/chapters"
-	      element={
-	        <ProtectedRoute>
-	          <ChaptersPage />
-	        </ProtectedRoute>
-	      }
-	    /> */}
 	    <Route
 	      path="/chapters/:id"
 	      element={

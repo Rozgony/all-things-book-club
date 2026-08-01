@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
-import { Nav } from '../components/Nav'
-import { deriveUserKey } from '../lib/crypto'
-import { setUserKey } from '../lib/keyStore'
+import { supabase } from '../../lib/supabase'
+import { Nav } from '../../components/Nav'
+import { deriveUserKey } from '../../lib/crypto'
+import { setUserKey } from '../../lib/keyStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { type Chapter } from '../api/types'
+import { type Chapter } from '../../api/types'
 
 interface ChapterCardProps {
 	chapter: Chapter,

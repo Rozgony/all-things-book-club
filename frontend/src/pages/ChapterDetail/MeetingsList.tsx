@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { type Meeting } from '../api/types'
+import { type Meeting } from '../../api/types'
 import { MeetingCard } from './MeetingCard'
-import { createMeeting } from '../api/meetings'
+import { createMeeting } from '../../api/meetings'
 
 interface MeetingsListProps {
 	chapterId: string

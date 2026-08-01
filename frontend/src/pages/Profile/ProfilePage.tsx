@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Nav } from '../components/Nav'
-import { ChapterCard } from '../components/ChapterCard'
-import { ProfileSection } from '../components/ProfileSection'
-import { getMyProfile, updateMyProfile } from '../api/users'
-import { getChapters } from '../api/chapters'
-import { type UserProfile, type Chapter } from '../api/types'
-import { CreateChapterForm } from '../components/CreateChapterForm'
-import { LoadingSpinner } from '../components/LoadingSpinner'
+import { Nav } from '../../components/Nav'
+import { ChapterCard } from './ChapterCard'
+import { ProfileSection } from './ProfileSection'
+import { getMyProfile, updateMyProfile } from '../../api/users'
+import { getChapters } from '../../api/chapters'
+import { type UserProfile, type Chapter } from '../../api/types'
+import { CreateChapterForm } from './CreateChapterForm'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 export function ProfilePage() {
 	const [profile, setProfile] = useState<UserProfile | null>(null)

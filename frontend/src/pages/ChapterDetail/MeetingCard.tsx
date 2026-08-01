@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { type Meeting } from '../api/types'
-import { deleteMeeting } from '../api/meetings'
-import { ConfirmModal } from './ConfirmModal'
-import { MeetingStatusBadge } from './MeetingStatusBadge'
+import { type Meeting } from '../../api/types'
+import { deleteMeeting } from '../../api/meetings'
+import { ConfirmModal } from '../../components/ConfirmModal'
+import { MeetingStatusBadge } from '../../components/MeetingStatusBadge'
 
 interface MeetingCardProps {
 	meeting: Meeting

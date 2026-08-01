@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/authStore'
-import { Nav } from '../components/Nav'
-import { ChapterHeader } from '../components/ChapterHeader'
-import { MeetingsList } from '../components/MeetingsList'
-import { getChapterAndSetKey, updateChapter, deleteChapter } from '../api/chapters'
-import { getMeetingsByChapterId } from '../api/meetings'
-import { type Chapter, type Meeting } from '../api/types'
-import { LoadingSpinner } from '../components/LoadingSpinner'
+import { useAuthStore } from '../../store/authStore'
+import { Nav } from '../../components/Nav'
+import { ChapterHeader } from './ChapterHeader'
+import { MeetingsList } from './MeetingsList'
+import { getChapterAndSetKey, updateChapter, deleteChapter } from '../../api/chapters'
+import { getMeetingsByChapterId } from '../../api/meetings'
+import { type Chapter, type Meeting } from '../../api/types'
+import { LoadingSpinner } from '../../components/LoadingSpinner'
 
 export function ChapterDetailPage() {
 	const { id } = useParams<{ id: string }>()
