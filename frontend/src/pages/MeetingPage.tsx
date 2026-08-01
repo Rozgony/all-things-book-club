@@ -98,7 +98,11 @@ export function MeetingPage() {
 		setAddError(null)
 		try {
 			const topic = await createTopic(meeting?.chapterId!, id, newTopicTitle.trim())
-			setMeeting(prev => (prev && prev.topics) ? { ...prev, topics: [...prev.topics, topic] } : prev)
+			setMeeting(prev => {
+				if (!prev) return null
+				if (prev.topics) return { ...prev, topics: [...prev.topics, topic] }
+				return { ...prev, topics: [topic] }
+			})
 			setNewTopicTitle('')
 		} catch (e) {
 			console.log({e})

@@ -21,6 +21,7 @@ export async function createTopic(chapterID: string, meetingId: string, title: s
 
 	if (!res.ok) throw new Error('Failed to create topic')
 	const response = await res.json()
+console.log({response});
 	return {
 		id: response.id,
 		title,

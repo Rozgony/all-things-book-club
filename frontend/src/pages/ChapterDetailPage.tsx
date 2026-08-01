@@ -75,7 +75,7 @@ export function ChapterDetailPage() {
 	  setDeleting(true)
 	  try {
 	    await deleteChapter(id!)
-	    navigate('/chapters')
+	    navigate('/profile')
 	  } catch {
 	    setError('Failed to delete chapter')
 	    setDeleting(false)

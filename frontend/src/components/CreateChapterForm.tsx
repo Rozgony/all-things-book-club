@@ -14,7 +14,7 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 	const [creating, setCreating] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
 	const user = useAuthStore((s) => s.user)
-console.log({user});
+
 	const handleCreate = async (e: React.FormEvent) => {
 		e.preventDefault()
 		setCreating(true)

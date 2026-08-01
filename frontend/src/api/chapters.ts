@@ -43,7 +43,7 @@ export async function createChapter(data: { name: string; description?: string; 
 	const { encryptedChapterKey, keyNonce } = await encryptChapterKey(chapterKey, userKey)
 
 	// 3. Encrypt the chapter content (name, description) with the chapter key
-	const { encryptedBlob: encryptedChapterBlob, nonce: chpaterNonce } = await encrypt(
+	const { encryptedBlob: encryptedChapterBlob, nonce: chapterNonce } = await encrypt(
 		{ name: data.name, description: data.description },
 		chapterKey
 	)
@@ -58,7 +58,7 @@ export async function createChapter(data: { name: string; description?: string; 
 		headers,
 		body: JSON.stringify({ 
 			encryptedChapterBlob, 
-			chpaterNonce, 
+			chapterNonce, 
 			encryptedMemberBlob, 
 			memberNonce, 
 			isPublic: false, 
