@@ -5,12 +5,12 @@ import { type Topic, type TopicStatus } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
-export async function createTopic(chapterID: string, meetingId: string, title: string, description?: string): Promise<Topic> {
+export async function createTopic(chapterID: string, meetingId: string, title: string, description?: string, url?: string): Promise<Topic> {
 	const headers = await getAuthHeaders()
 	const chapterKey = getChapterKey(chapterID)
 
 	const { encryptedBlob, nonce } = await encrypt(
-		{ title, description },
+		{ title, description, url },
 		chapterKey
 	)
 	const res = await fetch(`${API_BASE}/topics`, {
@@ -25,6 +25,7 @@ console.log({response});
 	return {
 		id: response.id,
 		title,
+		url,
 		description: description || '',
 		createdAt: response.createdAt, 
 		updatedAt: response.updatedAt,
@@ -51,12 +52,12 @@ export async function updateTopicStatus(id: string, topic: Topic, status: TopicS
 	} as Topic
 }
 
-export async function updateTopicContent(id: string, chapterId: string, title: string, description?: string): Promise<Topic> {
+export async function updateTopicContent(id: string, chapterId: string, title: string, description?: string, url?: string): Promise<Topic> {
 	const headers = await getAuthHeaders()
 	const chapterKey = getChapterKey(chapterId)
 	if (!chapterKey) throw new Error('Chapter key not available for encryption')
 
-	const { encryptedBlob, nonce } = await encrypt({ title, description }, chapterKey)
+	const { encryptedBlob, nonce } = await encrypt({ title, description, url }, chapterKey)
 
 	const res = await fetch(`${API_BASE}/topics/${id}`, {
 		method: 'PATCH',

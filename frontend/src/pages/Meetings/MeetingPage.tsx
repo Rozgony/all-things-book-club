@@ -155,7 +155,7 @@ export function MeetingPage() {
 		setAddingTopic(true)
 		setAddError(null)
 		try {
-			const topic = await createTopic(meeting.chapterId, id, data.title, data.description || undefined)
+			const topic = await createTopic(meeting.chapterId, id, data.title, data.description || undefined, data.url)
 			const { finalThemeIds, newlyCreatedThemes } = await syncTopicThemes(topic.id, meeting.chapterId, [], data.themes)
 			const topicWithThemes = { ...topic, themeIds: finalThemeIds }
 
@@ -183,13 +183,13 @@ export function MeetingPage() {
 		if (!meeting) return
 		setSavingTopic(true)
 		try {
-			await updateTopicContent(topicId, meeting.chapterId, data.title, data.description || undefined)
+			await updateTopicContent(topicId, meeting.chapterId, data.title, data.description || undefined, data.url || undefined)
 			const previousThemeIds = meeting.topics?.find(t => t.id === topicId)?.themeIds || []
 			const { finalThemeIds, newlyCreatedThemes } = await syncTopicThemes(topicId, meeting.chapterId, previousThemeIds, data.themes)
 			setMeeting(prev => prev ? {
 				...prev,
 				topics: prev.topics?.map(t => t.id === topicId
-					? { ...t, title: data.title, description: data.description || null, themeIds: finalThemeIds }
+					? { ...t, title: data.title, description: data.description || null, url: data.url || undefined, themeIds: finalThemeIds }
 					: t
 				) || []
 			} : prev)
@@ -324,6 +324,7 @@ export function MeetingPage() {
 												<TopicForm
 													chapterThemes={chapterThemes}
 													initialTitle={topic.title}
+													initialUrl={topic.url}
 													initialDescription={topic.description || ''}
 													initialThemes={(topic.themeIds || []).map(themeId => {
 														const theme = chapterThemes.find(t => t.id === themeId)

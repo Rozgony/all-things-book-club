@@ -11,7 +11,9 @@ export function TopicCard({ topic, chapterThemes, onEdit, onDelete }: TopicCardP
 	return (
 		<div className="flex justify-between items-start gap-2">
 			<div className="flex-1 min-w-0">
-				<span className="text-sm text-stone">{topic.title}</span>
+				<span className="text-sm text-stone">{
+						topic.url ? (<a className="text-terracotta hover:text-terracotta-dark underline text-sm break-all" href={topic.url}>{topic.title}</a>) : (topic.title)
+				}</span>
 				{topic.description && (
 					<p className="text-xs text-stone-muted mt-0.5">
 						{topic.description.length > 120 ? topic.description.substring(0, 120) + '…' : topic.description}

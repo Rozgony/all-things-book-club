@@ -4,13 +4,15 @@ import { type Theme } from '../../api/types'
 
 export interface TopicFormData {
 	title: string
-	description: string
+	description?: string
+	url?: string
 	themes: SelectedTheme[]
 }
 
 interface TopicFormProps {
 	chapterThemes: Theme[]
 	initialTitle?: string
+	initialUrl?: string
 	initialDescription?: string
 	initialThemes?: SelectedTheme[]
 	submitLabel?: string
@@ -23,6 +25,7 @@ interface TopicFormProps {
 export function TopicForm({
 	chapterThemes,
 	initialTitle = '',
+	initialUrl = '',
 	initialDescription = '',
 	initialThemes = [],
 	submitLabel = 'Add',
@@ -32,13 +35,14 @@ export function TopicForm({
 	onCancel
 }: TopicFormProps) {
 	const [title, setTitle] = useState(initialTitle)
+	const [url, setUrl] = useState(initialUrl)
 	const [description, setDescription] = useState(initialDescription)
 	const [themes, setThemes] = useState<SelectedTheme[]>(initialThemes)
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault()
-		if (!title.trim()) return
-		await onSubmit({ title: title.trim(), description: description.trim(), themes })
+		if (!title.trim() || themes.length === 0) return
+		await onSubmit({ title: title.trim(), description: description.trim(), url: url.trim(), themes })
 		if (!onCancel) {
 			setTitle('')
 			setDescription('')
@@ -52,8 +56,16 @@ export function TopicForm({
 				type="text"
 				maxLength={48}
 				value={title}
+				required={true}
 				onChange={e => setTitle(e.target.value)}
 				placeholder="Add a topic…"
+				className="px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+			/>
+			<input
+				type="url"
+				value={url}
+				onChange={e => setUrl(e.target.value)}
+				placeholder="Add a link (optional)"
 				className="px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 			/>
 			<textarea
@@ -69,7 +81,7 @@ export function TopicForm({
 					chapterThemes={chapterThemes}
 					selectedThemes={themes}
 					onChange={setThemes}
-					placeholder="Add themes & click enter…"
+					placeholder="Add at least one theme & click enter…"
 				/>
 				{onCancel && (
 					<button
@@ -82,7 +94,7 @@ export function TopicForm({
 				)}
 				<button
 					type="submit"
-					disabled={submitting || !title.trim()}
+					disabled={submitting || !title.trim() || themes.length === 0}
 					className="px-4 py-2 bg-forest text-white text-sm rounded hover:bg-forest-deep transition-colors disabled:opacity-50"
 				>
 					{submitting ? (pendingLabel || `${submitLabel}…`) : submitLabel}

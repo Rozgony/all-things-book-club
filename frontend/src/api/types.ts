@@ -83,6 +83,7 @@ export interface Theme {
 export interface Topic {
 	id: string
 	chapterId: string
+	url?: string
 	createdById: string | null
 	status: TopicStatus
 	createdAt: string
