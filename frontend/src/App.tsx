@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from './pages/LoginPage'
 import { ProfilePage } from './pages/ProfilePage'
-import { ChaptersPage } from './pages/ChaptersPage'
+// import { ChaptersPage } from './pages/ChaptersPage'
 import { ChapterDetailPage } from './pages/ChapterDetailPage'
 import { MeetingPage } from './pages/MeetingPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -18,14 +18,14 @@ function App() {
 	        </ProtectedRoute>
 	      }
 	    />
-	    <Route
+	    {/* <Route
 	      path="/chapters"
 	      element={
 	        <ProtectedRoute>
 	          <ChaptersPage />
 	        </ProtectedRoute>
 	      }
-	    />
+	    /> */}
 	    <Route
 	      path="/chapters/:id"
 	      element={
@@ -42,7 +42,7 @@ function App() {
 	        </ProtectedRoute>
 	      }
 	    />
-	    <Route path="*" element={<Navigate to="/chapters" replace />} />
+	    <Route path="*" element={<Navigate to="/profile" replace />} />
 	  </Routes>
 	)
 }

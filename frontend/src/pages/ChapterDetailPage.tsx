@@ -93,7 +93,7 @@ export function ChapterDetailPage() {
 	  return (
 	    <div className="flex flex-col items-center justify-center min-h-screen text-stone-muted gap-4">
 	      <p>{error ?? 'Chapter not found'}</p>
-	      <button onClick={() => navigate('/chapters')} className="text-terracotta hover:underline text-sm">Back to chapters</button>
+	      <button onClick={() => navigate('/profile')} className="text-terracotta hover:underline text-sm">Back to my profile</button>
 	    </div>
 	  )
 	}
