@@ -46,6 +46,7 @@ type Meeting struct {
 	Status    			string  `json:"status"`
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
+	Chapter				*Chapter `json:"chapter"`
 	Topics				[]*Topic `json:"topics"`
 	ChapterMembers		[]*ChapterMember	`json:"chapterMember"`
 }
@@ -83,20 +84,25 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	var m Meeting
 	var cm ChapterMember
+	var ch Chapter
 	err := s.db.QueryRow(ctx, `
 		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
-			cm.id, cm.encrypted_chapter_key, cm.key_nonce
+			cm.id, cm.encrypted_chapter_key, cm.key_nonce,
+			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapter_members cm ON cm.chapter_id = m.chapter_id AND cm.user_id = $2
+		JOIN chapters c ON c.id = m.chapter_id
 		WHERE m.id = $1
 	`, meetingID, userID).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
 			&m.Status, &m.Nonce, &m.EncryptedBlob,
-			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce)
+			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce,
+			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", err)
 	}
 
+	m.Chapter = &ch
 	m.ChapterMembers = append(m.ChapterMembers, &cm)
 
 	// Fetch topics for this meeting
@@ -132,9 +138,11 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT id, chapter_id, scheduled_at, duration, recurring_group_id, status, nonce, encrypted_blob
-		FROM meetings
-		WHERE chapter_id = $1
+		SELECT m.id, m.chapter_id, m.scheduled_at, m.duration, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
+			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
+		FROM meetings m
+		JOIN chapters c ON c.id = m.chapter_id
+		WHERE m.chapter_id = $1
 	`, chapterID)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByChapterID: query: %w", err)
@@ -144,9 +152,12 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 	meetings := []*Meeting{}
 	for rows.Next() {
 		var m Meeting
-		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob); err != nil {
+		var ch Chapter
+		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob,
+			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByChapterID: scan: %w", err)
 		}
+		m.Chapter = &ch
 		meetings = append(meetings, &m)
 	}
 

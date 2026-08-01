@@ -49,25 +49,40 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 ## Tech Stack
 
 ### Backend
-- **Runtime**: Node.js 24
-- **Framework**: Express 5.2.1
-- **Language**: TypeScript
-- **ORM**: Prisma 5.9.0
-- **Database**: PostgreSQL (via Supabase)
+- **Runtime**: Go
+- **Framework**: chi (HTTP router)
+- **Language**: Go
+- **Database**: PostgreSQL (via Supabase), raw SQL with pgx/v5
 - **Auth**: Supabase Auth (JWT-based)
-- **Testing**: Vitest + Supertest
+- **Migrations**: Plain `.sql` files in `backend-go/migrations/`, synced to `supabase/migrations/`
 
 ### Frontend
-- 
+- **Framework**: React
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Hosting**: Vercel
+- **E2EE**: Web Crypto API (AES-256-GCM) — all sensitive content encrypted client-side before sending to the server
+
+### Infrastructure
+- **Backend Hosting**: Railway
+- **Database**: Supabase (managed PostgreSQL)
+- **Auth**: Supabase Auth
 
 ---
 
 ## Code Style & Conventions
 
-- Services: functional exports, direct Prisma calls, no validation (validation in routes)
-- Routes: try/catch on every handler, `AppError` for user-facing errors, `next(err)` for middleware
-- Tests: Vitest + `vi.mock()` for Prisma/Supabase, Supertest for route integration tests
-- `__tests__/` folder colocated with source (`services/`, `routes/`, `middleware/`)
+### Backend (Go)
+- Services: methods on a struct with `*pgxpool.Pool`, named `<Resource>Service`
+- Routes: `handle<Action>` handlers in `internal/routes/`, decode JSON body → call service → encode response
+- Error handling: `handleError(w, err)` with typed errors from `internal/routes/errors.go`
+- Migrations: plain `.sql` files in `backend-go/migrations/` — copy to `supabase/migrations/` via `migrate-dev`/`migrate-prod` scripts
+
+### Frontend (TypeScript/React)
+- API layer in `src/api/` — one file per resource, async functions returning typed models
+- E2EE: encrypt before sending, decrypt after receiving; server never sees plaintext sensitive data
+- Encrypted fields use `encryptedBlob` (base64) + `nonce` (base64); decrypted fields populated client-side
+- Chapter key stored in memory via `src/lib/keyStore.ts`; derived from user password via PBKDF2
 
 ---
 
@@ -89,7 +104,8 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 
 ---
 
-## New Stack & Hosting
-- Frontend: React on Vercel
-- Backend: Go on Railway
-- DB: Postgres on Supabase
+## Workspace Structure
+- `backend-go/` — Go backend (chi router, pgx, services/routes/middleware layers)
+- `frontend/` — React + TypeScript + Vite frontend
+- `supabase/migrations/` — canonical SQL migrations (synced from `backend-go/migrations/`)
+- No `backend/` directory — the old Node.js/Express backend has been removed

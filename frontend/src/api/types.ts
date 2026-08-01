@@ -52,8 +52,13 @@ export interface Meeting {
 	recurringGroupId: string | null
 	createdAt: string
 	updatedAt: string
+	encryptedBlob?: string | null
+	nonce?: string | null
 	chapter?: Chapter
 	topics?: Topic[]
+	// Decrypted fields — populated client-side after decryption
+	videoCallLink?: string | null
+	physicalAddress?: string | null
 }
 
 export const meetingStatusReadable = {

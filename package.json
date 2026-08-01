@@ -6,11 +6,9 @@
 		"migrate-prod": "cp backend-go/migrations/*.sql supabase/migrations/ && supabase db push"
 	},
 	"devDependencies": {
-		"concurrently": "^10.0.3",
-		"prisma": "^5.22.0"
+		"concurrently": "^10.0.3"
 	},
 	"dependencies": {
-		"@prisma/client": "^5.22.0",
 		"supabase": "^2.109.1"
 	}
 }

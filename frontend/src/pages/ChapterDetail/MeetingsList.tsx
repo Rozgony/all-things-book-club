@@ -24,6 +24,8 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 	const [showForm, setShowForm] = useState(false)
 	const [scheduledAt, setScheduledAt] = useState('')
 	const [duration, setDuration] = useState(60)
+	const [videoCallLink, setVideoCallLink] = useState('')
+	const [physicalAddress, setPhysicalAddress] = useState('')
 	const [saving, setSaving] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
 	const [viewPastMeetings, setViewPastMeetings] = useState(false)
@@ -33,11 +35,13 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 		setSaving(true)
 		setFormError(null)
 		try {
-			const meeting = await createMeeting(chapterId, scheduledAt, duration)
+			const meeting = await createMeeting(chapterId, scheduledAt, duration, videoCallLink || undefined, physicalAddress || undefined)
 			onMeetingCreated(meeting)
 			setShowForm(false)
 			setScheduledAt('')
 			setDuration(60)
+			setVideoCallLink('')
+			setPhysicalAddress('')
 		} catch {
 			setFormError('Failed to schedule meeting')
 		} finally {
@@ -83,6 +87,30 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 							min={15}
 							step={15}
 							onChange={e => setDuration(Number(e.target.value))}
+							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+						/>
+					</div>
+					<div>
+						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
+							Video Call Link
+						</label>
+						<input
+							type="url"
+							value={videoCallLink}
+							placeholder="https://meet.link.com/..."
+							onChange={e => setVideoCallLink(e.target.value)}
+							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+						/>
+					</div>
+					<div>
+						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
+							Physical Address
+						</label>
+						<input
+							type="text"
+							value={physicalAddress}
+							placeholder="123 Main St, City, State"
+							onChange={e => setPhysicalAddress(e.target.value)}
 							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 						/>
 					</div>

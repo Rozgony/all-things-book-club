@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Nav } from '../../components/Nav'
 import { SpinWheel } from './SpinWheel'
 import { TopicModal } from './TopicModal'
+import { MeetingInfo } from './MeetingInfo'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { createTopic, updateTopicStatus, deleteTopic } from '../../api/topics'
 import { updateMeeting, getMeetingById } from '../../api/meetings'
-import { MeetingStatus, SpinnerSize, type Meeting, type Topic } from '../../api/types'
-import { MeetingStatusBadge } from '../../components/MeetingStatusBadge'
+import { MeetingStatus, type Meeting, type Topic } from '../../api/types'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
@@ -25,6 +25,8 @@ export function MeetingPage() {
 
 	const [editingDate, setEditingDate] = useState(false)
 	const [editDateValue, setEditDateValue] = useState('')
+	const [videoCallLinkValue, setVideoCallLinkValue] = useState('')
+	const [physicalAddressValue, setPhysicalAddressValue] = useState('')
 	const [savingDate, setSavingDate] = useState(false)
 
 	const [savingStatus, setSavingStatus] = useState(false)
@@ -38,6 +40,8 @@ export function MeetingPage() {
 	const handleEditDateStart = () => {
 		if (!meeting) return
 		setEditDateValue(toDatetimeLocal(meeting.scheduledAt))
+		setVideoCallLinkValue(meeting.videoCallLink || '')
+		setPhysicalAddressValue(meeting.physicalAddress || '')
 		setEditingDate(true)
 	}
 
@@ -45,8 +49,13 @@ export function MeetingPage() {
 		if (!meeting || !editDateValue) return
 		setSavingDate(true)
 		try {
-			const updated = await updateMeeting(meeting.id, { scheduledAt: new Date(editDateValue).toISOString() })
-			setMeeting(prev => prev ? { ...prev, scheduledAt: updated.scheduledAt } : prev)
+			const updated = await updateMeeting(meeting.id, {
+				scheduledAt: new Date(editDateValue).toISOString(),
+				videoCallLink: videoCallLinkValue,
+				physicalAddress: physicalAddressValue,
+				chapterId: meeting.chapterId
+			})
+			setMeeting(prev => prev ? { ...prev, scheduledAt: updated.scheduledAt, videoCallLink: videoCallLinkValue || null, physicalAddress: physicalAddressValue || null } : prev)
 			setEditingDate(false)
 		} catch {
 			// silent — keep modal open
@@ -192,64 +201,26 @@ export function MeetingPage() {
 
 			<main className="max-w-5gl mx-auto px-4 py-10">
 				<div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-8">
-					{/* Topics panel */}
+					{/* Meeting Info Panel */}
 					<div className="space-y-6">
-						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
-						{editingDate ? (
-							<div className="flex items-center gap-2 flex-wrap">
-								<input
-									type="datetime-local"
-									value={editDateValue}
-									onChange={e => setEditDateValue(e.target.value)}
-									className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-								<button
-									onClick={handleSaveDate}
-									disabled={savingDate}
-									className="px-3 py-1.5 bg-terracotta text-white text-sm rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
-								>
-									{savingDate ? 'Saving…' : 'Save'}
-								</button>
-								<button
-									onClick={() => setEditingDate(false)}
-									className="px-3 py-1.5 border border-warm-border text-stone-muted text-sm rounded hover:bg-cream transition-colors"
-								>
-									Cancel
-								</button>
-							</div>
-						) : (
-							<div className="flex items-center justify-between gap-2">
-								<h2 className="font-heading text-forest-deep">
-									{formatDate(meeting.scheduledAt)}
-								</h2>
-								{
-									['SCHEDULED','ACTIVE'].includes(meeting.status) ? (
-										<button
-											onClick={handleEditDateStart}
-											className="text-stone-muted hover:text-stone transition-colors p-1"
-											title="Edit date"
-										>
-											<div className="rotate-90">✏️</div>
-										</button>
-										) : null
-								}
-								<MeetingStatusBadge status={meeting.status}></MeetingStatusBadge>
-								<button
-									onClick={() => handleStatusUpdate()}
-									className={`flex items-center justify-center mx-2 px-1.5 py-1.5 min-w-24 ${meeting.status === MeetingStatus.ACTIVE ? 'text-terracotta hover:text-terracotta-dark border-terracotta' : 'text-forest hover:text-forest-deep border-forest'} text-sm border rounded transition-colors disabled:opacity-50`}
-								>
-									{ savingStatus ? (
-										 <LoadingSpinner size={SpinnerSize.SM} />
-									) : (
-										meeting.status === MeetingStatus.ACTIVE ? 'End Meeting' : 'Start Meeting'
-									)}
-								</button>
-							</div>
-						)}
-							<button onClick={() => navigate(-1)} className="text-med underline text-stone-muted hover:text-stone mb-3 inline-block">
-								{meeting.chapter?.name || ''} Chapter
-							</button>
-						</div>
+						<MeetingInfo
+							meeting={meeting}
+							editingDate={editingDate}
+							editDateValue={editDateValue}
+							videoCallLinkValue={videoCallLinkValue}
+							physicalAddressValue={physicalAddressValue}
+							savingDate={savingDate}
+							savingStatus={savingStatus}
+							onEditDateStart={handleEditDateStart}
+							onSaveDate={handleSaveDate}
+							onCancelEdit={() => setEditingDate(false)}
+							onEditDateValueChange={setEditDateValue}
+							onVideoCallLinkChange={setVideoCallLinkValue}
+							onPhysicalAddressChange={setPhysicalAddressValue}
+							onStatusUpdate={handleStatusUpdate}
+							formatDate={formatDate}
+						/>
+
 						{/* Add topic */}
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 							<h3 className="font-heading text-forest-deep mb-4">Topics</h3>

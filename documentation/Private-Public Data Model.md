@@ -1,23 +1,8 @@
-Updated todo list
-
-Let me look at the current schema first so the new model maps cleanly to what exists.  
-
-Read [](file:///Users/schangulo/Dev/all-things-book-club/backend/prisma/schema.prisma#1-1), lines 1 to 120
-
-Read [](file:///Users/schangulo/Dev/all-things-book-club/PROJECT_PLAN.md#1-1), lines 1 to 80
-
-Read [](file:///Users/schangulo/Dev/all-things-book-club/backend/prisma/schema.prisma#121-121), lines 121 to 280
-
-Good. Here's the full picture. Save this and hand it back when you're ready.
-
----
-
 ## Build Prompt: Go E2EE Backend — Data Model
 
 ### Context
-Refactoring a Node/TypeScript/Prisma backend to Go with end-to-end encryption. The server is blind to private chapter data. Auth remains Supabase (JWT). Database is PostgreSQL on Supabase.
 
-The current schema has: `User`, `Chapter`, `ChapterMember`, `ChapterInvitation`, `Theme`, `Meeting`, `Topic`, `TopicTheme`, `TopicStatus`, `DiscussionNote`, `MeetingStatus`, `VisibilityLevel`.
+The current schema has: `User`, `Chapter`, `ChapterMember`, `ChapterInvitation`, `Theme`, `Meeting`, `Topic`, `TopicTheme`, `TopicStatus`, `DiscussionNote`, `MeetingStatus`
 
 ---
 
