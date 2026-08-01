@@ -64,54 +64,56 @@ export function MeetingInfo({
 					</div>
 				</div>
 				{editingDate ? (
-					<div className="flex items-center gap-2 flex-wrap">
-						<div>
-							<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Meeting Time</p>
+					<div className="mt-2 space-y-4">
+						<div className="flex items-center justify-between gap-2">
 							<input
 								type="datetime-local"
 								value={editDateValue}
 								onChange={e => onEditDateValueChange(e.target.value)}
-								className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+								className="font-heading text-forest-deep bg-transparent border-b border-terracotta focus:outline-none focus:border-terracotta py-0.5 w-full"
+								style={{ fontSize: '1.33em' }}
 							/>
 						</div>
 						<div className="flex items-center gap-6 flex-wrap">
-							<div>
+							<div className="flex-1 min-w-40">
 								<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Video Call</p>
 								<input
 									type="url"
 									value={videoCallLinkValue}
 									onChange={e => onVideoCallLinkChange(e.target.value)}
-									placeholder="Video call link"
-									className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+									placeholder="https://meet.google.com/…"
+									className="w-full bg-transparent border-b border-warm-border text-terracotta text-sm focus:outline-none focus:border-terracotta py-0.5 placeholder:text-stone-muted/50"
 								/>
 							</div>
-							<div>
+							<div className="flex-1 min-w-40">
 								<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Location</p>
 								<input
 									type="text"
 									value={physicalAddressValue}
 									onChange={e => onPhysicalAddressChange(e.target.value)}
-									placeholder="Physical address"
-									className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+									placeholder="123 Main St, City, State"
+									className="w-full bg-transparent border-b border-warm-border text-terracotta text-sm focus:outline-none focus:border-terracotta py-0.5 placeholder:text-stone-muted/50"
 								/>
 							</div>
 						</div>
-						<button
-							onClick={onSaveDate}
-							disabled={savingDate}
-							className="px-3 py-1.5 bg-terracotta text-white text-sm rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
-						>
-							{savingDate ? 'Saving…' : 'Save'}
-						</button>
-						<button
-							onClick={onCancelEdit}
-							className="px-3 py-1.5 border border-warm-border text-stone-muted text-sm rounded hover:bg-cream transition-colors"
-						>
-							Cancel
-						</button>
+						<div className="flex items-center gap-2 justify-end">
+							<button
+								onClick={onSaveDate}
+								disabled={savingDate}
+								className="px-3 py-1.5 bg-terracotta text-white text-sm rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
+							>
+								{savingDate ? 'Saving…' : 'Save'}
+							</button>
+							<button
+								onClick={onCancelEdit}
+								className="px-3 py-1.5 border border-warm-border text-stone-muted text-sm rounded hover:bg-cream transition-colors"
+							>
+								Cancel
+							</button>
+						</div>
 					</div>
 				) : (
-					<div className="flex items-center justify-between gap-2 mb-2 mt-2">
+					<div className="flex items-center justify-start gap-2 mb-2 mt-2">
 						<h2 className="font-heading text-forest-deep">
 							{formatDate(meeting.scheduledAt)}
 						</h2>
