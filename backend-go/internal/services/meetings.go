@@ -124,6 +124,36 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 		m.Topics = append(m.Topics, &t)
 	}
 
+	// Fetch theme associations for these topics
+	if len(m.Topics) > 0 {
+		topicIDs := make([]string, len(m.Topics))
+		topicIndex := make(map[string]int, len(m.Topics))
+		for i, t := range m.Topics {
+			topicIDs[i] = t.ID
+			topicIndex[t.ID] = i
+		}
+
+		themeRows, err := s.db.Query(ctx, `
+			SELECT topic_id, theme_id
+			FROM topic_themes
+			WHERE topic_id = ANY($1)
+		`, topicIDs)
+		if err != nil {
+			return nil, fmt.Errorf("MeetingService.GetByID: fetch topic themes: %w", err)
+		}
+		defer themeRows.Close()
+
+		for themeRows.Next() {
+			var topicID, themeID string
+			if err := themeRows.Scan(&topicID, &themeID); err != nil {
+				return nil, fmt.Errorf("MeetingService.GetByID: scan topic theme: %w", err)
+			}
+			if idx, ok := topicIndex[topicID]; ok {
+				m.Topics[idx].ThemeIDs = append(m.Topics[idx].ThemeIDs, themeID)
+			}
+		}
+	}
+
 	return &m, nil
 }
 

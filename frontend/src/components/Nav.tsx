@@ -5,10 +5,11 @@ export type NavParams = {
 	  showLogout?: boolean
 	  showProfile?: boolean
 	  showChapters?: boolean
+	  username: string
 }
 
 export function Nav(params: NavParams) {
- const { showLogout, showProfile, showChapters } = params;
+ const { showLogout, showProfile, showChapters, username } = params;
 	const signOut = useAuthStore((s) => s.signOut)
 	const navigate = useNavigate()
 
@@ -17,7 +18,7 @@ export function Nav(params: NavParams) {
 	    	<h1 className="font-heading text-white text-lg tracking-wide">All Things Book Club</h1>
 	    	<div className="flex items-center gap-5">
 				{ !showChapters || <button onClick={() => navigate('/chapters')} className="text-sm text-white/75 hover:text-white transition-colors">All Chapters</button> }
-	      		{ !showProfile || <button onClick={() => navigate('/profile')} className="text-sm text-white/75 hover:text-white transition-colors">Profile</button> }
+	      		{ !showProfile || <button onClick={() => navigate('/profile')} className="text-sm text-white/75 hover:text-white transition-colors">{username || 'Profile'}</button> }
 	      		{ !showLogout || <button onClick={signOut} className="text-sm text-white/75 hover:text-white transition-colors">Sign out</button> }
 	    	</div>
 	  	</nav>

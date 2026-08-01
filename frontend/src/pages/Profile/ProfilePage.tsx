@@ -7,13 +7,19 @@ import { getChapters } from '../../api/chapters'
 import { type UserProfile, type Chapter } from '../../api/types'
 import { CreateChapterForm } from './CreateChapterForm'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { useAuthStore } from '../../store/authStore'
+import { supabase } from '../../lib/supabase'
 
 export function ProfilePage() {
+	const user = useAuthStore((s) => s.user)
 	const [profile, setProfile] = useState<UserProfile | null>(null)
 	const [chapters, setChapters] = useState<Chapter[]>([])
 	const [editing, setEditing] = useState(false)
 	const [name, setName] = useState('')
 	const [timezone, setTimezone] = useState('')
+	const [emailValue, setEmailValue] = useState('')
+	const [passwordValue, setPasswordValue] = useState('')
+	const [confirmPasswordValue, setConfirmPasswordValue] = useState('')
 	const [error, setError] = useState<string | null>(null)
 	const [chaptersError, setChaptersError] = useState<string | null>(null)
 	const [saving, setSaving] = useState(false)
@@ -51,12 +57,51 @@ export function ProfilePage() {
 	    setProfile(updated)
 		setName(updated.name ?? '')
 	    setTimezone(updated.timezone)
+
+		const currentEmail = user?.email ?? ''
+		if (emailValue && emailValue !== currentEmail) {
+		  const { error: emailError } = await supabase.auth.updateUser({ email: emailValue })
+		  if (emailError) {
+		    setError(emailError.message)
+		    setSaving(false)
+		    return
+		  }
+		}
+
+		if (passwordValue) {
+		  if (passwordValue !== confirmPasswordValue) {
+		    setError('Passwords don\'t match')
+		    setSaving(false)
+		    return
+		  }
+		  const { error: pwError } = await supabase.auth.updateUser({ password: passwordValue })
+		  if (pwError) {
+		    setError(pwError.message)
+		    setSaving(false)
+		    return
+		  }
+		}
+
 	    setEditing(false)
 	  } catch {
 	    setError('Failed to save profile')
 	  } finally {
 	    setSaving(false)
 	  }
+	}
+
+	const handleEditClick = () => {
+		setEmailValue(user?.email ?? '')
+		setPasswordValue('')
+		setConfirmPasswordValue('')
+		setEditing(true)
+	}
+
+	const handleCancel = () => {
+		setEditing(false)
+		setEmailValue('')
+		setPasswordValue('')
+		setConfirmPasswordValue('')
 	}
 
 	const handleChapterCreated = (chapter: Chapter) => {
@@ -73,21 +118,29 @@ export function ProfilePage() {
 
 	return (
 	  <div className="min-h-screen bg-cream">
-	    <Nav showLogout={true} />
+	    <Nav showLogout={true} username={name}/>
 	    <ProfileSection
 	      profile={profile}
+	      email={user?.email ?? ''}
+	      pendingEmail={user?.new_email}
 	      editing={editing}
 	      name={name}
 	      timezone={timezone}
+	      emailValue={emailValue}
+	      passwordValue={passwordValue}
+	      confirmPasswordValue={confirmPasswordValue}
 	      error={error}
 	      saving={saving}
-	      onEditClick={() => setEditing(true)}
+	      onEditClick={handleEditClick}
 	      onNameChange={setName}
 	      onTimezoneChange={setTimezone}
+	      onEmailChange={setEmailValue}
+	      onPasswordChange={setPasswordValue}
+	      onConfirmPasswordChange={setConfirmPasswordValue}
 	      onSave={handleSave}
-	      onCancel={() => setEditing(false)}
+	      onCancel={handleCancel}
 	    />
-	    <div className="max-w-lg mx-auto mt-8 p-8 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
+	    <div className="max-w-2xl mx-auto mt-8 p-8 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 	      <div className="flex justify-between items-center mb-7">
 	        <h2 className="font-heading text-forest-deep">My Chapters</h2>
 	        <button

@@ -79,22 +79,23 @@ func (s *ThemeService) ListByChapter(ctx context.Context, chapterID string, user
 // LinkToTopic links a theme to a topic in one call.
 // If ThemeID is set, links the existing theme.
 // If EncryptedBlob+Nonce are set, creates the theme in the chapter first, then links it — all in one transaction.
-func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, topicID string, userID string) error {
+// Returns the ID of the theme that was linked (existing or newly created).
+func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, topicID string, userID string) (string, error) {
 	// Get the topic's chapter to verify membership
 	var chapterID string
 	err := s.db.QueryRow(ctx, `
 		SELECT chapter_id FROM topics WHERE id = $1
 	`, topicID).Scan(&chapterID)
 	if err != nil {
-		return fmt.Errorf("ThemeService.LinkToTopic: fetch topic: %w", err)
+		return "", fmt.Errorf("ThemeService.LinkToTopic: fetch topic: %w", err)
 	}
 
 	ok, err := db.IsMember(ctx, s.db, chapterID, userID)
 	if err != nil {
-		return fmt.Errorf("ThemeService.LinkToTopic: %w", err)
+		return "", fmt.Errorf("ThemeService.LinkToTopic: %w", err)
 	}
 	if !ok {
-		return db.ErrNotMember
+		return "", db.ErrNotMember
 	}
 
 	themeID := input.ThemeID
@@ -103,13 +104,13 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 	if themeID == "" {
 		tx, err := s.db.Begin(ctx)
 		if err != nil {
-			return fmt.Errorf("ThemeService.LinkToTopic: begin tx: %w", err)
+			return "", fmt.Errorf("ThemeService.LinkToTopic: begin tx: %w", err)
 		}
 		defer tx.Rollback(ctx)
 
 		newThemeID, err := crypto.GenerateID()
 		if err != nil {
-			return fmt.Errorf("ThemeService.LinkToTopic: generate theme ID: %w", err)
+			return "", fmt.Errorf("ThemeService.LinkToTopic: generate theme ID: %w", err)
 		}
 
 		err = tx.QueryRow(ctx, `
@@ -118,12 +119,12 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 			RETURNING id
 		`, newThemeID, chapterID, input.EncryptedBlob, input.Nonce).Scan(&themeID)
 		if err != nil {
-			return fmt.Errorf("ThemeService.LinkToTopic: create theme: %w", err)
+			return "", fmt.Errorf("ThemeService.LinkToTopic: create theme: %w", err)
 		}
 
 		linkID, err := crypto.GenerateID()
 		if err != nil {
-			return fmt.Errorf("ThemeService.LinkToTopic: generate link ID: %w", err)
+			return "", fmt.Errorf("ThemeService.LinkToTopic: generate link ID: %w", err)
 		}
 
 		_, err = tx.Exec(ctx, `
@@ -132,16 +133,20 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 			ON CONFLICT (topic_id, theme_id) DO NOTHING
 		`, linkID, topicID, themeID)
 		if err != nil {
-			return fmt.Errorf("ThemeService.LinkToTopic: link theme: %w", err)
+			return "", fmt.Errorf("ThemeService.LinkToTopic: link theme: %w", err)
 		}
 
-		return tx.Commit(ctx)
+		if err := tx.Commit(ctx); err != nil {
+			return "", fmt.Errorf("ThemeService.LinkToTopic: commit tx: %w", err)
+		}
+
+		return themeID, nil
 	}
 
 	// Existing theme: just link it
 	linkID, err := crypto.GenerateID()
 	if err != nil {
-		return fmt.Errorf("ThemeService.LinkToTopic: generate link ID: %w", err)
+		return "", fmt.Errorf("ThemeService.LinkToTopic: generate link ID: %w", err)
 	}
 
 	_, err = s.db.Exec(ctx, `
@@ -150,10 +155,10 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 		ON CONFLICT (topic_id, theme_id) DO NOTHING
 	`, linkID, topicID, themeID)
 	if err != nil {
-		return fmt.Errorf("ThemeService.LinkToTopic: link theme: %w", err)
+		return "", fmt.Errorf("ThemeService.LinkToTopic: link theme: %w", err)
 	}
 
-	return nil
+	return themeID, nil
 }
 
 // RemoveFromTopic unlinks a theme from a topic. Does not delete the theme itself.

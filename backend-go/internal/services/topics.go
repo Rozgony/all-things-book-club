@@ -36,6 +36,7 @@ type Topic struct {
 	Nonce         []byte  `json:"nonce"`
 	CreatedAt     time.Time  `json:"createdAt"`
 	UpdatedAt     time.Time  `json:"updatedAt"`
+	ThemeIDs      []string   `json:"themeIds"`
 }
 
 func (s *TopicService) Create(ctx context.Context, input TopicInput, userID string) (*Topic, error) {

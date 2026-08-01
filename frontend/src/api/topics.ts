@@ -51,6 +51,23 @@ export async function updateTopicStatus(id: string, topic: Topic, status: TopicS
 	} as Topic
 }
 
+export async function updateTopicContent(id: string, chapterId: string, title: string, description?: string): Promise<Topic> {
+	const headers = await getAuthHeaders()
+	const chapterKey = getChapterKey(chapterId)
+	if (!chapterKey) throw new Error('Chapter key not available for encryption')
+
+	const { encryptedBlob, nonce } = await encrypt({ title, description }, chapterKey)
+
+	const res = await fetch(`${API_BASE}/topics/${id}`, {
+		method: 'PATCH',
+		headers,
+		body: JSON.stringify({ encryptedBlob, nonce })
+	})
+	if (!res.ok) throw new Error('Failed to update topic')
+
+	return { id, title, description: description ?? null } as unknown as Topic
+}
+
 export async function deleteTopic(id: string): Promise<void> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`${API_BASE}/topics/${id}`, {

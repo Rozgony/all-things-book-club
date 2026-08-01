@@ -35,7 +35,7 @@ func (h *ThemeHandler) ListByChapter(w http.ResponseWriter, r *http.Request) {
 }
 
 // LinkToTopic handles POST /api/topics/{id}/themes
-// Links an existing theme (by ID) to a topic.
+// Links an existing theme (by ID) to a topic, or creates a new theme and links it.
 func (h *ThemeHandler) LinkToTopic(w http.ResponseWriter, r *http.Request) {
 	var input services.LinkThemeInput
 
@@ -48,13 +48,14 @@ func (h *ThemeHandler) LinkToTopic(w http.ResponseWriter, r *http.Request) {
 	topicID := chi.URLParam(r, "id")
 	userID := middleware.UserIDFromContext(r.Context())
 
-	err = h.themes.LinkToTopic(r.Context(), input, topicID, userID)
+	themeID, err := h.themes.LinkToTopic(r.Context(), input, topicID, userID)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"themeId": themeID})
 }
 
 // RemoveFromTopic handles DELETE /api/topics/{id}/themes/{themeId}

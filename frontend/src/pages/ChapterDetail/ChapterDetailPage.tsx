@@ -8,6 +8,7 @@ import { getChapterAndSetKey, updateChapter, deleteChapter } from '../../api/cha
 import { getMeetingsByChapterId } from '../../api/meetings'
 import { type Chapter, type Meeting } from '../../api/types'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { getMyProfile } from '../../api/users'
 
 export function ChapterDetailPage() {
 	const { id } = useParams<{ id: string }>()
@@ -16,6 +17,7 @@ export function ChapterDetailPage() {
 
 	const [chapter, setChapter] = useState<Partial<Chapter> | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [name, setName] = useState('')
 	const [error, setError] = useState<string | null>(null)
 	const [meetings, setMeetings] = useState<Meeting[]>([])
 	const [meetingsLoading, setMeetingsLoading] = useState(false)
@@ -27,6 +29,14 @@ export function ChapterDetailPage() {
 	const [editError, setEditError] = useState<string | null>(null)
 
 	const [deleting, setDeleting] = useState(false)
+
+	useEffect(() => {
+		getMyProfile()
+			.then(p => {
+				setName(p.name ?? '')
+			})
+			.catch(() => setError('Failed to load profile'))
+	},[])
 
 	useEffect(() => {
 	  if (!id) return
@@ -100,7 +110,7 @@ export function ChapterDetailPage() {
 
 	return (
 	  	<div className="min-h-screen bg-cream">
-			<Nav showLogout={true} showProfile={true} />
+			<Nav showLogout={true} showProfile={true} username={name}/>
 
 			<main className="max-w-2xl mx-auto px-4 py-10">
 				<ChapterHeader

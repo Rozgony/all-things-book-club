@@ -70,6 +70,16 @@ export const meetingStatusReadable = {
 
 export type TopicStatus = 'PENDING' | 'SELECTED' | 'DISCUSSED'
 
+export interface Theme {
+	id: string
+	chapterId: string
+	encryptedBlob?: string | null
+	nonce?: string | null
+	createdAt: string
+	// Decrypted field — populated client-side after decryption
+	name: string
+}
+
 export interface Topic {
 	id: string
 	chapterId: string
@@ -79,6 +89,7 @@ export interface Topic {
 	updatedAt: string
 	encryptedBlob?: string
 	nonce?: string
+	themeIds?: string[] | null
 	// Decrypted fields — populated client-side after decryption
 	title: string
 	description: string | null

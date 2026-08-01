@@ -4,10 +4,15 @@ import { Nav } from '../../components/Nav'
 import { SpinWheel } from './SpinWheel'
 import { TopicModal } from './TopicModal'
 import { MeetingInfo } from './MeetingInfo'
+import { TopicForm, type TopicFormData } from './TopicForm'
+import { TopicCard } from './TopicCard'
+import { type SelectedTheme } from './ThemeTagInput'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
-import { createTopic, updateTopicStatus, deleteTopic } from '../../api/topics'
+import { createTopic, updateTopicStatus, updateTopicContent, deleteTopic } from '../../api/topics'
+import { getThemesByChapterId, linkThemeToTopic, unlinkThemeFromTopic } from '../../api/themes'
 import { updateMeeting, getMeetingById } from '../../api/meetings'
-import { MeetingStatus, type Meeting, type Topic } from '../../api/types'
+import { MeetingStatus, type Meeting, type Topic, type Theme } from '../../api/types'
+import { getMyProfile } from '../../api/users'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
@@ -15,13 +20,18 @@ export function MeetingPage() {
 
 	const [meeting, setMeeting] = useState<Meeting | null>(null)
 	const [loading, setLoading] = useState(true)
+	const [name, setName] = useState('')
 	const [error, setError] = useState<string | null>(null)
 	const [spinning, setSpinning] = useState(false)
 	const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null)
 
-	const [newTopicTitle, setNewTopicTitle] = useState('')
 	const [addingTopic, setAddingTopic] = useState(false)
 	const [addError, setAddError] = useState<string | null>(null)
+
+	const [chapterThemes, setChapterThemes] = useState<Theme[]>([])
+
+	const [editingTopicId, setEditingTopicId] = useState<string | null>(null)
+	const [savingTopic, setSavingTopic] = useState(false)
 
 	const [editingDate, setEditingDate] = useState(false)
 	const [editDateValue, setEditDateValue] = useState('')
@@ -87,6 +97,12 @@ export function MeetingPage() {
 	}
 
 	useEffect(() => {
+		getMyProfile()
+			.then(p => {
+				setName(p.name ?? '')
+			})
+			.catch(() => setError('Failed to load profile'))
+
 		if (!id) return
 		getMeetingById(id)
 			.then((meeting) => setMeeting(meeting))
@@ -94,30 +110,97 @@ export function MeetingPage() {
 			.finally(() => setLoading(false))
 	}, [])
 
+	useEffect(() => {
+		if (!meeting?.chapterId) return
+		getThemesByChapterId(meeting.chapterId)
+			.then(setChapterThemes)
+			.catch(() => {})
+	}, [meeting?.chapterId])
+
 	const formatDate = (dateString: string) =>
 		new Date(dateString).toLocaleDateString('en-US', {
 			weekday: 'long', month: 'long', day: 'numeric',
 			hour: '2-digit', minute: '2-digit'
 		})
 
-	const handleAddTopic = async (e: React.FormEvent) => {
-		e.preventDefault()
-		if (!id || !newTopicTitle.trim()) return
+	// Reconciles a topic form's theme selections against the topic's previously linked
+	// theme ids: unlinks removed themes, links newly selected/created themes, and returns
+	// the final set of theme ids plus any brand-new themes that were created.
+	const syncTopicThemes = async (topicId: string, chapterId: string, previousThemeIds: string[], selectedThemes: SelectedTheme[]) => {
+		const selectedExistingIds = new Set(selectedThemes.filter(t => t.id).map(t => t.id as string))
+		const toUnlink = previousThemeIds.filter(themeId => !selectedExistingIds.has(themeId))
+		await Promise.all(toUnlink.map(themeId => unlinkThemeFromTopic(topicId, themeId)))
+
+		const finalThemeIds: string[] = []
+		const newlyCreatedThemes: Theme[] = []
+		const previousSet = new Set(previousThemeIds)
+		for (const theme of selectedThemes) {
+			if (theme.id && previousSet.has(theme.id)) {
+				// Already linked — keep it
+				finalThemeIds.push(theme.id)
+			} else {
+				// New link (existing theme added during edit, or brand-new theme)
+				const themeId = await linkThemeToTopic(topicId, chapterId, theme)
+				finalThemeIds.push(themeId)
+				if (!theme.id) {
+					newlyCreatedThemes.push({ id: themeId, chapterId, createdAt: new Date().toISOString(), name: theme.name })
+				}
+			}
+		}
+		return { finalThemeIds, newlyCreatedThemes }
+	}
+
+	const handleAddTopic = async (data: TopicFormData) => {
+		if (!id || !meeting) return
 		setAddingTopic(true)
 		setAddError(null)
 		try {
-			const topic = await createTopic(meeting?.chapterId!, id, newTopicTitle.trim())
+			const topic = await createTopic(meeting.chapterId, id, data.title, data.description || undefined)
+			const { finalThemeIds, newlyCreatedThemes } = await syncTopicThemes(topic.id, meeting.chapterId, [], data.themes)
+			const topicWithThemes = { ...topic, themeIds: finalThemeIds }
+
 			setMeeting(prev => {
 				if (!prev) return null
-				if (prev.topics) return { ...prev, topics: [...prev.topics, topic] }
-				return { ...prev, topics: [topic] }
+				if (prev.topics) return { ...prev, topics: [...prev.topics, topicWithThemes] }
+				return { ...prev, topics: [topicWithThemes] }
 			})
-			setNewTopicTitle('')
+			if (newlyCreatedThemes.length > 0) {
+				setChapterThemes(prev => [...prev, ...newlyCreatedThemes])
+			}
 		} catch (e) {
-			console.log({e})
+			console.error('Error adding topic:', e)
 			setAddError('Failed to add topic')
 		} finally {
 			setAddingTopic(false)
+		}
+	}
+
+	const handleEditTopicStart = (topic: Topic) => {
+		setEditingTopicId(topic.id)
+	}
+
+	const handleSaveTopic = async (topicId: string, data: TopicFormData) => {
+		if (!meeting) return
+		setSavingTopic(true)
+		try {
+			await updateTopicContent(topicId, meeting.chapterId, data.title, data.description || undefined)
+			const previousThemeIds = meeting.topics?.find(t => t.id === topicId)?.themeIds || []
+			const { finalThemeIds, newlyCreatedThemes } = await syncTopicThemes(topicId, meeting.chapterId, previousThemeIds, data.themes)
+			setMeeting(prev => prev ? {
+				...prev,
+				topics: prev.topics?.map(t => t.id === topicId
+					? { ...t, title: data.title, description: data.description || null, themeIds: finalThemeIds }
+					: t
+				) || []
+			} : prev)
+			if (newlyCreatedThemes.length > 0) {
+				setChapterThemes(prev => [...prev, ...newlyCreatedThemes])
+			}
+			setEditingTopicId(null)
+		} catch {
+			// silent
+		} finally {
+			setSavingTopic(false)
 		}
 	}
 
@@ -197,7 +280,7 @@ export function MeetingPage() {
 	const discussedTopics = meeting?.topics?.filter(t => t.status === 'DISCUSSED') || []
 	return (
 		<div className="min-h-screen bg-cream">
-			<Nav showLogout={true} showProfile={true} />
+			<Nav showLogout={true} showProfile={true} username={name}/>
 
 			<main className="max-w-5gl mx-auto px-4 py-10">
 				<div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-8">
@@ -224,36 +307,42 @@ export function MeetingPage() {
 						{/* Add topic */}
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 							<h3 className="font-heading text-forest-deep mb-4">Topics</h3>
-							<form onSubmit={handleAddTopic} className="flex gap-2 mb-4">
-								<input
-									type="text"
-									maxLength={48}
-									value={newTopicTitle}
-									onChange={e => setNewTopicTitle(e.target.value)}
-									placeholder="Add a topic…"
-									className="flex-1 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-								<button
-									type="submit"
-									disabled={addingTopic || !newTopicTitle.trim()}
-									className="px-4 py-2 bg-forest text-white text-sm rounded hover:bg-forst-dark transition-colors disabled:opacity-50"
-								>
-									Add
-								</button>
-							</form>
+							<TopicForm
+								chapterThemes={chapterThemes}
+								submitLabel="Add"
+								pendingLabel="Adding…"
+								submitting={addingTopic}
+								onSubmit={handleAddTopic}
+							/>
 							{addError && <p className="text-sm text-red-600 mb-3">{addError}</p>}
 
 							{pendingTopics.length > 0 ? (
 								<ul className="divide-y divide-warm-border">
 									{pendingTopics.map(topic => (
-										<li key={topic.id} className="py-2.5 flex justify-between items-center">
-											<span className="text-sm text-stone">{topic.title}</span>
-											<button
-												onClick={() => handleDeleteTopic(topic.id)}
-												className="text-xs text-stone-muted hover:text-red-500 transition-colors ml-2"
-											>
-												remove
-											</button>
+										<li key={topic.id} className="py-3">
+											{editingTopicId === topic.id ? (
+												<TopicForm
+													chapterThemes={chapterThemes}
+													initialTitle={topic.title}
+													initialDescription={topic.description || ''}
+													initialThemes={(topic.themeIds || []).map(themeId => {
+														const theme = chapterThemes.find(t => t.id === themeId)
+														return { id: themeId, name: theme?.name || '' }
+													}).filter(t => t.name)}
+													submitLabel="Save"
+													pendingLabel="Saving…"
+													submitting={savingTopic}
+													onSubmit={data => handleSaveTopic(topic.id, data)}
+													onCancel={() => setEditingTopicId(null)}
+												/>
+											) : (
+												<TopicCard
+													topic={topic}
+													chapterThemes={chapterThemes}
+													onEdit={handleEditTopicStart}
+													onDelete={handleDeleteTopic}
+												/>
+											)}
 										</li>
 									))}
 								</ul>
@@ -268,9 +357,14 @@ export function MeetingPage() {
 								<h3 className="font-heading text-forest-deep mb-3">Discussed</h3>
 								<ul className="divide-y divide-warm-border">
 									{discussedTopics.map(topic => (
-										<li key={topic.id} className="py-2 flex items-center gap-2">
+										<li key={topic.id} className="py-2 flex items-center gap-2 flex-wrap">
 											<span className="text-stone-muted">✓</span>
-											<span className="text-sm text-stone-muted line-through">{topic.title}</span>
+										<button
+											onClick={() => setSelectedTopic(topic)}
+											className="text-sm text-stone-muted line-through hover:text-stone transition-colors text-left flex-1"
+										>
+											{topic.title}
+										</button>
 										</li>
 									))}
 								</ul>
@@ -293,9 +387,12 @@ export function MeetingPage() {
 
 			<TopicModal
 				topic={selectedTopic}
-				onMarkDiscussed={handleMarkDiscussed}
-				onSkip={handleSkip}
-			/>
-		</div>
-	)
+			chapterThemes={chapterThemes}
+			onMarkDiscussed={handleMarkDiscussed}
+			onSkip={handleSkip}
+			onClose={() => setSelectedTopic(null)}
+			readOnly={selectedTopic?.status === 'DISCUSSED'}
+		/>
+	</div>
+)
 }
