@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { MeetingStatus, type Meeting, type Topic } from '../api/types'
 import { ConfirmModal } from './ConfirmModal'
+import { EmptySpinWheel } from './EmptySpinWheel'
 
 interface SpinWheelProps {
 	topics: Topic[]
@@ -144,12 +145,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 	}
 
 	if (pendingTopics.length === 0) {
-		return (
-			<div className="flex flex-col items-center justify-center w-full h-64 text-stone-muted">
-				{ topics.length !== 0 ? <p className="text-lg font-heading">No topics left to spin!</p> : null }
-				<p className="text-sm mt-1">Add topics below to get started.</p>
-			</div>
-		)
+		return <EmptySpinWheel topics={topics} wheelSize={wheelSize} />
 	}
 
 	return (

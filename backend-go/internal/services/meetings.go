@@ -165,8 +165,7 @@ func (s *MeetingService) UpdateStatus(ctx context.Context, meetingID string, sta
 	return nil
 }
 
-func (s *MeetingService) UpdateScheduledAt(ctx context.Context, meetingID string, scheduledAtUnix int64) error {
-	scheduledAt := time.Unix(0, scheduledAtUnix*int64(time.Millisecond))
+func (s *MeetingService) UpdateScheduledAt(ctx context.Context, meetingID string, scheduledAt time.Time) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
 		SET scheduled_at = $1, updated_at = now()

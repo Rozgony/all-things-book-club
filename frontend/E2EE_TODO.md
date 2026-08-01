@@ -2,15 +2,15 @@
 
 ### Refactoring Steps
 **User** 
-- ⬜ Seed user
-- ⬜ Update user
-- ⬜ Add User name/email to chapter_member
+- ✅ Seed user
+- ✅ Update user
+- ✅ Add User name/email to chapter_member
 
 **Meetings** 
-- ⬜ Schedule Meeting
+- ✅ Schedule Meeting
 
 **Chapter** 
-- ⬜ Edit Chapter Return
+- ✅ Edit Chapter Return
 
 ## Themes (not yet started)
 - ✅ Create `api/themes.ts`

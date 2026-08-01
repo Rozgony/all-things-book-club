@@ -72,7 +72,7 @@ export async function updateMeeting(
 	if (updates.recurringGroupId) {
 		data.recurringGroupId = updates.recurringGroupId
 	}
-
+console.log({data});
 	const response = await fetch(`${API_BASE}/meetings/${id}`, {
 		method: 'PATCH',
 		headers,

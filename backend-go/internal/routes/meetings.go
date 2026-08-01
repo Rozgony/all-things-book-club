@@ -3,12 +3,13 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/services"
-	"github.com/all-things-book-club/internal/db"
 )
 
 type MeetingHandler struct {
@@ -73,7 +74,7 @@ func (h *MeetingHandler) GetByChapterID(w http.ResponseWriter, r *http.Request) 
 func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Status           *string    `json:"status,omitempty"`
-		ScheduledAt      *int64     `json:"scheduledAt,omitempty"` // Unix timestamp
+		ScheduledAt      *string    `json:"scheduledAt,omitempty"` // ISO 8601 string
 		Duration         *int       `json:"duration,omitempty"`
 		RecurringGroupId *string    `json:"recurringGroupId,omitempty"`
 		EncryptedBlob    []byte     `json:"encryptedBlob,omitempty"`
@@ -103,14 +104,18 @@ func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// Apply updates based on what was provided
 	if input.Status != nil {
 		if err := h.meetings.UpdateStatus(r.Context(), meetingID, *input.Status); err != nil {
-			log.Printf("update meeting status %+v",err)
 			handleError(w, err)
 			return
 		}
 	}
 
 	if input.ScheduledAt != nil {
-		if err := h.meetings.UpdateScheduledAt(r.Context(), meetingID, *input.ScheduledAt); err != nil {
+		parsed, err := time.Parse(time.RFC3339, *input.ScheduledAt)
+		if err != nil {
+			handleError(w, badRequest(err))
+			return
+		}
+		if err := h.meetings.UpdateScheduledAt(r.Context(), meetingID, parsed); err != nil {
 			handleError(w, err)
 			return
 		}
