@@ -87,7 +87,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	var ch Chapter
 	err := s.db.QueryRow(ctx, `
 		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
-			cm.id, cm.encrypted_chapter_key, cm.key_nonce,
+			cm.id, cm.encrypted_chapter_key, cm.key_nonce, cm.ephemeral_public_key,
 			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapter_members cm ON cm.chapter_id = m.chapter_id AND cm.user_id = $2
@@ -96,7 +96,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	`, meetingID, userID).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
 			&m.Status, &m.Nonce, &m.EncryptedBlob,
-			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce,
+			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce, &cm.EphemeralPublicKey,
 			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", err)

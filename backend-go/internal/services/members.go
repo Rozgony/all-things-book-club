@@ -34,10 +34,12 @@ type MemberInput struct {
 	ChapterId      string   			`json:"chapterId"`
 	Role      	   ChapterMemberRole   	`json:"role"`
 	JoinedAt       time.Time   			`json:"joinedAt"`
-	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's public key.
-	// Only the creator can decrypt it using their private key (never sent to the server).
+	// EncryptedChapterKey is the chapter's symmetric key, ECDH-wrapped for this member's X25519 public key.
+	// Only this member can unwrap it using their private key (never sent to the server).
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
 	KeyNonce            []byte `json:"keyNonce"`
+	// EphemeralPublicKey is the one-time sender key used for the ECDH wrap above.
+	EphemeralPublicKey  []byte `json:"ephemeralPublicKey"`
 }
 
 type ChapterMember struct {
@@ -48,6 +50,7 @@ type ChapterMember struct {
 	JoinedAt       			time.Time   		`json:"joinedAt"`
 	EncryptedChapterKey		[]byte				`json:"encryptedChapterKey"`
 	KeyNonce				[]byte				`json:"keyNonce"`
+	EphemeralPublicKey		[]byte				`json:"ephemeralPublicKey"`
 }
 
 func (s *MemberService) Create(ctx context.Context, input MemberInput) (*ChapterMember, error) {
@@ -58,10 +61,10 @@ func (s *MemberService) Create(ctx context.Context, input MemberInput) (*Chapter
 
 	var cm ChapterMember
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_blob, nonce)
-		VALUES ($1, $2, $3, $4, now(), $5, $6)
+		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_blob, nonce, encrypted_chapter_key, key_nonce, ephemeral_public_key)
+		VALUES ($1, $2, $3, $4, now(), $5, $6, $7, $8, $9)
 		RETURNING id, user_id, chapter_id, role, joined_at
-	`, memberID, input.UserId, input.ChapterId, input.Role, input.EncryptedBlob, input.Nonce).
+	`, memberID, input.UserId, input.ChapterId, input.Role, input.EncryptedBlob, input.Nonce, input.EncryptedChapterKey, input.KeyNonce, input.EphemeralPublicKey).
 		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.JoinedAt)
 	if err != nil {
 		return nil, fmt.Errorf("MemberService.Create: insert member: %w", err)

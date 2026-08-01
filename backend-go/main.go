@@ -8,6 +8,7 @@ import (
 
 	"github.com/all-things-book-club/internal/config"
 	"github.com/all-things-book-club/internal/db"
+	"github.com/all-things-book-club/internal/mailer"
 	"github.com/all-things-book-club/internal/routes"
 	"github.com/all-things-book-club/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -47,14 +48,17 @@ func main() {
 	topicService := services.NewTopicService(pool)
 	themeService := services.NewThemeService(pool)
 	userService := services.NewUserService(pool)
+	inviteService := services.NewInviteService(pool)
+	mailerService := mailer.New(cfg)
 
 	// Initialize handlers from services
 	chapterHandler := routes.NewChapterHandler(chapterService)
-	memberHandler := routes.NewMemberHandler(memberService)
+	memberHandler := routes.NewMemberHandler(memberService, pool)
 	meetingHandler := routes.NewMeetingHandler(meetingService)
 	topicHandler := routes.NewTopicHandler(topicService)
 	themeHandler := routes.NewThemeHandler(themeService)
-	userHandler := routes.NewUserHandler(userService)
+	userHandler := routes.NewUserHandler(userService, pool)
+	inviteHandler := routes.NewInviteHandler(inviteService, mailerService, pool, cfg.FrontendURL)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -105,6 +109,17 @@ func main() {
 		r.Get("/api/users/me", userHandler.GetByID)
 		r.Patch("/api/users/me", userHandler.Update)
 		r.Delete("/api/users/me", userHandler.Update)
+		r.Get("/api/users/by-email", userHandler.GetByEmail)
+
+		// Invites (creation + acceptance require auth; GET by token does not — registered below)
+		r.Post("/api/chapters/{id}/invites", inviteHandler.Create)
+		r.Post("/api/invites/{token}/accept", inviteHandler.Accept)
+	})
+
+	// Public: invite lookup has no account yet to authenticate with.
+	// TODO: add per-IP rate limiting here before production use.
+	r.Group(func(r chi.Router) {
+		r.Get("/api/invites/{token}", inviteHandler.GetByToken)
 	})
 
 	addr := ":" + cfg.Port

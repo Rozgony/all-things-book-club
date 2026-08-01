@@ -24,8 +24,8 @@ users (
   name        TEXT,
   avatar_url  TEXT,
   timezone    TEXT DEFAULT 'UTC',
-  -- NEW: client-generated public key for asymmetric key exchange
-  public_key  BYTEA NOT NULL,    -- X25519 public key, stored plaintext (it's public)
+  -- Client-generated public key for asymmetric key exchange (see Invite-Plan.md)
+  public_key  BYTEA,              -- X25519 public key, plaintext; nullable until first login after rollout
   created_at  TIMESTAMPTZ DEFAULT now(),
   updated_at  TIMESTAMPTZ DEFAULT now()
 )
@@ -54,18 +54,9 @@ chapter_members (
   -- Only this member can decrypt it with their private key
   encrypted_chapter_key  BYTEA NOT NULL,
   key_nonce              BYTEA NOT NULL,
+  -- Ephemeral X25519 public key the sender used for the ECDH wrap above
+  ephemeral_public_key   BYTEA,
   UNIQUE(user_id, chapter_id)
-)
-
--- Invitations: email stored plaintext (needed for matching on signup)
-chapter_invitations (
-  id             TEXT PRIMARY KEY,
-  chapter_id     TEXT REFERENCES chapters(id) ON DELETE CASCADE,
-  invited_email  TEXT NOT NULL,
-  inviter_id     TEXT REFERENCES users(id) ON DELETE CASCADE,
-  expires_at     TIMESTAMPTZ NOT NULL,
-  created_at     TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(chapter_id, invited_email)
 )
 
 -- Meetings: all content encrypted. scheduled_at stored plaintext for calendar queries.
@@ -139,25 +130,16 @@ public_topics (
 
 ```
 New user signs up
-  └─► client generates X25519 keypair
-  └─► public_key stored in users table (plaintext)
-  └─► private_key stored ONLY in client (localStorage or derived from password via Argon2id)
+  └─► client derives an X25519 keypair from their password (Argon2id)
+  └─► public_key stored in users table (plaintext); private key never leaves the client
 
 User creates a chapter
   └─► client generates random 32-byte symmetric chapter key
   └─► encrypts chapter data with chapter key (AES-256-GCM)
-  └─► encrypts chapter key with own public key → stores in chapter_members.encrypted_chapter_key
-
-User invites a member (they already have an account)
-  └─► inviter fetches invitee's public_key from server
-  └─► inviter encrypts chapter key with invitee's public key
-  └─► stores encrypted chapter key in chapter_members row for invitee
-
-User invites a member (no account yet)
-  └─► invitation stored by email
-  └─► on signup: inviter (or any admin) must re-encrypt chapter key for new member's public key
-      (admin is online — they complete the key handoff)
+  └─► wraps chapter key via ECDH for own public key → stores in chapter_members.encrypted_chapter_key
 ```
+
+Invitation/handoff flow for granting a new member access to `chapter_members.encrypted_chapter_key` is out of scope for this doc — see `documentation/Invite-Plan.md`.
 
 ---
 

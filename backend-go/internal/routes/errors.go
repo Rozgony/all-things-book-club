@@ -11,6 +11,7 @@ import (
 )
 
 var ErrBadRequest = errors.New("bad request")
+var errMissingEmail = errors.New("missing email query parameter")
 
 func badRequest(err error) error {
     return fmt.Errorf("%w: %w", ErrBadRequest, err)

@@ -1,7 +1,7 @@
 import { getAuthHeaders } from './auth'
 import type { Chapter, ChapterMember } from './types'
-import { generateChapterKey, encryptChapterKey, encrypt, decrypt } from '../lib/crypto'
-import { getUserKey, setChapterKey, getChapterKey, getAndSetChapterKey } from '../lib/keyStore'
+import { generateChapterKey, wrapChapterKeyForRecipient, getX25519PublicKey, encrypt, decrypt } from '../lib/crypto'
+import { getPrivateKey, setChapterKey, getChapterKey, getAndSetChapterKey } from '../lib/keyStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
@@ -21,7 +21,7 @@ export async function getChapters(): Promise<Chapter[]> {
 	// Decrypt each chapter's content using the stored chapter key
 	return Promise.all(chapters.map(async (chapter) => {
 		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
-		const key = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
+		const key = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!, chapter.ephemeralPublicKey!)
 		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key!)
 		return { ...chapter, name: content.name, description: content.description ?? null }
 	}))
@@ -34,13 +34,15 @@ type CreateResponse = {
 
 export async function createChapter(data: { name: string; description?: string; creatorName: string; creatorEmail: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
-	const userKey = getUserKey()
+	const myPrivateKey = getPrivateKey()
+	const myPublicKey = getX25519PublicKey(myPrivateKey)
 
 	// 1. Generate a fresh symmetric key for this chapter
 	const chapterKey = await generateChapterKey()
 
-	// 2. Encrypt the chapter key with the user's master key for storage
-	const { encryptedChapterKey, keyNonce } = await encryptChapterKey(chapterKey, userKey)
+	// 2. Wrap the chapter key via ECDH for the creator's own X25519 public key
+	//    (using a fresh ephemeral sender key, per the age-style scheme in crypto.ts)
+	const { encryptedChapterKey, keyNonce, ephemeralPublicKey } = await wrapChapterKeyForRecipient(chapterKey, myPublicKey)
 
 	// 3. Encrypt the chapter content (name, description) with the chapter key
 	const { encryptedBlob: encryptedChapterBlob, nonce: chapterNonce } = await encrypt(
@@ -63,13 +65,15 @@ export async function createChapter(data: { name: string; description?: string; 
 			memberNonce, 
 			isPublic: false, 
 			encryptedChapterKey, 
-			keyNonce 
+			keyNonce,
+			ephemeralPublicKey,
 		}),
 	})
 	if (!res.ok) throw new Error('Failed to create chapter')
 
 	const createResponse: CreateResponse = await res.json()
 	const { chapter, chapterMember} = createResponse;
+
 
 	// 5. Store the chapter key in memory so we can decrypt content immediately
 	setChapterKey(chapter.id, chapterKey)
@@ -88,7 +92,7 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 	if (!chapter.encryptedChapterKey && !chapter.keyNonce) throw 'Could not decrypt chapter'
 	if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 
-	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
+	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!, chapter.ephemeralPublicKey!)
 	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
 	return { ...chapter, name: content.name, description: content.description ?? null }
 }

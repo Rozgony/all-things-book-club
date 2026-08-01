@@ -14,9 +14,11 @@ import (
 type contextKey string
 
 const UserIDKey contextKey = "userID"
+const UserEmailKey contextKey = "userEmail"
 
 type Claims struct {
 	jwt.RegisteredClaims
+	Email string `json:"email"`
 }
 
 // NewRequireAuth fetches the JWKS from Supabase at startup and returns
@@ -48,6 +50,7 @@ func NewRequireAuth(supabaseURL string) (func(http.Handler) http.Handler, error)
 			}
 
 			ctx := context.WithValue(r.Context(), UserIDKey, claims.Subject)
+			ctx = context.WithValue(ctx, UserEmailKey, claims.Email)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}, nil
@@ -59,4 +62,10 @@ func NewRequireAuth(supabaseURL string) (func(http.Handler) http.Handler, error)
 func UserIDFromContext(ctx context.Context) string {
 	id, _ := ctx.Value(UserIDKey).(string)
 	return id
+}
+
+// UserEmailFromContext retrieves the authenticated user's email from the request context.
+func UserEmailFromContext(ctx context.Context) string {
+	email, _ := ctx.Value(UserEmailKey).(string)
+	return email
 }

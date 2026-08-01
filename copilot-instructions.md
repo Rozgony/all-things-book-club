@@ -60,11 +60,14 @@ I will teach you backend concepts and best practices throughout this project by:
 ### E2EE Architecture
 
 - Each chapter has a symmetric **chapter key** (AES-256-GCM) generated on creation
-- The chapter key is encrypted with the user's **master key** (derived from password via PBKDF2) and stored per member in `chapter_members.encrypted_chapter_key`
+- Each user has an **X25519 keypair** deterministically derived from their password via Argon2id at login; the public half is stored plaintext in `users.public_key`, the private half is never persisted (re-derived on every login)
+- The chapter key is wrapped per-member via ephemeral-sender **ECDH (X25519) + HKDF-SHA256** + AES-256-GCM, and stored in `chapter_members.encrypted_chapter_key` / `key_nonce` / `ephemeral_public_key`
+- A separate PBKDF2-derived **`userKey`** still exists but is only used to encrypt the user's profile blob (`users.encrypted_blob`) — it plays no role in chapter-key wrapping
+- Invites: an existing user's copy of the chapter key is wrapped directly via ECDH; a new user's copy is wrapped with a one-time random secret and emailed as a URL hash fragment, then re-wrapped to their real public key when they accept — see `documentation/Invite-Plan.md`
 - All sensitive content (chapter name/description, member profiles, topics, meeting details) is encrypted with the chapter key before being sent to the server
 - Encrypted fields are stored as `encrypted_blob` (base64) + `nonce` (base64) columns
 - Decrypted fields are populated client-side after fetching; the server never sees plaintext
-- Chapter key is held in memory via `src/lib/keyStore.ts` for the duration of the session
+- Both the `userKey` and the X25519 private key are held in memory via `src/lib/keyStore.ts` for the duration of the session
 
 ### Known Constraints & Considerations
 

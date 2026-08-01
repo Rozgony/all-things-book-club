@@ -4,16 +4,19 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/services"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserHandler struct {
 	users *services.UserService
+	pool  *pgxpool.Pool
 }
 
-func NewUserHandler(s *services.UserService) *UserHandler {
-	return &UserHandler{users: s}
+func NewUserHandler(s *services.UserService, pool *pgxpool.Pool) *UserHandler {
+	return &UserHandler{users: s, pool: pool}
 }
 
 func (h *UserHandler) GetSalt(w http.ResponseWriter, r *http.Request) {
@@ -73,4 +76,40 @@ func (h *UserHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetByEmail looks up an existing user's public key by email, for inviting
+// them into a chapter with an ECDH-wrapped key instead of a one-time secret.
+// Requires the caller to already share a chapter with the target — otherwise
+// this endpoint could be used to enumerate which emails have accounts.
+func (h *UserHandler) GetByEmail(w http.ResponseWriter, r *http.Request) {
+	email := r.URL.Query().Get("email")
+	if email == "" {
+		handleError(w, badRequest(errMissingEmail))
+		return
+	}
+
+	requesterID := middleware.UserIDFromContext(r.Context())
+
+	target, err := h.users.GetByEmail(r.Context(), email)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	shared, err := db.SharesAnyChapter(r.Context(), h.pool, requesterID, target.ID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !shared {
+		handleError(w, db.ErrNotMember)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"id":        target.ID,
+		"publicKey": target.PublicKey,
+	})
 }

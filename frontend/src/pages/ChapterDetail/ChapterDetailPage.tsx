@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import { Nav } from '../../components/Nav'
 import { ChapterHeader } from './ChapterHeader'
+import { InviteMemberForm } from './InviteMemberForm'
 import { MeetingsList } from './MeetingsList'
 import { getChapterAndSetKey, updateChapter, deleteChapter } from '../../api/chapters'
 import { getMeetingsByChapterId } from '../../api/meetings'
@@ -130,6 +131,8 @@ export function ChapterDetailPage() {
 					onCancel={() => setEditing(false)}
 					onDelete={handleDelete}
 				/>
+
+				{isAdmin && <InviteMemberForm chapterId={id!} />}
 
 				<MeetingsList
 					chapterId={id!}

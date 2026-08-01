@@ -5,14 +5,18 @@
  * so it survives page reloads within the same tab. sessionStorage is cleared
  * when the tab closes. Chapter keys are not persisted — they are re-derived
  * from the encrypted chapter key in the DB using the restored user key.
+ *
+ * The X25519 private key is NEVER persisted anywhere (not even
+ * sessionStorage): it is re-derived deterministically from the password
+ * via Argon2id on every login, so there is nothing to restore on reload.
  */
 
-import type { Chapter } from "../api/types"
-import { decryptChapterKey } from "./crypto"
+import { unwrapChapterKey } from "./crypto"
 
 const USER_KEY_SESSION_KEY = 'atbc_user_key'
 
 let userKey: CryptoKey | null = null
+let privateKey: Uint8Array | null = null
 const chapterKeys = new Map<string, CryptoKey>()
 
 // ─── User Key ────────────────────────────────────────────────────────────────
@@ -62,6 +66,25 @@ export function clearUserKey(): void {
   sessionStorage.removeItem(USER_KEY_SESSION_KEY)
 }
 
+// ─── X25519 Private Key ──────────────────────────────────────────────────────
+
+export function setPrivateKey(key: Uint8Array): void {
+  privateKey = key
+}
+
+export function getPrivateKey(): Uint8Array {
+  if (!privateKey) throw new Error('No private key — user must log in first')
+  return privateKey
+}
+
+export function hasPrivateKey(): boolean {
+  return privateKey !== null
+}
+
+export function clearPrivateKey(): void {
+  privateKey = null
+}
+
 // ─── Chapter Keys ─────────────────────────────────────────────────────────────
 
 export function setChapterKey(chapterId: string, key: CryptoKey): void {
@@ -80,14 +103,24 @@ export function hasChapterKey(chapterId: string): boolean {
 
 export function clearAll(): void {
   userKey = null
+  privateKey = null
   sessionStorage.removeItem(USER_KEY_SESSION_KEY)
   chapterKeys.clear()
 }
 
-export async function getAndSetChapterKey(chapterId: string, encryptedChapterKey: string, keyNonce: string): Promise<CryptoKey | null> {
-	const userKey = getUserKey();
+/**
+ * Unwraps a chapter's symmetric key using this member's X25519 private key
+ * and caches it in-memory for subsequent content decryption.
+ */
+export async function getAndSetChapterKey(
+	chapterId: string,
+	encryptedChapterKey: string,
+	keyNonce: string,
+	ephemeralPublicKey: string
+): Promise<CryptoKey | null> {
+	const myPrivateKey = getPrivateKey();
 	try {
-		const chapterKey = await decryptChapterKey(encryptedChapterKey!, keyNonce!, userKey)
+		const chapterKey = await unwrapChapterKey(encryptedChapterKey!, keyNonce!, ephemeralPublicKey!, myPrivateKey)
 		setChapterKey(chapterId, chapterKey);
 		return chapterKey
 	} catch (error) {
