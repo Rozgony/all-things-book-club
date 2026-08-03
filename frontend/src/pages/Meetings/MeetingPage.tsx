@@ -13,10 +13,12 @@ import { getThemesByChapterId, linkThemeToTopic, unlinkThemeFromTopic } from '..
 import { updateMeeting, getMeetingById } from '../../api/meetings'
 import { MeetingStatus, type Meeting, type Topic, type Theme } from '../../api/types'
 import { getMyProfile } from '../../api/users'
+import { useAuthStore } from '../../store/authStore'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const timezone = useAuthStore((s) => s.timezone)
 
 	const [meeting, setMeeting] = useState<Meeting | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -127,7 +129,8 @@ export function MeetingPage() {
 	const formatDate = (dateString: string) =>
 		new Date(dateString).toLocaleDateString('en-US', {
 			weekday: 'long', month: 'long', day: 'numeric',
-			hour: '2-digit', minute: '2-digit'
+			hour: '2-digit', minute: '2-digit',
+			...(timezone ? { timeZone: timezone } : {}),
 		})
 
 	// Reconciles a topic form's theme selections against the topic's previously linked

@@ -6,6 +6,7 @@ import { ChapterHeader } from './ChapterHeader'
 import { MeetingsList } from './MeetingsList'
 import { getChapterAndSetKey, updateChapter, deleteChapter } from '../../api/chapters'
 import { getMeetingsByChapterId } from '../../api/meetings'
+import { updateMemberName } from '../../api/members'
 import { type Chapter, type Meeting } from '../../api/types'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
 import { getMyProfile } from '../../api/users'
@@ -29,6 +30,10 @@ export function ChapterDetailPage() {
 	const [editError, setEditError] = useState<string | null>(null)
 
 	const [deleting, setDeleting] = useState(false)
+
+	const [editingMemberId, setEditingMemberId] = useState<string | null>(null)
+	const [editMemberName, setEditMemberName] = useState('')
+	const [savingMember, setSavingMember] = useState(false)
 
 	useEffect(() => {
 		getMyProfile()
@@ -92,6 +97,25 @@ export function ChapterDetailPage() {
 	  }
 	}
 
+	const handleMemberNameSave = async (memberId: string) => {
+		if (!id || !editMemberName.trim()) return
+		setSavingMember(true)
+		try {
+			await updateMemberName(memberId, id, editMemberName.trim())
+			setChapter(prev => ({
+				...prev,
+				chapterMembers: prev?.chapterMembers?.map(m =>
+					m.id === memberId ? { ...m, name: editMemberName.trim() } : m
+				)
+			}))
+			setEditingMemberId(null)
+		} catch {
+			// silently ignore — name stays as-is
+		} finally {
+			setSavingMember(false)
+		}
+	}
+
 	if (loading) {
 		return <div className="flex flex-col items-center justify-center min-h-screen">
 				<div>Loading chapter…</div>
@@ -107,7 +131,7 @@ export function ChapterDetailPage() {
 	    </div>
 	  )
 	}
-
+console.log({chapter})
 	return (
 	  	<div className="min-h-screen bg-cream">
 			<Nav showLogout={true} showProfile={true} username={name}/>
@@ -142,18 +166,39 @@ export function ChapterDetailPage() {
 
 				<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
 					<h3 className="font-heading text-forest-deep mb-4">Members</h3>
-					<ul className="divide-y divide-warm-border">
+					<ul className="divide-y divide-warm-border max-h-96 overflow-y-auto overflow-x-hidden border border-warm-border rounded bg-white p-4 -m-4">
 					{chapter?.chapterMembers?.map(member => (
-						<li key={member.id} className="py-3 flex justify-between items-center">
-						{/* @ts-ignore: Property 'user' does not exist on type 'ChapterMember' */}
-						<span className="text-sm text-stone">{member.user?.name}</span>
-						<span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-							member.role === 'ADMIN'
-							? 'bg-forest-light text-forest'
-							: 'bg-cream text-stone-muted'
-						}`}>
-							{member.role.toLowerCase()}
-						</span>
+						<li key={member.id} className="py-3 flex justify-between items-center gap-3">
+							{editingMemberId === member.id ? (
+								<form className="flex items-center gap-2 flex-1" onSubmit={e => { e.preventDefault(); handleMemberNameSave(member.id) }}>
+									<input
+										autoFocus
+										value={editMemberName}
+										onChange={e => setEditMemberName(e.target.value)}
+										className="flex-1 px-2 py-1 text-sm border border-warm-border rounded bg-cream/40 focus:outline-none focus:ring-2 focus:ring-terracotta"
+									/>
+									<button type="submit" disabled={savingMember} className="bg-forest rounded py-1 px-1 text-xs text-white hover:underline disabled:opacity-50">Save</button>
+									<button type="button" onClick={() => setEditingMemberId(null)} className="text-xs text-terracotta hover:underline">Cancel</button>
+								</form>
+							) : (
+								<span className="text-sm text-stone flex-1">{member.name ?? ''}</span>
+							)}
+							<div className="flex items-center gap-2 shrink-0">
+								{member.userId === user?.id && editingMemberId !== member.id && (
+									<button
+										onClick={() => { setEditingMemberId(member.id); setEditMemberName(member.name ?? '') }}
+										className="text-xs text-stone-muted hover:text-stone"
+										aria-label="Edit your display name"
+									>Edit</button>
+								)}
+								<span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+									member.role === 'ADMIN'
+									? 'bg-forest-light text-forest'
+									: 'bg-cream text-stone-muted'
+								}`}>
+									{member.role.toLowerCase()}
+								</span>
+							</div>
 						</li>
 					))}
 					</ul>

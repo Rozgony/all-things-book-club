@@ -32,7 +32,7 @@ type CreateResponse = {
 	chapterMember: ChapterMember
 }
 
-export async function createChapter(data: { name: string; description?: string; creatorName: string; creatorEmail: string }): Promise<Chapter> {
+export async function createChapter(data: { name: string; description?: string; creatorName: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 	const userKey = getUserKey()
 
@@ -48,7 +48,7 @@ export async function createChapter(data: { name: string; description?: string; 
 		chapterKey
 	)
 	const { encryptedBlob: encryptedMemberBlob, nonce: memberNonce } = await encrypt(
-		{ name: data.creatorName, email: data.creatorEmail },
+		{ name: data.creatorName },
 		chapterKey
 	)
 
@@ -75,7 +75,8 @@ export async function createChapter(data: { name: string; description?: string; 
 	setChapterKey(chapter.id, chapterKey)
 
 	// 6. Return the chapter with decrypted fields for the UI
-	return { ...chapter, name: data.name, description: data.description ?? null, chapterMembers: [chapterMember] }
+	const creatorMember = { ...chapterMember, name: data.creatorName }
+	return { ...chapter, name: data.name, description: data.description ?? null, chapterMembers: [creatorMember] }
 }
 
 export async function getChapterAndSetKey(id: string): Promise<Chapter> {
@@ -90,7 +91,16 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 
 	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
-	return { ...chapter, name: content.name, description: content.description ?? null }
+
+	const decryptedMembers = chapter.chapterMembers
+		? await Promise.all(chapter.chapterMembers.map(async (member) => {
+			if (!member.encryptedBlob || !member.nonce) return member
+			const memberContent = await decrypt<{ name: string; email: string }>(member.encryptedBlob, member.nonce, chapterKey!)
+			return { ...member, name: memberContent.name, email: memberContent.email }
+		}))
+		: chapter.chapterMembers
+
+	return { ...chapter, name: content.name, description: content.description ?? null, chapterMembers: decryptedMembers }
 }
 
 export async function updateChapter(id: string, data: { name?: string; description?: string }): Promise<Chapter> {

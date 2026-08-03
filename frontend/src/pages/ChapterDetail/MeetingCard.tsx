@@ -4,25 +4,28 @@ import { type Meeting } from '../../api/types'
 import { deleteMeeting } from '../../api/meetings'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { MeetingStatusBadge } from '../../components/MeetingStatusBadge'
+import { useAuthStore } from '../../store/authStore'
 
 interface MeetingCardProps {
 	meeting: Meeting
 	onDeleted?: (id: string) => void
 }
 
-function formatMeetingDate(dateString: string) {
+function formatMeetingDate(dateString: string, timezone?: string | null) {
 	const date = new Date(dateString)
 	return date.toLocaleDateString('en-US', {
 		weekday: 'short',
 		month: 'short',
 		day: 'numeric',
 		hour: '2-digit',
-		minute: '2-digit'
+		minute: '2-digit',
+		...(timezone ? { timeZone: timezone } : {}),
 	})
 }
 
 export function MeetingCard({ meeting, onDeleted }: MeetingCardProps) {
 	const navigate = useNavigate()
+	const timezone = useAuthStore((s) => s.timezone)
 	const [showConfirm, setShowConfirm] = useState(false)
 	const [deleting, setDeleting] = useState(false)
 
@@ -44,7 +47,7 @@ export function MeetingCard({ meeting, onDeleted }: MeetingCardProps) {
 				onClick={() => navigate(`/meetings/${meeting.id}`)}
 			>
 				<div>
-					<p className="text-sm text-stone font-medium">{formatMeetingDate(meeting.scheduledAt)}</p>
+					<p className="text-sm text-stone font-medium">{formatMeetingDate(meeting.scheduledAt, timezone)}</p>
 					<p className="text-xs text-stone-muted">{meeting.duration} minutes</p>
 				</div>
 				<div className="flex items-center gap-2">
@@ -66,7 +69,7 @@ export function MeetingCard({ meeting, onDeleted }: MeetingCardProps) {
 			{showConfirm && (
 				<ConfirmModal
 					header="Delete meeting?"
-					bodyText={<>This will permanently delete the meeting on <span className="text-stone font-medium">{formatMeetingDate(meeting.scheduledAt)}</span> and all its topics.</>}
+					bodyText={<>This will permanently delete the meeting on <span className="text-stone font-medium">{formatMeetingDate(meeting.scheduledAt, timezone)}</span> and all its topics.</>}
 					confirmText="Delete"
 					onConfirm={handleDelete}
 					onCancel={() => setShowConfirm(false)}

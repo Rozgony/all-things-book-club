@@ -176,8 +176,6 @@ export function ScheduleMeetingForm({ chapterId, editRuleId, onMeetingCreated, o
 				<input
 					type="number"
 					value={duration}
-					min={15}
-					step={15}
 					onChange={e => setDuration(Number(e.target.value))}
 					className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 				/>

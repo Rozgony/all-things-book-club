@@ -113,7 +113,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 					</div>
 					{ 
 						viewPastMeetings ? 
-						<ul className="divide-y divide-warm-border">
+						<ul className="divide-y divide-warm-border h-80 overflow-y-auto overflow-x-hidden border border-warm-border rounded bg-white p-4">
 							{pastMeetings.length > 0 ? (
 								pastMeetings.map(meeting => (
 									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />
@@ -122,7 +122,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 								<p className="py-4 text-stone-muted text-sm">No past meetings</p>
 							)}
 						</ul> :
-						<ul className="divide-y divide-warm-border">
+						<ul className="divide-y divide-warm-border h-80 overflow-y-auto overflow-x-hidden border border-warm-border rounded bg-white p-4">
 							{upcomingAndActive.length > 0 ? (
 								upcomingAndActive.map(meeting => (
 									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />

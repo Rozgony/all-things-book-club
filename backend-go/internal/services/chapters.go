@@ -150,7 +150,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	rows, err := s.db.Query(ctx, `
 		SELECT c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce,
 			my_cm.encrypted_chapter_key, my_cm.key_nonce,
-			cm.id, cm.user_id, cm.role, cm.joined_at
+				cm.id, cm.user_id, cm.role, cm.joined_at, cm.encrypted_blob, cm.nonce
 		FROM chapters c
 		JOIN chapter_members my_cm ON my_cm.chapter_id = c.id AND my_cm.user_id = $2
 		JOIN chapter_members cm ON cm.chapter_id = c.id
@@ -172,7 +172,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt,
 			&ch.EncryptedBlob, &ch.Nonce,
 			&ch.EncryptedChapterKey, &ch.KeyNonce,
-			&cm.ID, &cm.UserId, &cm.Role, &cm.JoinedAt); err != nil {
+			&cm.ID, &cm.UserId, &cm.Role, &cm.JoinedAt, &cm.EncryptedBlob, &cm.Nonce); err != nil {
 				return nil, fmt.Errorf("scan: %w", err)
 		}
 		if _, exists := chapterMap[ch.ID]; !exists {

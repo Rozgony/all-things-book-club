@@ -13,6 +13,11 @@ export interface ChapterMember {
 	role: 'ADMIN' | 'MEMBER'
 	joinedAt: string
 	users?: UserProfile[]
+	encryptedBlob?: string | null
+	nonce?: string | null
+	// Decrypted fields — populated client-side after decryption
+	name?: string | null
+	email?: string | null
 }
 
 export interface Chapter {

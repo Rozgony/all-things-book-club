@@ -12,6 +12,7 @@ import { supabase } from '../../lib/supabase'
 
 export function ProfilePage() {
 	const user = useAuthStore((s) => s.user)
+	const setStoreTimezone = useAuthStore((s) => s.setTimezone)
 	const [profile, setProfile] = useState<UserProfile | null>(null)
 	const [chapters, setChapters] = useState<Chapter[]>([])
 	const [editing, setEditing] = useState(false)
@@ -57,6 +58,7 @@ export function ProfilePage() {
 	    setProfile(updated)
 		setName(updated.name ?? '')
 	    setTimezone(updated.timezone)
+		setStoreTimezone(updated.timezone)
 
 		const currentEmail = user?.email ?? ''
 		if (emailValue && emailValue !== currentEmail) {

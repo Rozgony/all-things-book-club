@@ -58,7 +58,7 @@ Membership records. Each member has their own encrypted copy of the chapter's sy
 | `encrypted_chapter_key` | BYTEA | - | Chapter key encrypted for this user's public key |
 | `key_nonce` | BYTEA | - | AES-GCM nonce |
 | `joined_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `encrypted_blob` | BYTEA | -	| Encrypted name, description, etc. |
+| `encrypted_blob` | BYTEA | -	| Encrypted name |
 | `nonce` | BYTEA | - | AES-GCM nonce |
 
 **Unique**: (user_id, chapter_id)

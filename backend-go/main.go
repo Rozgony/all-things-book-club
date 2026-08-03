@@ -87,6 +87,7 @@ func main() {
 
 		// Members
 		r.Post("/api/members", memberHandler.Create)
+		r.Patch("/api/members/{memberID}", memberHandler.Update)
 		
 		// Meetings
 		r.Post("/api/meetings", meetingHandler.Create)

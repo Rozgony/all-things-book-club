@@ -48,6 +48,28 @@ type ChapterMember struct {
 	JoinedAt       			time.Time   		`json:"joinedAt"`
 	EncryptedChapterKey		[]byte				`json:"encryptedChapterKey"`
 	KeyNonce				[]byte				`json:"keyNonce"`
+	EncryptedBlob			[]byte				`json:"encryptedBlob"`
+	Nonce					[]byte				`json:"nonce"`
+}
+
+type UpdateMemberInput struct {
+	EncryptedBlob []byte `json:"encryptedBlob"`
+	Nonce         []byte `json:"nonce"`
+}
+
+func (s *MemberService) Update(ctx context.Context, memberID string, userID string, input UpdateMemberInput) (*ChapterMember, error) {
+	var cm ChapterMember
+	err := s.db.QueryRow(ctx, `
+		UPDATE chapter_members
+		SET encrypted_blob = $1, nonce = $2
+		WHERE id = $3 AND user_id = $4
+		RETURNING id, user_id, chapter_id, role, joined_at
+	`, input.EncryptedBlob, input.Nonce, memberID, userID).
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.JoinedAt)
+	if err != nil {
+		return nil, fmt.Errorf("MemberService.Update: %w", err)
+	}
+	return &cm, nil
 }
 
 func (s *MemberService) Create(ctx context.Context, input MemberInput) (*ChapterMember, error) {
