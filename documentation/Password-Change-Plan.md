@@ -110,7 +110,39 @@ Reversing the order (Supabase password first) is worse: if the DB rotation then 
 ## Scope
 
 - **In scope:** fixing `ProfilePage.tsx`'s password-change flow to correctly rotate the X25519 keypair, `userKey`, and every chapter key the user holds; a new atomic backend endpoint for it; verifying the current password against Supabase before touching any keys
-- **Out of scope:** rotating `key_derivation_salt`; recovery flow for users who forgot their password (that's a "lost private key" problem, not a rotation problem — no plan here restores access without the old password); rate-limiting the new endpoint (same reasoning as other authenticated, self-scoped endpoints — not public)
+- **Out of scope:** rotating `key_derivation_salt`; rate-limiting the new endpoint (same reasoning as other authenticated, self-scoped endpoints — not public)
 - **Recommended follow-ups (separate from this plan):**
   - Raise `minimum_password_length` in `supabase/config.toml` — currently `6`, which is weak; 8+ is a more defensible floor
   - Revoke other active sessions after a successful rotation via Supabase's admin API (`auth.admin.signOut(userId, 'others')`), which needs a `SUPABASE_SERVICE_ROLE_KEY` the backend doesn't currently have configured
+
+---
+
+## Recovery Codes
+
+Users who forget their password have no server-side recovery by design — that's the E2EE tradeoff. Recovery codes are a client-side escape hatch: a second high-entropy secret that can decrypt the master key without the password.
+
+### How it works
+
+1. At signup, generate a random recovery phrase (e.g. 12 BIP-39 words)
+2. Derive a recovery key from it via PBKDF2 with a separate salt
+3. Encrypt the user's `userKey` with the recovery key → store `recovery_encrypted_key`, `recovery_key_nonce`, `recovery_key_salt` on the `users` table
+4. Show the recovery phrase **once** — the server never stores it plaintext
+5. On password reset: prompt for the recovery code → decrypt the `userKey` → re-derive the X25519 keypair from the recovered `userKey` (or store a separate wrapped copy) → re-encrypt everything with the new password
+
+### Schema addition (one migration)
+
+```sql
+ALTER TABLE users
+  ADD COLUMN recovery_encrypted_key BYTEA,
+  ADD COLUMN recovery_key_nonce     BYTEA,
+  ADD COLUMN recovery_key_salt      TEXT;
+```
+
+### Implementation checklist (to be detailed when built)
+
+- [ ] Generate recovery phrase on signup (`frontend/src/lib/crypto.ts`) and derive recovery key
+- [ ] Store `recovery_encrypted_key`/`recovery_key_nonce`/`recovery_key_salt` alongside the existing user record (extend the signup API call)
+- [ ] Show recovery phrase once in the UI with a copy/download prompt; warn that it cannot be shown again
+- [ ] Add a "Forgot password" flow that accepts the recovery code, decrypts the `userKey`, then follows the same rotation steps as Phase 1 above (re-encrypts profile blob + all chapter keys with the new password's derived key)
+- [ ] Add a "Regenerate recovery code" option in Profile (requires the current password, follows same pattern as key rotation)
+- [ ] Warn prominently in the UI: **without your password or recovery code, your data cannot be recovered**
