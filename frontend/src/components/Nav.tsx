@@ -5,11 +5,13 @@ export type NavParams = {
 	  showLogout?: boolean
 	  showProfile?: boolean
 	  showChapters?: boolean
-	  username: string
+	  showLogin?: boolean
+	  onLoginClick?: () => void
+	  username?: string
 }
 
 export function Nav(params: NavParams) {
- const { showLogout, showProfile, showChapters, username } = params;
+ const { showLogout, showProfile, showChapters, showLogin, onLoginClick, username } = params;
 	const signOut = useAuthStore((s) => s.signOut)
 	const navigate = useNavigate()
 
@@ -20,6 +22,7 @@ export function Nav(params: NavParams) {
 				{ !showChapters || <button onClick={() => navigate('/chapters')} className="text-sm text-white/75 hover:text-white transition-colors">All Chapters</button> }
 	      		{ !showProfile || <button onClick={() => navigate('/profile')} className="text-sm text-white/75 hover:text-white transition-colors">{username || 'Profile'}</button> }
 	      		{ !showLogout || <button onClick={signOut} className="text-sm text-white/75 hover:text-white transition-colors">Sign out</button> }
+	      		{ !showLogin || <button onClick={onLoginClick} className="text-sm text-white/75 hover:text-white transition-colors">Login</button> }
 	    	</div>
 	  	</nav>
 	)
