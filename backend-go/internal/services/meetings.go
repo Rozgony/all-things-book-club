@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/all-things-book-club/internal/crypto"
@@ -31,6 +32,8 @@ func (s *MeetingService) GetDB() *pgxpool.Pool {
 type MeetingInput struct {
 	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
 	Nonce         		[]byte 	`json:"nonce"`
+	LocationEncryptedBlob []byte `json:"locationEncryptedBlob"`
+  	LocationNonce         []byte `json:"locationNonce"`
 	ChapterID      		string  `json:"chapterId"`
 	ScheduledAt       	time.Time  `json:"scheduledAt"`
 	Duration       		int  	`json:"duration"`
@@ -38,17 +41,19 @@ type MeetingInput struct {
 }
 
 type Meeting struct {
-	ID      			string  `json:"id"`
-	ChapterID      		string  `json:"chapterId"`
-	ScheduledAt       	time.Time  `json:"scheduledAt"`
-	Duration       		int  	`json:"duration"`
-	RecurringGroupId    *string `json:"recurringGroupId"`
-	Status    			string  `json:"status"`
-	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
-	Nonce         		[]byte 	`json:"nonce"`
-	Chapter				*Chapter `json:"chapter"`
-	Topics				[]*Topic `json:"topics"`
-	ChapterMembers		[]*ChapterMember	`json:"chapterMember"`
+	ID      				string  			`json:"id"`
+	ChapterID      			string  			`json:"chapterId"`
+	ScheduledAt       		time.Time  			`json:"scheduledAt"`
+	Duration       			int  				`json:"duration"`
+	RecurringGroupId    	*string 			`json:"recurringGroupId"`
+	Status    				string  			`json:"status"`
+	EncryptedBlob 			[]byte 				`json:"encryptedBlob"`
+	Nonce         			[]byte 				`json:"nonce"`
+	LocationEncryptedBlob 	[]byte 				`json:"locationEncryptedBlob"`
+  	LocationNonce         	[]byte 				`json:"locationNonce"`
+	Chapter					*Chapter 			`json:"chapter"`
+	Topics					[]*Topic 			`json:"topics"`
+	ChapterMembers			[]*ChapterMember	`json:"chapterMember"`
 }
 
 func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID string) (*Meeting, error) {
@@ -68,10 +73,12 @@ func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID 
 
 	var m Meeting
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO meetings (id, chapter_id, duration, scheduled_at, recurring_group_id, created_at, updated_at, status, encrypted_blob, nonce)
-		VALUES ($1, $2, $3, $4, $5, now(), now(), 'SCHEDULED', $6, $7)
+		INSERT INTO meetings (id, chapter_id, duration, scheduled_at, recurring_group_id, 
+			created_at, updated_at, status, encrypted_blob, nonce, location_encrypted_blob, location_nonce)
+		VALUES ($1, $2, $3, $4, $5, now(), now(), 'SCHEDULED', $6, $7, $8, $9)
 		RETURNING id, chapter_id, duration, scheduled_at, status
-	`, meetingID, input.ChapterID, input.Duration, input.ScheduledAt, input.RecurringGroupId, input.EncryptedBlob, input.Nonce).
+	`, meetingID, input.ChapterID, input.Duration, input.ScheduledAt, input.RecurringGroupId, 
+			input.EncryptedBlob, input.Nonce, input.LocationEncryptedBlob, input.LocationNonce).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.Status)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.Create: insert meeting: %w", err)
@@ -86,7 +93,8 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	var cm ChapterMember
 	var ch Chapter
 	err := s.db.QueryRow(ctx, `
-		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
+		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, 
+			m.nonce, m.encrypted_blob, m.location_nonce, m.location_encrypted_blob,
 			cm.id, cm.encrypted_chapter_key, cm.key_nonce,
 			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
 		FROM meetings m
@@ -95,7 +103,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 		WHERE m.id = $1
 	`, meetingID, userID).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
-			&m.Status, &m.Nonce, &m.EncryptedBlob,
+			&m.Status, &m.Nonce, &m.EncryptedBlob, &m.LocationNonce, &m.LocationEncryptedBlob,
 			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce,
 			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
@@ -168,7 +176,8 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT m.id, m.chapter_id, m.scheduled_at, m.duration, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
+		SELECT m.id, m.chapter_id, m.scheduled_at, m.duration, m.recurring_group_id, m.status, 
+			m.nonce, m.encrypted_blob, m.location_nonce, m.location_encrypted_blob,
 			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapters c ON c.id = m.chapter_id
@@ -183,7 +192,8 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 	for rows.Next() {
 		var m Meeting
 		var ch Chapter
-		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob,
+		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, 
+			&m.Nonce, &m.EncryptedBlob, &m.LocationNonce, &m.LocationEncryptedBlob,
 			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByChapterID: scan: %w", err)
 		}
@@ -195,13 +205,55 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 }
 
 func (s *MeetingService) UpdateStatus(ctx context.Context, meetingID string, status string) error {
-	_, err := s.db.Exec(ctx, `
+	if status != "ACTIVE" {
+		tag, err := s.db.Exec(ctx, `
+			UPDATE meetings
+			SET status = $1, updated_at = now()
+			WHERE id = $2
+		`, status, meetingID)
+		if err != nil {
+			return fmt.Errorf("MeetingService.UpdateStatus: %w", err)
+		}
+		if tag.RowsAffected() == 0 {
+			return pgx.ErrNoRows
+		}
+		return nil
+	}
+
+	// Activating a meeting auto-completes any other ACTIVE meeting in the same
+	// chapter. Both updates run in one transaction so a crash mid-way never
+	// leaves two meetings ACTIVE at once.
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateStatus: begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) // no-op if tx.Commit() is called below
+
+	_, err = tx.Exec(ctx, `
 		UPDATE meetings
-		SET status = $1, updated_at = now()
-		WHERE id = $2
-	`, status, meetingID)
+		SET status = 'COMPLETED', updated_at = now()
+		WHERE chapter_id = (SELECT chapter_id FROM meetings WHERE id = $1)
+		  AND status = 'ACTIVE'
+		  AND id != $1
+	`, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateStatus: complete previous active meeting: %w", err)
+	}
+
+	tag, err := tx.Exec(ctx, `
+		UPDATE meetings
+		SET status = 'ACTIVE', updated_at = now()
+		WHERE id = $1
+	`, meetingID)
 	if err != nil {
 		return fmt.Errorf("MeetingService.UpdateStatus: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("MeetingService.UpdateStatus: commit: %w", err)
 	}
 	return nil
 }
@@ -250,6 +302,18 @@ func (s *MeetingService) UpdateEncryptedData(ctx context.Context, meetingID stri
 	`, encryptedBlob, nonce, meetingID)
 	if err != nil {
 		return fmt.Errorf("MeetingService.UpdateEncryptedData: %w", err)
+	}
+	return nil
+}
+
+func (s *MeetingService) UpdateEncryptedLocationData(ctx context.Context, meetingID string, locationEncryptedBlob []byte, locationNonce []byte) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE meetings
+		SET location_encrypted_blob = $1, location_nonce = $2, updated_at = now()
+		WHERE id = $3
+	`, locationEncryptedBlob, locationNonce, meetingID)
+	if err != nil {
+		return fmt.Errorf("MeetingService.UpdateLocationEncryptedData: %w", err)
 	}
 	return nil
 }

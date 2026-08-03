@@ -8,6 +8,7 @@ import (
 
 	"github.com/all-things-book-club/internal/config"
 	"github.com/all-things-book-club/internal/db"
+	"github.com/all-things-book-club/internal/jobs"
 	"github.com/all-things-book-club/internal/routes"
 	"github.com/all-things-book-club/internal/services"
 	"github.com/go-chi/chi/v5"
@@ -47,6 +48,9 @@ func main() {
 	topicService := services.NewTopicService(pool)
 	themeService := services.NewThemeService(pool)
 	userService := services.NewUserService(pool)
+	recurringRuleService := services.NewRecurringRuleService(pool)
+
+	jobs.StartRecurringMeetingGenerator(ctx, recurringRuleService) 
 
 	// Initialize handlers from services
 	chapterHandler := routes.NewChapterHandler(chapterService)
@@ -55,6 +59,7 @@ func main() {
 	topicHandler := routes.NewTopicHandler(topicService)
 	themeHandler := routes.NewThemeHandler(themeService)
 	userHandler := routes.NewUserHandler(userService)
+	recurringRuleHandler := routes.NewRecurringRuleHandler(recurringRuleService)
 
 	// Public routes (no auth required)
 	r.Group(func(r chi.Router) {
@@ -89,6 +94,11 @@ func main() {
 		r.Get("/api/meetings/{id}", meetingHandler.GetByID)
 		r.Patch("/api/meetings/{id}", meetingHandler.Update)
 		r.Delete("/api/meetings/{id}", meetingHandler.Delete)
+
+		// Recurring rules
+		r.Post("/api/recurring-rules", recurringRuleHandler.Create)
+		r.Get("/api/recurring-rules/{id}", recurringRuleHandler.GetByID)
+		r.Patch("/api/recurring-rules/{id}", recurringRuleHandler.Update)
 
 		// Topics
 		r.Post("/api/topics", topicHandler.Create)

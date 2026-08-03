@@ -73,12 +73,14 @@ func (h *MeetingHandler) GetByChapterID(w http.ResponseWriter, r *http.Request) 
 
 func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Status           *string    `json:"status,omitempty"`
-		ScheduledAt      *string    `json:"scheduledAt,omitempty"` // ISO 8601 string
-		Duration         *int       `json:"duration,omitempty"`
-		RecurringGroupId *string    `json:"recurringGroupId,omitempty"`
-		EncryptedBlob    []byte     `json:"encryptedBlob,omitempty"`
-		Nonce            []byte     `json:"nonce,omitempty"`
+		Status           		*string    `json:"status,omitempty"`
+		ScheduledAt      		*string    `json:"scheduledAt,omitempty"` // ISO 8601 string
+		Duration         		*int       `json:"duration,omitempty"`
+		RecurringGroupId 		*string    `json:"recurringGroupId,omitempty"`
+		EncryptedBlob    		[]byte     `json:"encryptedBlob,omitempty"`
+		Nonce            		[]byte     `json:"nonce,omitempty"`
+		LocationEncryptedBlob   []byte     `json:"locationEncryptedBlob,omitempty"`
+		LocationNonce           []byte     `json:"locationNonce,omitempty"`
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&input)
@@ -137,6 +139,13 @@ func (h *MeetingHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if input.EncryptedBlob != nil {
 		if err := h.meetings.UpdateEncryptedData(r.Context(), meetingID, input.EncryptedBlob, input.Nonce); err != nil {
+			handleError(w, err)
+			return
+		}
+	}
+
+	if input.LocationEncryptedBlob != nil {
+		if err := h.meetings.UpdateEncryptedLocationData(r.Context(), meetingID, input.LocationEncryptedBlob, input.LocationNonce); err != nil {
 			handleError(w, err)
 			return
 		}

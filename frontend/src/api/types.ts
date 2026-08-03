@@ -38,6 +38,22 @@ export enum MeetingStatus {
 	CANCELLED = 'CANCELLED'
 }
 
+export enum MeetingFrequency {
+	MINUTES = 'MINUTES',
+	DAILY = 'DAILY',
+	WEEKLY = 'WEEKLY',
+	MONTHLY = 'MONTHLY',
+	MONTHLY_WEEKDAY = 'MONTHLY_WEEKDAY'
+}
+
+export const meetingFrequencyReadable = {
+	MINUTES: 'Minutes',
+	DAILY: 'Days',
+	WEEKLY: 'Weeks',
+	MONTHLY: 'Months (same date)',
+	MONTHLY_WEEKDAY: 'Months (same weekday, e.g. 1st Thursday)'
+}
+
 export enum SpinnerSize { 
 	LG = 'LG',
 	SM = 'SM' 
@@ -54,11 +70,14 @@ export interface Meeting {
 	updatedAt: string
 	encryptedBlob?: string | null
 	nonce?: string | null
+	locationEncryptedBlob?: string | null
+	locationNonce?: string | null
 	chapter?: Chapter
 	topics?: Topic[]
 	// Decrypted fields — populated client-side after decryption
 	videoCallLink?: string | null
 	physicalAddress?: string | null
+	discussionNotes?: string | null
 }
 
 export const meetingStatusReadable = {
@@ -66,6 +85,16 @@ export const meetingStatusReadable = {
 	ACTIVE: 'Active Now',
 	COMPLETED: 'Completed',
 	CANCELLED: 'Cancelled'
+}
+
+export interface RecurringRule {
+	id: string
+	chapterId: string
+	frequency: MeetingFrequency
+	interval: number
+	startDate: string
+	endDate: string | null
+	duration: number
 }
 
 export type TopicStatus = 'PENDING' | 'SELECTED' | 'DISCUSSED'

@@ -8,6 +8,7 @@ import (
     "github.com/jackc/pgx/v5"
 
     "github.com/all-things-book-club/internal/db"
+    "github.com/all-things-book-club/internal/services"
 )
 
 var ErrBadRequest = errors.New("bad request")
@@ -24,6 +25,8 @@ func handleError(w http.ResponseWriter, err error) {
         http.Error(w, `{"error":"not found"}`, http.StatusNotFound)
     case errors.Is(err, db.ErrNotMember):
         http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+    case errors.Is(err, services.ErrRecurringRuleExists):
+        http.Error(w, `{"error":"chapter already has an active recurring rule"}`, http.StatusConflict)
     default:
         http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
     }

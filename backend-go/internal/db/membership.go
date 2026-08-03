@@ -72,3 +72,19 @@ func IsMemberOfTopic(ctx context.Context, pool *pgxpool.Pool, topicID string, us
     }
     return exists, nil
 }
+
+// IsMemberOfRecurringRule checks whether a user is a member of the chapter that owns a recurring rule
+func IsMemberOfRecurringRule(ctx context.Context, pool *pgxpool.Pool, ruleID string, userID string) (bool, error) {
+    var exists bool
+    err := pool.QueryRow(ctx, `
+        SELECT EXISTS (
+            SELECT 1 FROM chapter_members cm
+            JOIN recurring_rules r ON r.chapter_id = cm.chapter_id
+            WHERE r.id = $1 AND cm.user_id = $2
+        )
+    `, ruleID, userID).Scan(&exists)
+    if err != nil {
+        return false, fmt.Errorf("IsMemberOfRecurringRule: %w", err)
+    }
+    return exists, nil
+}

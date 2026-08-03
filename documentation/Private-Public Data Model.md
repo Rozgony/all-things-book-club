@@ -96,17 +96,6 @@ chapter_topics (
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
 )
-
--- Discussion notes: fully encrypted
-discussion_notes (
-  id              TEXT PRIMARY KEY,
-  topic_id        TEXT REFERENCES chapter_topics(id) ON DELETE CASCADE,
-  meeting_id      TEXT REFERENCES meetings(id) ON DELETE CASCADE,
-  author_id       TEXT REFERENCES users(id) ON DELETE SET NULL,
-  encrypted_blob  BYTEA NOT NULL,             -- AES-256-GCM: note content
-  nonce           BYTEA NOT NULL,
-  created_at      TIMESTAMPTZ DEFAULT now()
-)
 ```
 
 ---
