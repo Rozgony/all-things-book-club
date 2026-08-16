@@ -57,7 +57,7 @@ func main() {
 	meetingHandler := routes.NewMeetingHandler(meetingService)
 	topicHandler := routes.NewTopicHandler(topicService)
 	themeHandler := routes.NewThemeHandler(themeService)
-	userHandler := routes.NewUserHandler(userService, pool)
+	userHandler := routes.NewUserHandler(userService)
 	inviteHandler := routes.NewInviteHandler(inviteService, mailerService, pool, cfg.FrontendURL)
 
 	// Public routes (no auth required)
@@ -109,7 +109,6 @@ func main() {
 		r.Get("/api/users/me", userHandler.GetByID)
 		r.Patch("/api/users/me", userHandler.Update)
 		r.Delete("/api/users/me", userHandler.Update)
-		r.Get("/api/users/by-email", userHandler.GetByEmail)
 
 		// Invites (creation + acceptance require auth; GET by token does not — registered below)
 		r.Post("/api/chapters/{id}/invites", inviteHandler.Create)

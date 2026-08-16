@@ -36,25 +36,7 @@ type User struct {
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-// GetByEmail resolves a user's ID and X25519 public key by email, for inviting
-// existing users. Joins auth.users (Supabase-managed, holds email) with our
-// public.users (holds public_key) — same physical Postgres instance.
-// Callers must additionally verify the requester shares a chapter with the
-// result (see db.SharesAnyChapter) to avoid turning this into an email oracle.
-func (s *UserService) GetByEmail(ctx context.Context, email string) (*User, error) {
-	var u User
-	err := s.db.QueryRow(ctx, `
-		SELECT pu.id, pu.public_key
-		FROM auth.users au
-		JOIN public.users pu ON pu.id = au.id::text
-		WHERE au.email = $1
-	`, email).Scan(&u.ID, &u.PublicKey)
-	if err != nil {
-		return nil, fmt.Errorf("UserService.GetByEmail: %w", err)
-	}
-	return &u, nil
-}
-// The frontend uses this salt with the user's password to derive their encryption key.
+// GetOrCreateSalt is the frontend's first call on login — it needs the salt
 func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (string, error) {
 	// Try to get existing salt
 	var salt string

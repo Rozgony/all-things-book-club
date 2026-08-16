@@ -10,50 +10,6 @@ export interface InviteInfo {
 	status: 'PENDING' | 'ACCEPTED' | 'EXPIRED'
 }
 
-export interface UserLookup {
-	id: string
-	publicKey: string | null
-}
-
-// Looks up an existing user's public key by email, to decide between the
-// direct-ECDH invite path and the one-time-secret invite path. Returns null
-// on 404 (no account with that email) rather than throwing, since 404 is an
-// expected outcome here, not an error.
-export async function lookupUserByEmail(email: string): Promise<UserLookup | null> {
-	const headers = await getAuthHeaders()
-	const res = await fetch(`${API_BASE}/users/by-email?email=${encodeURIComponent(email)}`, { headers })
-	if (res.status === 404) return null
-	if (!res.ok) throw new Error('Failed to look up user')
-	return res.json()
-}
-
-// Existing-user invite path: adds the invitee directly as a chapter member
-// with their own ECDH-wrapped copy of the chapter key. ADMIN only (enforced
-// server-side). Their encrypted member-blob (display name) is left unset —
-// the inviter doesn't know it; the invitee can set it from their profile.
-export async function inviteExistingUser(params: {
-	chapterId: string
-	userId: string
-	encryptedChapterKey: string
-	keyNonce: string
-	ephemeralPublicKey: string
-}): Promise<void> {
-	const headers = await getAuthHeaders()
-	const res = await fetch(`${API_BASE}/members`, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify({
-			userId: params.userId,
-			chapterId: params.chapterId,
-			role: 'MEMBER',
-			encryptedChapterKey: params.encryptedChapterKey,
-			keyNonce: params.keyNonce,
-			ephemeralPublicKey: params.ephemeralPublicKey,
-		}),
-	})
-	if (!res.ok) throw new Error('Failed to add member')
-}
-
 // New-user invite path: creates a pending invite emailed to invitedEmail.
 // inviteSecretBase64url only lives in this request — the backend uses it to
 // build the emailed URL and does not persist it (see documentation/Invite-Plan.md).

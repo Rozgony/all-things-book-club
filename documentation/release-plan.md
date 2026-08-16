@@ -51,18 +51,7 @@ Move sensitive timestamps client-side by encrypting them inside the content blob
 - Tradeoff: server-side sort/filter by date is no longer possible; all ordering happens client-side after decryption
 - Must be decided before launch — retrofitting requires re-encrypting every row with each user's key, which cannot be coordinated after the fact
 
-### 3. Anonymous Sign-In *(Privacy mode only)*
-
-Allow users to sign up with a **username + password** instead of an email address, using Supabase anonymous auth (`supabase.auth.signInAnonymously()`).
-
-- Username is a pseudonym or codename — never verified, never linked to a real-world identity
-- Username must be unique on the server (the server knows "this username exists" but not who it belongs to)
-- Password + server salt re-derives all keys deterministically — same username/password on any device restores full access with no recovery email needed
-- Invite flow must work without a recipient email: use the existing invite-secret URL fragment mechanism, shared out-of-band
-- Tradeoff: if both username and password are forgotten, the account is unrecoverable — this must be communicated clearly in the UI
-- Must be decided before launch — early users signed up with email cannot have that email retroactively removed
-
-### 4. Password Change / Key Rotation
+### 3. Password Change / Key Rotation
 
 Allow users to change their password without losing access to their encrypted data. See `documentation/Password-Change-Plan.md` for the full implementation plan.
 
@@ -76,7 +65,7 @@ Allow users to change their password without losing access to their encrypted da
 
 ## Post-Launch
 
-### 5. Hard-Delete Member Records on Leave
+### 4. Hard-Delete Member Records on Leave
 
 When a member leaves a chapter, hard-delete their `chapter_members` row. No soft-delete, no `deleted_at` column.
 
@@ -84,7 +73,7 @@ When a member leaves a chapter, hard-delete their `chapter_members` row. No soft
 - Chapter content (topics, meetings, themes) is scoped to `chapter_id` only with no `user_id` or `created_by` column, so it remains intact for remaining members
 - Implementation: add a `Delete` method to `MemberService` in `backend-go/internal/services/members.go` that runs `DELETE FROM chapter_members WHERE id = $1` — the schema has no soft-delete pattern so nothing else needs to change
 
-### 6. Minimize Invite Metadata
+### 5. Minimize Invite Metadata
 
 Hard-delete `chapter_invitations` rows rather than retaining them with a status flag. Each row currently exposes `inviter_id`, `invited_email`, `chapter_id`, and `created_at` in plaintext — enough to reconstruct a social graph even if the invite was never accepted.
 
@@ -92,9 +81,9 @@ Hard-delete `chapter_invitations` rows rather than retaining them with a status 
 - **On reject**: delete the row immediately
 - **On expiry**: run a periodic cleanup job (or DB trigger) to hard-delete expired rows — do not leave them with `status = 'EXPIRED'`
 - The `status` column and its index can be removed once rows are deleted instead of updated
-- If item 3 (anonymous sign-in) is implemented, `invited_email` may be eliminated entirely — invites would be shared as one-time URLs out-of-band rather than sent to an email address the server knows
+- If item 11 (anonymous sign-in) is implemented, `invited_email` may be eliminated entirely — invites would be shared as one-time URLs out-of-band rather than sent to an email address the server knows
 
-### 7. Ghost Mode *(Privacy mode only)*
+### 6. Ghost Mode *(Privacy mode only)*
 
 A chapter-level setting that automatically hard-deletes all content after a configurable retention window.
 
@@ -105,7 +94,7 @@ A chapter-level setting that automatically hard-deletes all content after a conf
 - Since content timestamps may be encrypted (item 2), Ghost Mode uses the server-side `inserted_at` opaque sequence for deletion timing, not the encrypted semantic date
 - Tradeoff: members lose access to history older than the retention window; this must be communicated clearly when a chapter enables Ghost Mode
 
-### 8. Log Out Everywhere
+### 7. Log Out Everywhere
 
 A user-initiated action that invalidates all active sessions across all devices simultaneously and clears derived keys from each device's session storage.
 
@@ -114,7 +103,7 @@ A user-initiated action that invalidates all active sessions across all devices 
 - Useful when a device is lost, stolen, or suspected compromised — closes the session hijacking window immediately
 - Does not revoke the chapter key in the DB — content remains accessible on next login with the correct password; this is intentional (the key is still wrapped, not plaintext)
 
-### 9. Strip IP Addresses from Application Logs
+### 8. Strip IP Addresses from Application Logs
 
 Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at the app layer.
 
@@ -123,7 +112,7 @@ Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at t
 - Activists using Tor Browser already hide their IP from the server; this protects non-Tor users from IP logging on your side
 - Implementation: set `log_format` in Nginx to omit `$remote_addr`, or use Caddy's `log` directive with IP field removed
 
-### 10. Forward Secrecy on Member Removal
+### 9. Forward Secrecy on Member Removal
 
 Rotate the chapter key when a member is removed, so they cannot decrypt content created after their removal even if they retained a copy of the old key.
 
@@ -142,3 +131,34 @@ Rotate the chapter key when a member is removed, so they cannot decrypt content 
   - Slow for chapters with large amounts of content; needs progress UI
   - Members offline during rotation are unaffected — they unwrap the new chapter key on next login
 - This is a post-launch addition — it requires no schema changes and no changes to existing crypto primitives
+
+### 10. Anonymous Sign-In *(Privacy mode only)*
+
+Allow users to sign up with a **username + password** instead of an email address, using Supabase anonymous auth (`supabase.auth.signInAnonymously()`).
+
+- Username is a pseudonym or codename — never verified, never linked to a real-world identity
+- Username must be unique on the server (the server knows "this username exists" but not who it belongs to)
+- Password + server salt re-derives all keys deterministically — same username/password on any device restores full access with no recovery email needed
+- Invite flow must work without a recipient email: use the existing invite-secret URL fragment mechanism, shared out-of-band
+- Tradeoff: if both username and password are forgotten, the account is unrecoverable — this must be communicated clearly in the UI
+- **Migration path for existing email users:** create a new anonymous account and use the existing invite flow to re-join any chapters — chapter keys are re-wrapped per-member at invite-accept time, so no data is lost
+
+#### Implementation approach
+
+Since Supabase requires an email identity for password-based re-login across devices, anonymous users are registered with a **synthetic email** derived deterministically on the client: `username@anon.internal`. This is never verified or displayed — it exists solely as a Supabase auth handle. The key derivation flow (salt → `deriveUserKey` → `deriveX25519KeyPair`) is identical to the email path.
+
+#### Files to change
+
+| File | Change |
+|---|---|
+| `supabase/migrations/006_anonymous_auth.sql` | Add `username TEXT UNIQUE` (nullable) to `users` |
+| `backend-go/internal/services/users.go` | Add `CheckUsernameAvailable`, `SetUsername` |
+| `backend-go/internal/routes/users.go` | Add `GET /auth/username-check` (rate-limited, unauthenticated) |
+| `backend-go/internal/routes/invites.go` | Make `invitedEmail` optional; return invite URL in response body when omitted; skip mailer |
+| `backend-go/main.go` | Register new route |
+| `frontend/src/pages/Home/SignUpPage.tsx` | Email/anonymous toggle; username field; no-recovery warning |
+| `frontend/src/pages/Home/LoginPage.tsx` | Username login path using synthetic email |
+| `frontend/src/store/authStore.ts` | Add `authMode: 'email' \| 'anonymous'` and `username: string \| null` |
+| `frontend/src/pages/ChapterDetail/InviteMemberForm.tsx` | Link-based invite path; show copyable URL when email omitted |
+| `frontend/src/pages/Invite/AcceptInvitePage.tsx` | Anonymous signup path in the `needs-signup` state |
+| `frontend/src/api/users.ts` | Add `checkUsernameAvailable`, `setMyUsername` |

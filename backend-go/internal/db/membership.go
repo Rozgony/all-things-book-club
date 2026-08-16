@@ -73,20 +73,3 @@ func IsMemberOfTopic(ctx context.Context, pool *pgxpool.Pool, topicID string, us
     return exists, nil
 }
 
-// SharesAnyChapter checks whether two users belong to at least one chapter in
-// common. Used to gate the by-email public-key lookup so it can't be used to
-// enumerate arbitrary registered emails.
-func SharesAnyChapter(ctx context.Context, pool *pgxpool.Pool, userA string, userB string) (bool, error) {
-    var exists bool
-    err := pool.QueryRow(ctx, `
-        SELECT EXISTS (
-            SELECT 1 FROM chapter_members cm1
-            JOIN chapter_members cm2 ON cm2.chapter_id = cm1.chapter_id
-            WHERE cm1.user_id = $1 AND cm2.user_id = $2
-        )
-    `, userA, userB).Scan(&exists)
-    if err != nil {
-        return false, fmt.Errorf("SharesAnyChapter: %w", err)
-    }
-    return exists, nil
-}

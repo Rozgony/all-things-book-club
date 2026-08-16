@@ -153,9 +153,11 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 ## 9. Threat Modeling — Enumeration, TOFU, and Timing Attacks
 
-**Where:** `backend-go/internal/db/membership.go` (`SharesAnyChapter`); `backend-go/internal/services/invites.go` (`subtle.ConstantTimeCompare`)
+**Where:** `backend-go/internal/services/invites.go` (`subtle.ConstantTimeCompare`)
 
-- `GET /api/users/by-email` requires the caller to already share a chapter with the target user. What attack does this prevent, and what could an attacker learn from this endpoint if that check didn't exist?
+> **Design history:** The original invite plan included `GET /api/users/by-email?email=X` to check whether an invitee already had an account, with a "must share a chapter" guard to prevent user enumeration. While studying the invite flow, the user identified that this guard made the endpoint useless for its only purpose: you'd never share a chapter with someone you're *inviting*. The options were either to relax the guard (introducing enumeration) or remove the two-path split entirely. The user recommended the simpler path — always use the invite-secret flow regardless of whether the invitee has an account. Existing users get the accept link like everyone else and the re-wrap takes a few extra seconds; the tradeoff of one code path over two was judged worth it. `GET /api/users/by-email` was removed from both the backend and the plan.
+
+- ~~`GET /api/users/by-email` requires the caller to already share a chapter with the target user. What attack does this prevent, and what could an attacker learn from this endpoint if that check didn't exist?~~ **Removed** — see design history above.
 - Why does the invite-accept code use `crypto/subtle.ConstantTimeCompare` instead of a plain `==` when checking the invite token? What class of attack does a plain string comparison expose you to, and why?
 - Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5. What is "Trust On First Use," and what specific attack does the existing-user invite path have no defense against?
 
