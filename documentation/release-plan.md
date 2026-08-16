@@ -1,6 +1,6 @@
-# E2EE Hardening Plan
+# Release Plan
 
-Improvements to reduce metadata exposure without changing the core crypto primitives or requiring special hardware from users.
+Critical E2EE and privacy features required before launch, plus post-launch hardening improvements to reduce metadata exposure without changing the core crypto primitives or requiring special hardware from users.
 
 ## Threat Model & Opt-In Tiers
 
@@ -24,6 +24,14 @@ Two usage tiers share the same codebase and crypto:
 ---
 
 ## Pre-Launch
+
+### ✅ 0. Upgrade `deriveUserKey` from PBKDF2 to Argon2id
+
+**Completed.** `deriveUserKey` was originally PBKDF2-SHA256 (600k iterations). The reasoning was that the user profile blob is low-sensitivity, so a lighter KDF was acceptable there. This was incorrect: `userKey` wraps `chapter_members.encrypted_chapter_key`, which decrypts all chapter content. PBKDF2 is compute-bound and GPU-parallelisable — cracking it bypasses Argon2id entirely.
+
+- Both `deriveUserKey` and `deriveX25519KeyPair` now use Argon2id (19 MiB, t=2, p=1)
+- Domain labels `:userkey` and `:x25519` appended to the shared salt prevent the two derivations from producing the same output
+- **Breaking change** for any existing stored data — requires clearing/re-registering any test accounts created before this change
 
 ### 1. Short Log Retention Policy
 
@@ -54,11 +62,21 @@ Allow users to sign up with a **username + password** instead of an email addres
 - Tradeoff: if both username and password are forgotten, the account is unrecoverable — this must be communicated clearly in the UI
 - Must be decided before launch — early users signed up with email cannot have that email retroactively removed
 
+### 4. Password Change / Key Rotation
+
+Allow users to change their password without losing access to their encrypted data. See `documentation/Password-Change-Plan.md` for the full implementation plan.
+
+- When a user changes their password, `deriveUserKey` and `deriveX25519KeyPair` both produce new outputs from the new password + existing salt
+- The new `userKey` must re-wrap every `chapter_members.encrypted_chapter_key` the user holds before the old password is discarded
+- The new X25519 keypair must be re-stored in the user profile blob; existing chapter keys were wrapped to the old public key and must be re-encrypted to the new one
+- Without this, a user who changes their Supabase auth password loses all their chapter keys permanently — unrecoverable
+- Must be implemented before any real users exist; there is no safe migration path after the fact
+
 ---
 
 ## Post-Launch
 
-### 4. Hard-Delete Member Records on Leave
+### 5. Hard-Delete Member Records on Leave
 
 When a member leaves a chapter, hard-delete their `chapter_members` row. No soft-delete, no `deleted_at` column.
 
@@ -66,7 +84,7 @@ When a member leaves a chapter, hard-delete their `chapter_members` row. No soft
 - Chapter content (topics, meetings, themes) is scoped to `chapter_id` only with no `user_id` or `created_by` column, so it remains intact for remaining members
 - Implementation: add a `Delete` method to `MemberService` in `backend-go/internal/services/members.go` that runs `DELETE FROM chapter_members WHERE id = $1` — the schema has no soft-delete pattern so nothing else needs to change
 
-### 5. Minimize Invite Metadata
+### 6. Minimize Invite Metadata
 
 Hard-delete `chapter_invitations` rows rather than retaining them with a status flag. Each row currently exposes `inviter_id`, `invited_email`, `chapter_id`, and `created_at` in plaintext — enough to reconstruct a social graph even if the invite was never accepted.
 
@@ -76,7 +94,7 @@ Hard-delete `chapter_invitations` rows rather than retaining them with a status 
 - The `status` column and its index can be removed once rows are deleted instead of updated
 - If item 3 (anonymous sign-in) is implemented, `invited_email` may be eliminated entirely — invites would be shared as one-time URLs out-of-band rather than sent to an email address the server knows
 
-### 6. Ghost Mode *(Privacy mode only)*
+### 7. Ghost Mode *(Privacy mode only)*
 
 A chapter-level setting that automatically hard-deletes all content after a configurable retention window.
 
@@ -87,7 +105,7 @@ A chapter-level setting that automatically hard-deletes all content after a conf
 - Since content timestamps may be encrypted (item 2), Ghost Mode uses the server-side `inserted_at` opaque sequence for deletion timing, not the encrypted semantic date
 - Tradeoff: members lose access to history older than the retention window; this must be communicated clearly when a chapter enables Ghost Mode
 
-### 7. Log Out Everywhere
+### 8. Log Out Everywhere
 
 A user-initiated action that invalidates all active sessions across all devices simultaneously and clears derived keys from each device's session storage.
 
@@ -96,7 +114,7 @@ A user-initiated action that invalidates all active sessions across all devices 
 - Useful when a device is lost, stolen, or suspected compromised — closes the session hijacking window immediately
 - Does not revoke the chapter key in the DB — content remains accessible on next login with the correct password; this is intentional (the key is still wrapped, not plaintext)
 
-### 8. Strip IP Addresses from Application Logs
+### 9. Strip IP Addresses from Application Logs
 
 Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at the app layer.
 
@@ -104,3 +122,23 @@ Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at t
 - Complements item 1 (infrastructure log retention) — item 1 deletes logs after 48 hours; this prevents IPs from being written at all
 - Activists using Tor Browser already hide their IP from the server; this protects non-Tor users from IP logging on your side
 - Implementation: set `log_format` in Nginx to omit `$remote_addr`, or use Caddy's `log` directive with IP field removed
+
+### 10. Forward Secrecy on Member Removal
+
+Rotate the chapter key when a member is removed, so they cannot decrypt content created after their removal even if they retained a copy of the old key.
+
+- **Current gap:** deleting a member's `chapter_members` row revokes API access, but a member who copied the chapter key before removal can still decrypt any ciphertext they obtain later (e.g. via subpoena of the DB). All content encrypted with the old key remains readable to them indefinitely.
+- **What rotation achieves:** everything encrypted after the rotation point is protected by a new key the removed member never held. Data encrypted before rotation is a permanent gap — this is accepted and matches how Signal and WhatsApp handle it.
+- **Implementation:**
+  1. Admin triggers removal; client fetches all chapter ciphertext
+  2. Client decrypts each blob locally with the current chapter key
+  3. Client generates a new random chapter key (`generateChapterKey`)
+  4. Client re-encrypts all blobs with the new key and uploads them in a batch
+  5. Client re-wraps the new chapter key for each remaining member (`wrapChapterKeyForRecipient`) and updates their `chapter_members` rows
+  6. Server hard-deletes the removed member's row (item 5)
+- **Tradeoffs:**
+  - Re-encryption is client-side only — the server cannot do this since it cannot read the blobs
+  - Must be triggered by an online admin; cannot be automated server-side
+  - Slow for chapters with large amounts of content; needs progress UI
+  - Members offline during rotation are unaffected — they unwrap the new chapter key on next login
+- This is a post-launch addition — it requires no schema changes and no changes to existing crypto primitives

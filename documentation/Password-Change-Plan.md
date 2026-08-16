@@ -1,6 +1,6 @@
 # Password Change Plan: E2EE Key Rotation
 
-Both derived secrets — the PBKDF2 `userKey` (profile blob) and the Argon2id-derived X25519 keypair (chapter-key wrapping, see `documentation/Invite-Plan.md`) — are deterministic functions of the user's password. Changing the password changes both. Every `chapter_members.encrypted_chapter_key` row the user owns was wrapped to their *old* public key and must be re-wrapped to the new one, or that member permanently loses access to their own chapters.
+Both derived secrets — the Argon2id `userKey` (profile blob) and the Argon2id-derived X25519 keypair (chapter-key wrapping, see `documentation/Invite-Plan.md`) — are deterministic functions of the user's password. Changing the password changes both. Every `chapter_members.encrypted_chapter_key` row the user owns was wrapped to their *old* public key and must be re-wrapped to the new one, or that member permanently loses access to their own chapters.
 
 > **Existing gap:** `frontend/src/pages/Profile/ProfilePage.tsx` already has a password-change UI (`passwordValue`/`confirmPasswordValue` fields, `ProfileSection.tsx`) that calls `supabase.auth.updateUser({ password })` directly — **with no key rotation at all**. This is a live bug: today, changing your password silently orphans every chapter key you hold. This plan fixes that flow rather than building a new one from scratch.
 

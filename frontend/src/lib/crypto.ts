@@ -4,7 +4,7 @@
  * asymmetric invite key-handoff scheme (see documentation/Invite-Plan.md).
  *
  * Key hierarchy:
- *   password + server_salt → userKey        (PBKDF2 — profile blob encryption only)
+ *   password + server_salt → userKey        (Argon2id — profile blob encryption only)
  *   password + server_salt → X25519 keypair (Argon2id — chapter key wrapping)
  *   chapterKey → encrypts all chapter content (meetings, topics, themes)
  *
@@ -43,27 +43,15 @@ export { toBase64, fromBase64 }
  * server-provided salt. This is deterministic — same password + salt
  * always produces the same key, on any device.
  *
- * Uses PBKDF2-SHA256 with 600,000 iterations (NIST recommended).
+ * Uses Argon2id (19 MiB, t=2, p=1) with a `:userkey` domain label so
+ * the output is independent from the X25519 keypair derived from the same salt.
  */
 export async function deriveUserKey(password: string, saltHex: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder()
+  const seed = argon2id(password, saltHex + ':userkey', { t: 2, m: 19456, p: 1, dkLen: 32 })
 
-  // Import the raw password as key material
-  const keyMaterial = await crypto.subtle.importKey(
+  return crypto.subtle.importKey(
     'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  )
-
-  // Convert hex salt to bytes
-  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)))
-
-  // Derive a 256-bit AES-GCM key
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
-    keyMaterial,
+    seed,
     { name: 'AES-GCM', length: 256 },
     true,        // extractable — needed to export to sessionStorage for reload support
     ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
@@ -144,7 +132,7 @@ export interface X25519KeyPair {
  *
  * Parameters follow OWASP's minimum recommendation for Argon2id
  * (19 MiB memory, 2 iterations, 1 degree of parallelism). The "x25519"
- * label domain-separates this derivation from `deriveUserKey`'s PBKDF2
+ * label domain-separates this derivation from `deriveUserKey`'s Argon2id
  * output, which uses the same salt for a different purpose.
  */
 export function deriveX25519KeyPair(password: string, saltHex: string): X25519KeyPair {

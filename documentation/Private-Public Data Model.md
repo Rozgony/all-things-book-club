@@ -24,4 +24,4 @@ public_topics (
 - Topic added to a `private` chapter → optionally upsert `public_topics` with `chapter_id = NULL`
 - Chapter toggles public → private → nullify `chapter_id` on all `public_topics` rows
 
-**Ghost Mode interaction:** when Ghost Mode activates (hardening item 6), existing `public_topics` rows with this chapter's `chapter_id` must also be nullified or deleted before the chapter auto-deletes.
+**Ghost Mode interaction:** when Ghost Mode activates (item 7), existing `public_topics` rows with this chapter's `chapter_id` must also be nullified or deleted before the chapter auto-deletes.
