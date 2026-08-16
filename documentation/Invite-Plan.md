@@ -86,7 +86,12 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 - [x] **2.2** Extend `PATCH /api/users/me` response — add `publicKey` to `User` struct and SELECT
 - [x] **2.3** ~~Add `GET /api/users/by-email?email=X`~~ — **removed**. The shared-chapter guard made this endpoint useless for the invite case (invitee has no shared chapter yet), and relaxing the guard introduces user enumeration. All invites now use the single invite-secret flow regardless of whether the invitee already has an account (see Phase 5).
 - [x] **2.4** Create `backend-go/internal/routes/invites.go` + `backend-go/internal/services/invites.go`:
-  - `POST /api/chapters/{id}/invites` — ADMIN only; body: `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url }`; backend generates `invite_token` (32 random bytes, hex), constructs invite URL as `APP_URL + "/accept-invite?token=" + token + "#" + inviteSecretBase64url`, sends email via Supabase SMTP, **does not persist `inviteSecretBase64url`** (only `encryptedChapterKey` and `keyNonce` are stored in DB); sets `expires_at = now() + 7 days`; returns 201. **Trust boundary note:** the server sees `inviteSecretBase64url` in-memory during email dispatch and could decrypt the chapter key — this is a concession for the invite flow specifically and should be documented as such. The server is trusted for availability; the ongoing E2EE model (post-accept) remains server-blind.
+  - `POST /api/chapters/{id}/invites` 
+    1. ADMIN only; body: `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url }`; 
+    2. backend generates `invite_token` (32 random bytes, hex), constructs invite URL as `APP_URL + "/accept-invite?token=" + token + "#" + inviteSecretBase64url`, 
+    3. sends email via Supabase SMTP, **does not persist `inviteSecretBase64url`** (only `encryptedChapterKey` and `keyNonce` are stored in DB); sets `expires_at = now() + 7 days`; 
+    4. returns 201.   
+      **Trust boundary note:** the server sees `inviteSecretBase64url` in-memory during email dispatch and could decrypt the chapter key — this is a concession for the invite flow specifically and should be documented as such. The server is trusted for availability; the ongoing E2EE model (post-accept) remains server-blind.
   - `GET /api/invites/{token}` — **no auth required** (invitee may not have an account yet); returns `{ inviterEmail, encryptedChapterKey, keyNonce, expiresAt, status }`; apply rate limiting (e.g. 20 req/min per IP)
   - `POST /api/invites/{token}/accept` — auth required; body: `{ encryptedChapterKey, keyNonce, ephemeralPublicKey }`; use `crypto/subtle.ConstantTimeCompare` when comparing the token to prevent timing side-channels; atomically verifies token is PENDING + not expired + authed user's email matches `invited_email`; inserts `chapter_members` row; marks invite ACCEPTED; returns 201
 - [x] **2.5** Extend `backend-go/internal/services/members.go` — add `EphemeralPublicKey []byte` to `MemberInput`; include in INSERT SQL
@@ -120,7 +125,9 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 
 - [x] **5.1** Add invite UI to chapter settings (ADMIN only): email input + "Invite" button
 - [x] **5.2** On submit — always use the invite-secret flow regardless of whether the invitee has an account:
-  - Generate `inviteSecret = crypto.getRandomValues(new Uint8Array(32))`; `wrapChapterKeyWithSecret(chapterKey, inviteSecret)`; `POST /api/chapters/{id}/invites` with `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url: base64url(inviteSecret) }` — backend generates the real token, constructs the full URL, and sends the email. The `inviteSecret` is never persisted by the backend, only handled in-memory during email dispatch. See trust boundary note in Phase 2.4.
+  - Generate `inviteSecret = crypto.getRandomValues(new Uint8Array(32))`; `wrapChapterKeyWithSecret(chapterKey, inviteSecret)`; `POST /api/chapters/{id}/invites` with `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url: base64url(inviteSecret) }` 
+    - backend generates the real token, constructs the full URL, and sends the email. 
+    - The `inviteSecret` is never persisted by the backend, only handled in-memory during email dispatch. See trust boundary note in Phase 2.4.
   - **Existing users** click the link, log in (or are already logged in), and land on `AcceptInvitePage` where Phase 4.5–4.7 re-wraps the chapter key to their own public key. A few extra seconds versus the removed direct-wrap path — one code path is worth it.
   - **No `GET /api/users/by-email` lookup needed** — removed entirely. Avoids the enumeration trade-off and eliminates a branch of frontend and backend code.
 
