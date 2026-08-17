@@ -56,7 +56,6 @@ func NewRequireAuth(supabaseURL string) (func(http.Handler) http.Handler, error)
 	}, nil
 }
 
-
 // UserIDFromContext retrieves the authenticated user's ID from the request context.
 // Returns an empty string if not set (i.e. the request didn't go through RequireAuth).
 func UserIDFromContext(ctx context.Context) string {

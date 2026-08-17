@@ -205,3 +205,4 @@ A self-study map of the concepts behind this app's encryption, in the order they
 5. ✅ Section 11 (systems-level) — read `documentation/Password-Change-Plan.md` fully.
 
 **Self-check exercise:** once you've been through all 11, try to draw the full journey of one chapter key from `createChapter()` being called to a second member decrypting a meeting note, from memory, without opening any files. Then check yourself against the code.
+
