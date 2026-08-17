@@ -36,6 +36,7 @@ export function AcceptInvitePage() {
 	// 'keys-in-memory' skips the redundant password prompt when this tab's
 	// session already derived keys (e.g. clicked the link while browsing the app).
 	const [authState, setAuthState] = useState<'loading' | 'keys-in-memory' | 'needs-password' | 'needs-signup'>('loading')
+	const [isAuthenticated, setIsAuthenticated] = useState(false)
 
 	useEffect(() => {
 		getInvite(token)
@@ -44,7 +45,10 @@ export function AcceptInvitePage() {
 
 		supabase.auth.getSession().then(({ data: { session } }) => {
 			if (!session) setAuthState('needs-signup')
-			else setAuthState(hasPrivateKey() ? 'keys-in-memory' : 'needs-password')
+			else {
+				setAuthState(hasPrivateKey() ? 'keys-in-memory' : 'needs-password')
+				setIsAuthenticated(true)
+			}
 		})
 	}, [token])
 
@@ -161,7 +165,7 @@ export function AcceptInvitePage() {
 
 	return (
 		<>
-			<Nav />
+			<Nav showProfile={isAuthenticated} showChapters={isAuthenticated} showLogout={isAuthenticated} />
 			<div className="flex items-center justify-center min-h-screen bg-cream">
 				<div className="w-full max-w-sm px-8 py-10 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 					<div className="text-stone-muted text-sm mb-4">

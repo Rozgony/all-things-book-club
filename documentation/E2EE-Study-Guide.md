@@ -134,8 +134,11 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 **Where:** `backend-go/SCHEMA.md`'s E2EE Overview; `documentation/Invite-Plan.md`'s Phase 2.4 note about the invite secret
 
-- For nearly every piece of user content, the Go backend only ever stores ciphertext. Find the **one exception** during the invite flow where the server briefly *could* see a decryptable chapter key in memory. Why was that judged an acceptable trade-off?
-- `chapters.name` and `chapter_members.role` are stored as plaintext, not encrypted. Why those two fields specifically — what would break if they were encrypted like everything else?
+- ✅ For nearly every piece of user content, the Go backend only ever stores ciphertext. Find the **one exception** during the invite flow where the server briefly *could* see a decryptable chapter key in memory. Why was that judged an acceptable trade-off?
+	-  The server see the inviteSecretBase64Url in memory when handling the email request.  It does have everything it needs to decrypt chapter data at that point. Since they server is the only place the email is generated, its is necessary but not as bad since it is never logged and never stored in the database.
+- ✅ `chapters.name` and `chapter_members.role` are stored as plaintext, not encrypted. Why those two fields specifically — what would break if they were encrypted like everything else?
+	- chapters.name is actually encrypted.  
+	- chapter_members.role is important to not be encrypted for server-side access control checks.
 
 ---
 
@@ -159,7 +162,9 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 - ~~`GET /api/users/by-email` requires the caller to already share a chapter with the target user. What attack does this prevent, and what could an attacker learn from this endpoint if that check didn't exist?~~ **Removed** — see design history above.
 - Why does the invite-accept code use `crypto/subtle.ConstantTimeCompare` instead of a plain `==` when checking the invite token? What class of attack does a plain string comparison expose you to, and why?
+	- Because an attacker could infer information about the secrets base on how long it takes to compare them.  Constant Time functions take the same amount of time to run regardless of the similarity to prevent that attack surface.
 - Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5. What is "Trust On First Use," and what specific attack does the existing-user invite path have no defense against?
+	- The inviter needs to access the existing invitee user's public key but has no way to know if that is not a compromised key (unless I set up safety numbers like Signal) and so we need to trust the key on first use even though we have no way to verify it.  The attack that could take advantage of this would be a compromised server substituting a different public key.
 
 ---
 
@@ -168,7 +173,12 @@ A self-study map of the concepts behind this app's encryption, in the order they
 **Where:** `frontend/src/pages/Invite/AcceptInvitePage.tsx`; `backend-go/internal/routes/invites.go` (`Create`)
 
 - The one-time invite secret travels in the URL's `#hash` fragment, not a `?query=` parameter. Research the difference: which one does a browser send to the server in an HTTP request, and which one never leaves the browser?
+	- a query parameter is set to the server in an http request but a hash parameter does not. The has never leaves the browser.
 - Given that, why would putting the invite secret in a query parameter instead have been a real vulnerability (think about server access logs, browser history, and the `Referer` header)?
+	- putting it in a parameter gives it more surface:
+		- servers logging query string
+		- browsers logging URL with query params
+		- referrer header could be sent to any third-party library used in the code
 
 ---
 

@@ -33,7 +33,7 @@ type createInviteRequest struct {
 	InviteSecretBase64url string `json:"inviteSecretBase64url"`
 }
 
-// Create handles POST /api/chapters/{id}/invites — ADMIN only.
+// Create handles POST /api/chapters/{id}/invites
 // The invite secret is used only to build the emailed URL fragment; it is
 // never written to the database (see services.InviteService.Create).
 func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
@@ -41,12 +41,12 @@ func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	requesterID := middleware.UserIDFromContext(r.Context())
 	requesterEmail := middleware.UserEmailFromContext(r.Context())
 
-	isAdmin, err := db.IsAdmin(r.Context(), h.pool, chapterID, requesterID)
+	isMember, err := db.IsMember(r.Context(), h.pool, chapterID, requesterID)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
-	if !isAdmin {
+	if !isMember {
 		handleError(w, db.ErrNotMember)
 		return
 	}

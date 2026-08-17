@@ -87,7 +87,7 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 - [x] **2.3** ~~Add `GET /api/users/by-email?email=X`~~ — **removed**. The shared-chapter guard made this endpoint useless for the invite case (invitee has no shared chapter yet), and relaxing the guard introduces user enumeration. All invites now use the single invite-secret flow regardless of whether the invitee already has an account (see Phase 5).
 - [x] **2.4** Create `backend-go/internal/routes/invites.go` + `backend-go/internal/services/invites.go`:
   - `POST /api/chapters/{id}/invites` 
-    1. ADMIN only; body: `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url }`; 
+    1. body: `{ invitedEmail, encryptedChapterKey, keyNonce, inviteSecretBase64url }`; 
     2. backend generates `invite_token` (32 random bytes, hex), constructs invite URL as `APP_URL + "/accept-invite?token=" + token + "#" + inviteSecretBase64url`, 
     3. sends email via Supabase SMTP, **does not persist `inviteSecretBase64url`** (only `encryptedChapterKey` and `keyNonce` are stored in DB); sets `expires_at = now() + 7 days`; 
     4. returns 201.   

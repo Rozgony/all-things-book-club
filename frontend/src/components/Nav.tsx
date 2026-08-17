@@ -5,7 +5,7 @@ export type NavParams = {
 	  showLogout?: boolean
 	  showProfile?: boolean
 	  showChapters?: boolean
-	  username: string
+	  username?: string
 }
 
 export function Nav(params: NavParams) {
