@@ -7,6 +7,8 @@ interface InviteMemberFormProps {
 	chapterId: string
 }
 
+const uniqueInviteErr = 'A user can only have one pending Chapter Invite.'
+
 export function InviteMemberForm({ chapterId }: InviteMemberFormProps) {
 	const [email, setEmail] = useState('')
 	const [submitting, setSubmitting] = useState(false)
@@ -28,8 +30,10 @@ export function InviteMemberForm({ chapterId }: InviteMemberFormProps) {
 			await createInvite({ chapterId, invitedEmail: email, encryptedChapterKey, keyNonce, inviteSecretBase64url })
 			setMessage(`An invite has been emailed to ${email}.`)
 			setEmail('')
-		} catch {
-			setError('Failed to send invite. Please try again.')
+		} catch (error){
+			const errorMsg = (error as Error)?.message?.includes(uniqueInviteErr) ? uniqueInviteErr : 'Failed to send invite. Please try again.'
+			console.log(errorMsg);
+			setError(errorMsg)
 		} finally {
 			setSubmitting(false)
 		}

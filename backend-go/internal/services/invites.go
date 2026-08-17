@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/all-things-book-club/internal/crypto"
@@ -36,6 +37,8 @@ type Invite struct {
 	Status              string    `json:"status"`
 }
 
+var ErrInviteUnique = errors.New("A user can only have one pending Chapter Invite.")
+
 // Create generates a random invite token and stores the invite. It does NOT
 // receive or persist the invite secret — that only ever lives in the caller's
 // (this request's) memory long enough to build the emailed URL.
@@ -56,6 +59,9 @@ func (s *InviteService) Create(ctx context.Context, chapterID, inviterID, invite
 			(id, chapter_id, inviter_id, invited_email, invite_token, encrypted_chapter_key, key_nonce, status, expires_at, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', now() + interval '7 days', now())
 	`, id, chapterID, inviterID, invitedEmail, token, encryptedChapterKey, keyNonce)
+	if err != nil && strings.Contains(err.Error(), "chapter_invitations_pending_unique") {
+		return "", fmt.Errorf("InviteService.Create: insert: %w", ErrInviteUnique)
+	}
 	if err != nil {
 		return "", fmt.Errorf("InviteService.Create: insert: %w", err)
 	}
@@ -66,6 +72,7 @@ func (s *InviteService) Create(ctx context.Context, chapterID, inviterID, invite
 // GetByToken looks up a pending invite for display on the accept page.
 // Rate-limit this at the route/middleware layer — it's unauthenticated.
 func (s *InviteService) GetByToken(ctx context.Context, token string) (*Invite, error) {
+	fmt.Printf("token %s", token)
 	var inv Invite
 	err := s.db.QueryRow(ctx, `
 		SELECT au.email, ci.encrypted_chapter_key, ci.key_nonce, ci.expires_at, ci.status

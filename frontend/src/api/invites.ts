@@ -31,7 +31,10 @@ export async function createInvite(params: {
 			inviteSecretBase64url: params.inviteSecretBase64url,
 		}),
 	})
-	if (!res.ok) throw new Error('Failed to create invite')
+	if (!res.ok) {
+		const response = await res.json()
+		throw new Error(response.error)
+	}
 }
 
 // GET /api/invites/{token} is unauthenticated — no getAuthHeaders() call.

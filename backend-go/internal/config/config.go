@@ -46,7 +46,7 @@ func Load() *Config {
 		SMTPPort:    getEnv("SMTP_PORT", "2500"),
 		SMTPUser:    getEnv("SMTP_USER", ""),
 		SMTPPass:    getEnv("SMTP_PASS", ""),
-		SMTPFrom:    getEnv("SMTP_FROM", "no-reply@allthingsbookclub.app"),
+		SMTPFrom:    getEnv("SMTP_FROM", "no-reply@allthingsbook.club"),
 	}
 
 	return cfg

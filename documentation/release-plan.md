@@ -65,7 +65,17 @@ Allow users to change their password without losing access to their encrypted da
 
 ## Post-Launch
 
-### 4. Hard-Delete Member Records on Leave
+### 4. Per-IP Rate Limiting on Public Endpoints
+
+Add rate limiting to unauthenticated endpoints to defend against brute-force and enumeration attacks.
+
+- **Scope**: applies primarily to `/api/invites/{token}` (public invite lookup) and any future public endpoints
+- **Implementation**: middleware or third-party library (e.g. `github.com/go-chi/httprate`); track client IP via `X-Forwarded-For` header (set by Railway/Vercel reverse proxy)
+- **Rate limit**: e.g. 10 requests per minute per IP address for invite lookups; lower for password attempts if auth endpoints become public
+- **Tradeoff**: legitimate users behind NAT or corporate proxies may hit the limit if multiple people from the same IP try simultaneously; document in UI
+- **Code**: middleware added to the public group in `backend-go/main.go` before the invite handler group
+
+### 5. Hard-Delete Member Records on Leave
 
 When a member leaves a chapter, hard-delete their `chapter_members` row. No soft-delete, no `deleted_at` column.
 
@@ -73,7 +83,7 @@ When a member leaves a chapter, hard-delete their `chapter_members` row. No soft
 - Chapter content (topics, meetings, themes) is scoped to `chapter_id` only with no `user_id` or `created_by` column, so it remains intact for remaining members
 - Implementation: add a `Delete` method to `MemberService` in `backend-go/internal/services/members.go` that runs `DELETE FROM chapter_members WHERE id = $1` — the schema has no soft-delete pattern so nothing else needs to change
 
-### 5. Minimize Invite Metadata
+### 6. Minimize Invite Metadata
 
 Hard-delete `chapter_invitations` rows rather than retaining them with a status flag. Each row currently exposes `inviter_id`, `invited_email`, `chapter_id`, and `created_at` in plaintext — enough to reconstruct a social graph even if the invite was never accepted.
 
@@ -83,7 +93,7 @@ Hard-delete `chapter_invitations` rows rather than retaining them with a status 
 - The `status` column and its index can be removed once rows are deleted instead of updated
 - If item 11 (anonymous sign-in) is implemented, `invited_email` may be eliminated entirely — invites would be shared as one-time URLs out-of-band rather than sent to an email address the server knows
 
-### 6. Ghost Mode *(Privacy mode only)*
+### 7. Ghost Mode *(Privacy mode only)*
 
 A chapter-level setting that automatically hard-deletes all content after a configurable retention window.
 
@@ -94,7 +104,7 @@ A chapter-level setting that automatically hard-deletes all content after a conf
 - Since content timestamps may be encrypted (item 2), Ghost Mode uses the server-side `inserted_at` opaque sequence for deletion timing, not the encrypted semantic date
 - Tradeoff: members lose access to history older than the retention window; this must be communicated clearly when a chapter enables Ghost Mode
 
-### 7. Log Out Everywhere
+### 8. Log Out Everywhere
 
 A user-initiated action that invalidates all active sessions across all devices simultaneously and clears derived keys from each device's session storage.
 
@@ -103,7 +113,7 @@ A user-initiated action that invalidates all active sessions across all devices 
 - Useful when a device is lost, stolen, or suspected compromised — closes the session hijacking window immediately
 - Does not revoke the chapter key in the DB — content remains accessible on next login with the correct password; this is intentional (the key is still wrapped, not plaintext)
 
-### 8. Strip IP Addresses from Application Logs
+### 9. Strip IP Addresses from Application Logs
 
 Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at the app layer.
 
@@ -112,7 +122,7 @@ Configure the reverse proxy (Nginx or Caddy) to not log client IP addresses at t
 - Activists using Tor Browser already hide their IP from the server; this protects non-Tor users from IP logging on your side
 - Implementation: set `log_format` in Nginx to omit `$remote_addr`, or use Caddy's `log` directive with IP field removed
 
-### 9. Forward Secrecy on Member Removal
+### 10. Forward Secrecy on Member Removal
 
 Rotate the chapter key when a member is removed, so they cannot decrypt content created after their removal even if they retained a copy of the old key.
 
@@ -132,7 +142,7 @@ Rotate the chapter key when a member is removed, so they cannot decrypt content 
   - Members offline during rotation are unaffected — they unwrap the new chapter key on next login
 - This is a post-launch addition — it requires no schema changes and no changes to existing crypto primitives
 
-### 10. Anonymous Sign-In *(Privacy mode only)*
+### 11. Anonymous Sign-In *(Privacy mode only)*
 
 Allow users to sign up with a **username + password** instead of an email address, using Supabase anonymous auth (`supabase.auth.signInAnonymously()`).
 

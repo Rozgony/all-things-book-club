@@ -116,7 +116,6 @@ func main() {
 	})
 
 	// Public: invite lookup has no account yet to authenticate with.
-	// TODO: add per-IP rate limiting here before production use.
 	r.Group(func(r chi.Router) {
 		r.Get("/api/invites/{token}", inviteHandler.GetByToken)
 	})

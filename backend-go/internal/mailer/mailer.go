@@ -1,6 +1,4 @@
-// Package mailer sends transactional emails (currently: invite links) via a
-// plain SMTP relay. In dev this points at Supabase's local Inbucket; in prod
-// it points at the Supabase project's SMTP relay (or any SMTP provider).
+// Package mailer sends transactional emails via SMTP (Resend in prod/dev).
 package mailer
 
 import (
@@ -31,13 +29,7 @@ func (m *Mailer) SendInviteEmail(toEmail, inviterEmail, inviteURL string) error 
 		m.cfg.SMTPFrom, toEmail, subject, body)
 
 	addr := fmt.Sprintf("%s:%s", m.cfg.SMTPHost, m.cfg.SMTPPort)
-
-	// Local Inbucket (dev) has no auth. A real SMTP relay (prod) requires it —
-	// only attempt PLAIN auth when credentials are actually configured.
-	var auth smtp.Auth
-	if m.cfg.SMTPUser != "" {
-		auth = smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
-	}
+	auth := smtp.PlainAuth("", m.cfg.SMTPUser, m.cfg.SMTPPass, m.cfg.SMTPHost)
 
 	if err := smtp.SendMail(addr, auth, m.cfg.SMTPFrom, []string{toEmail}, []byte(msg)); err != nil {
 		return fmt.Errorf("mailer.SendInviteEmail: %w", err)

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"log"
 
 	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/mailer"
@@ -60,6 +61,7 @@ func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		handleError(w, badRequest(errors.New("invitedEmail and inviteSecretBase64url are required")))
 		return
 	}
+    log.Printf("req %+v", req)
 
 	token, err := h.invites.Create(r.Context(), chapterID, requesterID, req.InvitedEmail, req.EncryptedChapterKey, req.KeyNonce)
 	if err != nil {
