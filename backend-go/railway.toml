@@ -1,7 +1,7 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "go build -o server ."
+buildCommand = "go build -o all-things-book-club ./..."
 
 [deploy]
-startCommand = "./server"
+startCommand = "./all-things-book-club"
 restartPolicyType = "ON_FAILURE"
