@@ -161,9 +161,9 @@ A self-study map of the concepts behind this app's encryption, in the order they
 > **Design history:** The original invite plan included `GET /api/users/by-email?email=X` to check whether an invitee already had an account, with a "must share a chapter" guard to prevent user enumeration. While studying the invite flow, the user identified that this guard made the endpoint useless for its only purpose: you'd never share a chapter with someone you're *inviting*. The options were either to relax the guard (introducing enumeration) or remove the two-path split entirely. The user recommended the simpler path — always use the invite-secret flow regardless of whether the invitee has an account. Existing users get the accept link like everyone else and the re-wrap takes a few extra seconds; the tradeoff of one code path over two was judged worth it. `GET /api/users/by-email` was removed from both the backend and the plan.
 
 - ~~`GET /api/users/by-email` requires the caller to already share a chapter with the target user. What attack does this prevent, and what could an attacker learn from this endpoint if that check didn't exist?~~ **Removed** — see design history above.
-- Why does the invite-accept code use `crypto/subtle.ConstantTimeCompare` instead of a plain `==` when checking the invite token? What class of attack does a plain string comparison expose you to, and why?
+- ✅ Why does the invite-accept code use `crypto/subtle.ConstantTimeCompare` instead of a plain `==` when checking the invite token? What class of attack does a plain string comparison expose you to, and why?
 	- Because an attacker could infer information about the secrets base on how long it takes to compare them.  Constant Time functions take the same amount of time to run regardless of the similarity to prevent that attack surface.
-- Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5. What is "Trust On First Use," and what specific attack does the existing-user invite path have no defense against?
+- ✅ Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5. What is "Trust On First Use," and what specific attack does the existing-user invite path have no defense against?
 	- The inviter needs to access the existing invitee user's public key but has no way to know if that is not a compromised key (unless I set up safety numbers like Signal) and so we need to trust the key on first use even though we have no way to verify it.  The attack that could take advantage of this would be a compromised server substituting a different public key.
 
 ---
@@ -172,9 +172,9 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 **Where:** `frontend/src/pages/Invite/AcceptInvitePage.tsx`; `backend-go/internal/routes/invites.go` (`Create`)
 
-- The one-time invite secret travels in the URL's `#hash` fragment, not a `?query=` parameter. Research the difference: which one does a browser send to the server in an HTTP request, and which one never leaves the browser?
+- ✅ The one-time invite secret travels in the URL's `#hash` fragment, not a `?query=` parameter. Research the difference: which one does a browser send to the server in an HTTP request, and which one never leaves the browser?
 	- a query parameter is set to the server in an http request but a hash parameter does not. The has never leaves the browser.
-- Given that, why would putting the invite secret in a query parameter instead have been a real vulnerability (think about server access logs, browser history, and the `Referer` header)?
+- ✅ Given that, why would putting the invite secret in a query parameter instead have been a real vulnerability (think about server access logs, browser history, and the `Referer` header)?
 	- putting it in a parameter gives it more surface:
 		- servers logging query string
 		- browsers logging URL with query params
@@ -200,8 +200,8 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 1. ✅ Sections 1–4 (crypto primitives) — read `crypto.ts` top to bottom alongside them.
 2. ✅ Section 5–6 (how the primitives compose into this app's key hierarchy) — re-read `documentation/Invite-Plan.md`'s "Key Architecture" diagram.
-3. Section 7–8 (what the server does and doesn't know) — re-read `backend-go/SCHEMA.md`.
-4. Section 9–10 (attack-focused) — read `documentation/Invite-Plan.md` fully, front to back.
+3. ✅ Section 7–8 (what the server does and doesn't know) — re-read `backend-go/SCHEMA.md`.
+4. ✅ Section 9–10 (attack-focused) — read `documentation/Invite-Plan.md` fully, front to back.
 5. ✅ Section 11 (systems-level) — read `documentation/Password-Change-Plan.md` fully.
 
 **Self-check exercise:** once you've been through all 11, try to draw the full journey of one chapter key from `createChapter()` being called to a second member decrypting a meeting note, from memory, without opening any files. Then check yourself against the code.
