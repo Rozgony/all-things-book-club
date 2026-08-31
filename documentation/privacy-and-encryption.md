@@ -10,10 +10,10 @@ To close the credibility gap without publishing the full codebase:
 
 - **Publish `frontend/src/lib/crypto.ts` as a standalone snippet** (e.g., GitHub Gist or embed in the website). It contains no secrets and is the most technically interesting file.
 - **Link directly from each section to relevant code lines:**
-  - Section 4 (Key Hierarchy): link to the KDF calls in `deriveUserKey` and `deriveX25519KeyPair`
+  - Section 4 (Key Hierarchy): link to the KDF call in `deriveUserKey` and the `encryptChapterKey` / `decryptChapterKey` functions
   - Section 5 (AES-256-GCM): link to `encrypt`/`decrypt` functions and nonce generation
-  - Section 6 (Argon2id): link to the domain separation labels (`:userkey`, `:x25519`) and the parameter choices (19 MiB, t=2, p=1)
-  - Section 7 (X25519): link to `wrapChapterKeyForRecipient` / `unwrapChapterKey` and the HKDF call with the `atbc-chapter-key-v1` context
+  - Section 6 (Argon2id): link to the domain separation label (`:userkey`) and the parameter choices (19 MiB, t=2, p=1)
+  - Section 7 (Invite Transport): link to `wrapChapterKeyWithSecret` / `unwrapChapterKeyWithSecret` and the invite secret `#hash` fragment handling
   - Section 8 (Invitations): reference the invite secret mechanism in both the frontend and backend handling
 - **Add a brief architecture diagram** showing the key flow as it actually exists in your schema (`backend-go/SCHEMA.md`, migrations) and service layer.
 
@@ -41,17 +41,20 @@ _A plain table: column or field / plaintext or encrypted / who holds the key. Co
 
 ## 4. Key Hierarchy
 
-_Walk through the three-level key hierarchy in plain terms, then show the diagram:_
+_Walk through the two-level key hierarchy in plain terms, then show the diagram:_
 
 ```
 password + server salt
-  → (Argon2id :userkey)   userKey          — encrypts profile blob
-  → (Argon2id :x25519)    X25519 keypair   — used for chapter key wrapping
-        ↓ per chapter
-        chapterKey (AES-256-GCM)           — encrypts all chapter content
+  → (Argon2id :userkey)   userKey (AES-256-GCM)  — encrypts profile blob
+                                  │
+                     wraps per-member chapter key copy
+                                  │
+                           chapterKey (AES-256-GCM)  — encrypts all chapter content
 ```
 
-_Explain why breaking one level does not automatically break another._
+_Explain why breaking the `userKey` derivation (cracking the password) does not automatically give access to other members' data — each member's copy of the chapter key is independently wrapped._
+
+> **Design note:** An earlier version of this design used X25519 / ECDH to permanently wrap chapter keys in `chapter_members`. After implementation, it was simplified: X25519 is only needed during invite transport (where the inviter can't know the invitee's password). Once the invitee accepts, the chapter key is immediately re-wrapped with their `userKey`. This eliminated five crypto functions, an `ephemeral_public_key` column, and per-login X25519 key re-derivation.
 
 ---
 
@@ -63,15 +66,17 @@ _What is encrypted with AES-256-GCM (every content blob). What a nonce is and wh
 
 ## 6. Password-Based Key Derivation — Argon2id
 
-_Why a KDF is used instead of hashing. What memory-hardness means and why it matters for browser-based login. Parameters chosen (19 MiB, t=2, p=1) and the tradeoff that prevented going higher. Domain separation labels (`:userkey` / `:x25519`) and why both derivations share a salt without producing the same bytes._
+_Why a KDF is used instead of hashing. What memory-hardness means and why it matters for browser-based login. Parameters chosen (19 MiB, t=2, p=1) and the tradeoff that prevented going higher. The `:userkey` domain label and why it exists even with a single derivation (future-proofing against a second derivation being added with the same salt)._
 
 _Include the design mistake: the original PBKDF2 derivation for `userKey`, why it was wrong (GPU-parallelisable, would have bypassed Argon2id entirely), and how it was caught and corrected before any user data existed._
 
 ---
 
-## 7. Asymmetric Key Wrapping — X25519 / ECDH
+## 7. Invite Key Transport — One-Time Secret
 
-_How a chapter member receives a chapter key they can decrypt without the server ever seeing it in plaintext. Walk through the ECDH handshake at a high level. Why the raw shared secret is passed through HKDF before use. Why a fresh ephemeral keypair is generated per wrap (forward unlinkability). The `atbc-chapter-key-v1` context string and what it binds._
+_How a new member receives a chapter key without the inviter knowing their password. The role of the one-time invite secret (32 random bytes, AES-256-GCM wrapped) embedded in the URL fragment. Why the fragment is never sent to the server. What happens to the invite record after it is accepted — the chapter key is re-wrapped with the new member's `userKey` and the invite row is marked ACCEPTED._
+
+_Note: An earlier design used X25519 / ECDH for this step. The current design uses a simpler one-time random secret because asymmetric crypto is only needed for transport — the final stored copy uses symmetric `userKey` wrapping like everything else._
 
 ---
 

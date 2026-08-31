@@ -36,9 +36,9 @@ export async function getMeetingById(id: string): Promise<Meeting> {
 	if (!res.ok) throw new Error('Failed to fetch meeting')
 	const meeting = await res.json()
 
-	const { encryptedChapterKey, keyNonce, ephemeralPublicKey } = meeting.chapterMember[0]
+	const { encryptedChapterKey, keyNonce } = meeting.chapterMember[0]
 
-	const chapterKey = await getAndSetChapterKey(meeting.chapterId, encryptedChapterKey, keyNonce, ephemeralPublicKey)
+	const chapterKey = await getAndSetChapterKey(meeting.chapterId, encryptedChapterKey, keyNonce)
 
 	if (meeting.encryptedBlob && meeting.nonce) {
 		const decrypted = await decrypt<{ videoCallLink?: string; physicalAddress?: string }>(meeting.encryptedBlob, meeting.nonce, chapterKey!)

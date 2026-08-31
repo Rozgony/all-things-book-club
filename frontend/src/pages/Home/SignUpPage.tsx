@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Nav } from '../../components/Nav'
-import { deriveUserKey, deriveX25519KeyPair } from '../../lib/crypto'
-import { setUserKey, setPrivateKey } from '../../lib/keyStore'
-import { setMyPublicKey } from '../../api/users'
+import { deriveUserKey } from '../../lib/crypto'
+import { setUserKey } from '../../lib/keyStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
@@ -49,11 +48,6 @@ export function SignUpPage() {
 
 	  const key = await deriveUserKey(password, salt)
 	  await setUserKey(key)
-
-	  const { privateKey, publicKey } = deriveX25519KeyPair(password, salt)
-	  setPrivateKey(privateKey)
-	  const publicKeyBase64 = btoa(String.fromCharCode(...publicKey))
-	  await setMyPublicKey(publicKeyBase64)
 
 	  setLoading(false)
 	  navigate('/profile')

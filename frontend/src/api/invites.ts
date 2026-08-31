@@ -47,7 +47,6 @@ export async function getInvite(token: string): Promise<InviteInfo> {
 export async function acceptInvite(token: string, params: {
 	encryptedChapterKey: string
 	keyNonce: string
-	ephemeralPublicKey: string
 }): Promise<{ chapterId: string }> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`${API_BASE}/invites/${token}/accept`, {

@@ -4,8 +4,6 @@ export interface UserProfile {
 	name: string | null
 	avatarUrl: string | null
 	timezone: string
-	// Base64-encoded X25519 public key, used to ECDH-wrap chapter keys for this user.
-	publicKey: string | null
 }
 
 export interface ChapterMember {
@@ -17,8 +15,6 @@ export interface ChapterMember {
 	users?: UserProfile[]
 	encryptedChapterKey?: string | null
 	keyNonce?: string | null
-	// Ephemeral sender public key from the ECDH wrap of this member's chapter key copy.
-	ephemeralPublicKey?: string | null
 }
 
 export interface Chapter {
@@ -29,8 +25,6 @@ export interface Chapter {
   nonce: string | null
   encryptedChapterKey: string | null
   keyNonce: string | null
-  // Ephemeral sender public key for the current user's own ECDH-wrapped chapter key.
-  ephemeralPublicKey: string | null
   createdAt: string
   updatedAt: string
   chapterMembers?: ChapterMember[]

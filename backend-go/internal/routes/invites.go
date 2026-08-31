@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"log"
+	"net/http"
 
 	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/mailer"
@@ -61,7 +61,7 @@ func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		handleError(w, badRequest(errors.New("invitedEmail and inviteSecretBase64url are required")))
 		return
 	}
-    log.Printf("req %+v", req)
+	log.Printf("req %+v", req)
 
 	token, err := h.invites.Create(r.Context(), chapterID, requesterID, req.InvitedEmail, req.EncryptedChapterKey, req.KeyNonce)
 	if err != nil {
@@ -96,7 +96,6 @@ func (h *InviteHandler) GetByToken(w http.ResponseWriter, r *http.Request) {
 type acceptInviteRequest struct {
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
 	KeyNonce            []byte `json:"keyNonce"`
-	EphemeralPublicKey  []byte `json:"ephemeralPublicKey"`
 }
 
 // Accept handles POST /api/invites/{token}/accept — auth required.
@@ -111,7 +110,7 @@ func (h *InviteHandler) Accept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.invites.Accept(r.Context(), token, userID, userEmail, req.EncryptedChapterKey, req.KeyNonce, req.EphemeralPublicKey)
+	member, err := h.invites.Accept(r.Context(), token, userID, userEmail, req.EncryptedChapterKey, req.KeyNonce)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -132,4 +131,3 @@ func (h *InviteHandler) Accept(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(member)
 }
-

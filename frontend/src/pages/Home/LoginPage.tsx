@@ -2,9 +2,8 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Nav } from '../../components/Nav'
-import { deriveUserKey, deriveX25519KeyPair } from '../../lib/crypto'
-import { setUserKey, setPrivateKey } from '../../lib/keyStore'
-import { getMyProfile, setMyPublicKey } from '../../api/users'
+import { deriveUserKey } from '../../lib/crypto'
+import { setUserKey } from '../../lib/keyStore'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
@@ -46,24 +45,6 @@ export function LoginPage() {
 	  // This is deterministic — same password + salt = same key on any device
 	  const key = await deriveUserKey(password, salt)
 	  await setUserKey(key)
-
-	  // Step 4: Derive the X25519 keypair used for chapter-key handoff (invites).
-	  // Also deterministic from password + salt — re-derived every login, never persisted.
-	  const { privateKey, publicKey } = deriveX25519KeyPair(password, salt)
-	  setPrivateKey(privateKey)
-
-	  // Step 5: Upload the public key on first login from this account (idempotent —
-	  // re-deriving and re-uploading the same key is a harmless no-op server-side).
-	  try {
-	    const profile = await getMyProfile()
-	    if (!profile.publicKey) {
-	      const publicKeyBase64 = btoa(String.fromCharCode(...publicKey))
-	      await setMyPublicKey(publicKeyBase64)
-	    }
-	  } catch {
-	    // Non-fatal — the user can still use the app; invites just won't work
-	    // until a subsequent login successfully uploads the public key.
-	  }
 
 	  setLoading(false)
 	  navigate('/profile')

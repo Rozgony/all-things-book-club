@@ -24,18 +24,6 @@ export async function getMyProfile(): Promise<UserProfile> {
 	return { ...user, name: decrypted.name, avatarUrl: decrypted.avatarUrl ?? null, timezone: decrypted.timezone ?? null}
 }
 
-// Uploads the derived X25519 public key on first login from a new device/browser.
-// Separate from updateMyProfile so it never touches the encrypted profile blob.
-export async function setMyPublicKey(publicKeyBase64: string): Promise<void> {
-	const headers = await getAuthHeaders()
-	const res = await fetch(`${API_BASE}/users/me`, {
-		method: 'PATCH',
-		headers,
-		body: JSON.stringify({ publicKey: publicKeyBase64 }),
-	})
-	if (!res.ok) throw new Error('Failed to store public key')
-}
-
 export async function updateMyProfile(data: Partial<Pick<UserProfile, 'name' | 'avatarUrl' | 'timezone'>>): Promise<UserProfile> {
 	const headers = await getAuthHeaders()
 	const userKey = getUserKey()

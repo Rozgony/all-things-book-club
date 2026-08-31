@@ -29,7 +29,7 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 ## 2. Key Derivation Functions — Argon2id
 
-**Where:** `crypto.ts` → `deriveUserKey` (Argon2id, `:userkey` label) and `deriveX25519KeyPair` (Argon2id, `:x25519` label)
+**Where:** `crypto.ts` → `deriveUserKey` (Argon2id, `:userkey` label)
 
 > **Design history:** `deriveUserKey` was originally written using PBKDF2-SHA256 (600k iterations). The reasoning was that the user profile blob is low-sensitivity data, so a lighter KDF was acceptable there. This was a mistake: `userKey` wraps the `chapter_members.encrypted_chapter_key`, which in turn unlocks all chapter content. PBKDF2 is purely compute-bound so GPUs can attack it cheaply in parallel — cracking `userKey` would therefore bypass Argon2id entirely and expose everything. A user caught this during review, and both derivations were upgraded to Argon2id.
 
@@ -61,7 +61,9 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 ## 3. Diffie-Hellman Key Exchange — X25519 / ECDH
 
-**Where:** `crypto.ts` → `wrapChapterKeyForRecipient` / `unwrapChapterKey`
+**Where:** `crypto.ts` → `wrapChapterKeyWithSecret` / `unwrapChapterKeyWithSecret` (invite transport only)
+
+> **Design history:** The original invite implementation used X25519 / ECDH to permanently wrap chapter keys in `chapter_members` — each member's copy of the chapter key was ECDH-wrapped with their X25519 public key (itself Argon2id-derived from their password). During a review of the completed implementation, the user noticed that X25519 was only genuinely *necessary* during the one-time invite handoff — the moment an invitee accepts, the chapter key is already in their browser's memory. Re-wrapping it with their `userKey` (AES-GCM) at that point is simpler, eliminates the `ephemeral_public_key` column from `chapter_members`, removes the X25519 private key re-derivation step from every login, and reduces the codebase by five functions and one schema column — without weakening any meaningful security property. The simplified design was adopted in `backend-go/migrations/006_simplify_keys.sql`. Recognising when a powerful primitive is solving a problem you don't actually have is as important as knowing how to use it.
 
 - ？Two parties who've never spoken before can each compute the *same* shared secret using their own private key and the other's public key. What mathematical property makes this possible?
 	- The Dillie-Hellman key exchange uses an logrithmic algorithm that is very easy to computer forward but not backwards. That means its takes little computation if you have the secret and the public key but is nearly impossible if you only have the public key.
@@ -72,17 +74,17 @@ A self-study map of the concepts behind this app's encryption, in the order they
 		4. Alice computes Ba  pBamodp — she has BB (received) and aa (her own private key)
 		5. Bob computes Ab  pAbmodp — he has AA (received) and bb (his own private key)
 		6. Both get gab  pgabmodp
-- ✅ The raw ECDH output (`x25519.getSharedSecret(...)`) is never used directly as an AES key — it's passed into HKDF first. Why not use it directly?
-	- The EDCH output is just a point on a curve and so it needs to be modified to be turned into a proper key.
-	- HKDF also lets you bind the derived key to a specific context via the `info` string (`atbc-chapter-key-v1`)
-- ✅ What is an "ephemeral" keypair, and why is a fresh one generated for every single wrap (`wrapChapterKeyForRecipient`) instead of reusing the sender's own long-term keypair? What would an observer be able to link together if it *weren't* ephemeral?
-	- without ephemeral keys, you could easily see all the keys who came from the same person. with the ephemeral key, each key looks like it came from a new sender. 
+- ✅ In this app X25519 is used only during invite transport (`wrapChapterKeyWithSecret`), not for permanent storage. Why is asymmetric crypto still necessary at that one step, even though the final stored copy uses symmetric `userKey` wrapping?
+	- Because the inviter doesn't know the invitee's password. The invite secret is a one-time random value that travels in the email `#hash` fragment — the only way to hand the chapter key to someone whose password you don't know, without the server seeing the plaintext key.
+- ✅ The raw ECDH output (`x25519.getSharedSecret(...)`) is never used directly as an AES key — it's passed through HKDF first. Why not use it directly?
+	- The ECDH output is just a point on a curve and needs to be processed into a proper fixed-length key.
+	- HKDF also lets you bind the derived key to a specific context via the `info` string (`atbc-chapter-key-v1`).
 
 ---
 
 ## 4. HKDF (Extract-and-Expand Key Derivation)
 
-**Where:** `crypto.ts` → the `hkdf(sha256, shared, hkdfSalt, hkdfInfo, 32)` call inside `wrapChapterKeyForRecipient`/`unwrapChapterKey`
+**Where:** `crypto.ts` → the `hkdf(sha256, shared, hkdfSalt, hkdfInfo, 32)` call inside `wrapChapterKeyWithSecret`/`unwrapChapterKeyWithSecret`
 
 - ✅ HKDF takes three distinct inputs: IKM, salt, and info. What role does each play, and why are they *not* interchangeable?
 	- uses the "age" design pattern
@@ -107,9 +109,8 @@ A self-study map of the concepts behind this app's encryption, in the order they
 - ✅ Both ultimately use AES-256-GCM. What's structurally different between "wrapping a key" and "encrypting content"?
 	- the wrapping and unwrapping is a specific function that validates that its a proper encryption key
 - ✅ Every chapter member has their *own* row with their *own* wrapped copy of the same chapter key. Why not store one shared wrapped copy for the whole chapter?
-	- The chapter key is wrapped with each member's **X25519 public key** via ECDH. That's the whole point of the asymmetric key exchange.
-	- When a user creates a chapter, it is wrapped and unwrapped using their userKey. Otherwise, they'd need to have a separate password for each chapter to derive the key from. 
-	- separately wrapped keys means a user can leave a chapter without everyone having to re-encrypt data
+	- Each member's copy is wrapped with their own `userKey` (AES-GCM). A shared single copy would require all members to share the same wrapping key — which means sharing a password or having the server hold the key.
+	- Separate per-member copies means a user can leave a chapter without requiring everyone to re-encrypt data (only a new chapter key rotation is needed)
 - ✅ Trace what happens when an ADMIN removes a member from a chapter — does the chapter key itself need to change? Why or why not? (Hint: research "forward secrecy" and whether this scheme provides it after a member is removed.)
 	- Yes, since the encryption key is shared between chapter members, all of the chapter data needs to be re-encrypted with a new key.  There is no code to do this yet though.  And really isn't priority because API access controls would limit the non-member from accessing the newly created data.
 	- A fix would require the frontend to re-encrypt all the chapter's data when a member is removed.  This would be timely and so maybe it could only be an optional feature for users that would be defaulted in Ghost mode. 
@@ -117,16 +118,16 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 ## 6. Deterministic vs. Random Key Generation
 
-**Where:** `deriveX25519KeyPair` (deterministic, from password) vs. `generateChapterKey` (random, `crypto.subtle.generateKey`)
+**Where:** `deriveUserKey` (deterministic, from password) vs. `generateChapterKey` (random, `crypto.subtle.generateKey`)
 
-- ✅ Why must a user's own X25519 keypair be re-derivable (deterministic) rather than randomly generated once and stored?
-	- So that it can be accessed across devices without actually providing a key or from a physical device something like that
-- ✅ What multi-device/multi-browser problem does determinism solve, without needing any key-syncing infrastructure?
-	- The user would need to provide the actual key with every login on every device the user uses. This would require a complicated sync infrastructure.
+- ✅ Why must the `userKey` be re-derivable (deterministic) rather than randomly generated once and stored?
+	- So that it can be accessed across devices and browser sessions without syncing infrastructure — same password + salt always produces the same key on any device.
+- ✅ What multi-device/multi-browser problem does determinism solve?
+	- The user would need to carry the actual key to every device. With determinism, the key is re-derived from their password on each login with no key-sync infrastructure needed.
 - ✅ Read `documentation/Password-Change-Plan.md`'s opening paragraph. What new problem does determinism introduce the moment a password changes?
-	- All the keys on the chapter members first need to be unwrapped based on the old password and then re-wrapped based on the new passwrod.
+	- All the chapter keys in `chapter_members` need to be unwrapped with the old `userKey` and re-wrapped with the new one before the password itself changes.
 - ✅ Why can the chapter key be randomly generated?
-	- because we actually store the chapter key an a wrapped form in the data base so we don't need to derive it again.
+	- Because we store it in wrapped form in the database — we don't need to re-derive it, we just decrypt it with the `userKey`.
 
 ---
 
@@ -148,9 +149,8 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 - ✅ A valid Supabase JWT proves *who you are* to the server. Does it give the server (or anyone holding a stolen JWT) the ability to decrypt any chapter content? Why or why not?
 	- No. The JWT is not the password. It holds a token to say that we have been logged in that this is the token to prove it.  I an attacker actually need the text of the password to decrypt the data. 
-- ✅ Name the two secrets tied to a user's password that the JWT has zero knowledge of.
-	- User Key
-	- X25519 private key for the ECDH
+- ✅ Name the secret tied to a user's password that the JWT has zero knowledge of.
+	- `userKey` — the Argon2id-derived AES-256-GCM key that wraps all chapter keys and encrypts the profile blob. The JWT is issued by Supabase Auth and has no relationship to this key.
 
 ---
 
@@ -163,8 +163,7 @@ A self-study map of the concepts behind this app's encryption, in the order they
 - ~~`GET /api/users/by-email` requires the caller to already share a chapter with the target user. What attack does this prevent, and what could an attacker learn from this endpoint if that check didn't exist?~~ **Removed** — see design history above.
 - ✅ Why does the invite-accept code use `crypto/subtle.ConstantTimeCompare` instead of a plain `==` when checking the invite token? What class of attack does a plain string comparison expose you to, and why?
 	- Because an attacker could infer information about the secrets base on how long it takes to compare them.  Constant Time functions take the same amount of time to run regardless of the similarity to prevent that attack surface.
-- ✅ Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5. What is "Trust On First Use," and what specific attack does the existing-user invite path have no defense against?
-	- The inviter needs to access the existing invitee user's public key but has no way to know if that is not a compromised key (unless I set up safety numbers like Signal) and so we need to trust the key on first use even though we have no way to verify it.  The attack that could take advantage of this would be a compromised server substituting a different public key.
+- ~~Read the "TOFU note" in `documentation/Invite-Plan.md`'s Phase 5.~~ **No longer applicable.** The public-key lookup path was removed when the design was simplified to `userKey` wrapping. All invites now use the invite-secret flow — there is no server-stored public key involved in the permanent chapter key handoff, so the TOFU attack surface (a compromised server substituting a different public key) is eliminated.
 
 ---
 

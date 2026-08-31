@@ -28,21 +28,18 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 
 ### Phase 0 — Crypto Foundation
 
-- [x] **0.1** Install `@noble/curves` and `@noble/hashes`
-  - `@noble/curves` — X25519 key generation and ECDH (Web Crypto can't import raw bytes as X25519 private key)
-  - `@noble/hashes` — Argon2id (memory-hard KDF, stronger than PBKDF2 for keypair derivation)
-  - Both are small, audited, tree-shakable; same library family
+- [x] **0.1** Install `@noble/hashes`
+  - `@noble/hashes` — Argon2id (memory-hard KDF) and HKDF; small, audited, tree-shakable
+  - (`@noble/curves` was installed for the original X25519 design but is no longer used for permanent key storage)
 
-- [x] **0.2** Add to `frontend/src/lib/crypto.ts`:
-  - `deriveX25519KeyPair(password, salt)` — `Argon2id(password, salt + "x25519", { m: 19456, t: 2, p: 1 })` → 32-byte seed → `{ privateKey: Uint8Array, publicKey: Uint8Array }` via `@noble/curves/x25519`. Parameters follow OWASP minimums (19 MiB memory, 2 iterations, 1 parallelism). The `"x25519"` label appended to the salt provides domain separation from the Argon2id `userKey` derivation which uses the same salt.
-  - `wrapChapterKeyForRecipient(chapterKey, recipientPublicKey)` — generate ephemeral X25519 keypair; `ECDH(ephPriv, recipientPub)` → sharedSecret; `HKDF-SHA256(IKM=sharedSecret, salt=ephPub ‖ recipientPub, info="atbc-chapter-key-v1")` → wrapKey (following the `age` spec: shared secret is the IKM, concatenated public keys are the HKDF **salt**, label is the HKDF **info**); `AES-256-GCM(chapterKey_bytes, wrapKey)`; returns `{ encryptedChapterKey, keyNonce, ephemeralPublicKey }`
-  - `unwrapChapterKey(encryptedChapterKey, keyNonce, ephemeralPublicKey, myPrivateKey)` — inverse: `ECDH(myPrivKey, ephPub)` → same wrapKey → AES-GCM decrypt → import as `CryptoKey`
-  - `wrapChapterKeyWithSecret(chapterKey, inviteSecret)` — import `inviteSecret` as raw AES-GCM key via `crypto.subtle.importKey('raw', inviteSecret, 'AES-GCM', ...)`, then AES-256-GCM wrap; returns `{ encryptedChapterKey, keyNonce }` — invite links only
-  - `unwrapChapterKeyWithSecret(encryptedChapterKey, keyNonce, inviteSecret)` → raw `Uint8Array` chapter key bytes
+- [x] **0.2** Functions in `frontend/src/lib/crypto.ts`:
+  - `deriveUserKey(password, salt)` — `Argon2id(password, salt + ":userkey", ...)` → AES-256-GCM `CryptoKey`. Wraps chapter keys and encrypts the profile blob.
+  - `encryptChapterKey(chapterKey, userKey)` / `decryptChapterKey(...)` — AES-256-GCM wrap/unwrap using `crypto.subtle.wrapKey`
+  - `wrapChapterKeyWithSecret(chapterKey, inviteSecret)` — AES-256-GCM wrap using a one-time random secret; used for invite transport only
+  - `unwrapChapterKeyWithSecret(...)` → raw `Uint8Array` chapter key bytes; caller immediately re-wraps with `encryptChapterKey`
 
-- [x] **0.3** Update `frontend/src/lib/keyStore.ts`:
-  - Add `setPrivateKey(key: Uint8Array)`, `getPrivateKey(): Uint8Array`, `clearPrivateKey()` — in-memory only, never persisted (re-derived from password each login)
-  - Update `getAndSetChapterKey` signature: add `ephemeralPublicKey` param, switch from `decryptChapterKey(userKey)` to `unwrapChapterKey(myPrivateKey)`
+- [x] **0.3** `frontend/src/lib/keyStore.ts`:
+  - `getAndSetChapterKey(chapterId, encryptedChapterKey, keyNonce)` — uses `decryptChapterKey(userKey)` to unwrap and cache the chapter key in memory
 
 ---
 
@@ -93,18 +90,15 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
     4. returns 201.   
       **Trust boundary note:** the server sees `inviteSecretBase64url` in-memory during email dispatch and could decrypt the chapter key — this is a concession for the invite flow specifically and should be documented as such. The server is trusted for availability; the ongoing E2EE model (post-accept) remains server-blind.
   - `GET /api/invites/{token}` — **no auth required** (invitee may not have an account yet); returns `{ inviterEmail, encryptedChapterKey, keyNonce, expiresAt, status }`; apply rate limiting (e.g. 20 req/min per IP)
-  - `POST /api/invites/{token}/accept` — auth required; body: `{ encryptedChapterKey, keyNonce, ephemeralPublicKey }`; use `crypto/subtle.ConstantTimeCompare` when comparing the token to prevent timing side-channels; atomically verifies token is PENDING + not expired + authed user's email matches `invited_email`; inserts `chapter_members` row; marks invite ACCEPTED; returns 201
-- [x] **2.5** Extend `backend-go/internal/services/members.go` — add `EphemeralPublicKey []byte` to `MemberInput`; include in INSERT SQL
+  - `POST /api/invites/{token}/accept` — auth required; body: `{ encryptedChapterKey, keyNonce }`; use `crypto/subtle.ConstantTimeCompare` when comparing the token to prevent timing side-channels; atomically verifies token is PENDING + not expired + authed user's email matches `invited_email`; inserts `chapter_members` row; marks invite ACCEPTED; returns 201
+- [x] **2.5** `backend-go/internal/services/members.go` — no `EphemeralPublicKey` field needed; `MemberInput` and INSERT use only `encrypted_chapter_key` / `key_nonce`
 
 ---
 
 ### Phase 3 — Login Key Setup
 
-- [x] **3.1** Update `frontend/src/pages/Home/LoginPage.tsx` — after existing Argon2id step, add in parallel:
-  1. `deriveX25519KeyPair(password, salt)` → store `privateKey` in keyStore (memory only)
-  2. Fetch profile; if `publicKey` is null → `PATCH /api/users/me` with `publicKey` (first-login upload)
-- [x] **3.2** Add `frontend/src/pages/Home/SignUpPage.tsx` — for new chapter founders (no invite):
-  - `supabase.auth.signUp({ email, password })` → `GET /api/users/me/salt` → derive keypair → `PATCH /api/users/me` with `publicKey` → redirect to profile
+- [x] **3.1** Update `frontend/src/pages/Home/LoginPage.tsx` — after the Argon2id step, derive `userKey` and store it in keyStore. No X25519 derivation or public key upload needed.
+- [x] **3.2** `frontend/src/pages/Home/SignUpPage.tsx` — for new chapter founders (no invite): `supabase.auth.signUp()` → `GET /api/users/me/salt` → derive `userKey` → redirect to profile.
 
 ---
 
@@ -113,10 +107,10 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 - [x] **4.1** Create `frontend/src/pages/Invite/AcceptInvitePage.tsx` and wire route `/accept-invite` in `App.tsx`
 - [x] **4.2** On mount: extract `token` from `?token=` query param, `inviteSecret` from `window.location.hash` (base64url decode → `Uint8Array`) — hash fragment is never sent to the server
 - [x] **4.3** `GET /api/invites/{token}` → display: `"[inviterEmail] has invited you to an All Things Book Club chapter."`
-- [x] **4.4** If not logged in: show sign-up form (email field for convenience — not pre-filled from server since `invited_email` is not in the response); on submit: `supabase.auth.signUp()` → fetch salt → derive X25519 keypair → `PATCH /api/users/me` with `publicKey`
+- [x] **4.4** If not logged in: show sign-up form; on submit: `supabase.auth.signUp()` → fetch salt → derive `userKey`
 - [x] **4.5** `unwrapChapterKeyWithSecret(encryptedChapterKey, keyNonce, inviteSecret)` → raw chapter key bytes
-- [x] **4.6** `wrapChapterKeyForRecipient(chapterKeyBytes, ownPublicKey)` → `{ encryptedChapterKey, keyNonce, ephemeralPublicKey }`
-- [x] **4.7** `POST /api/invites/{token}/accept` with ECDH-wrapped key
+- [x] **4.6** `encryptChapterKey(chapterKey, userKey)` → `{ encryptedChapterKey, keyNonce }` — re-wraps with the member's own `userKey`
+- [x] **4.7** `POST /api/invites/{token}/accept` with `userKey`-wrapped chapter key
 - [x] **4.8** Redirect to profile/chapter
 
 ---
@@ -136,14 +130,11 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 ### Phase 6 — Update Existing Chapter Creation Flow
 
 - [x] **6.1** Update `frontend/src/api/chapters.ts` `createChapter()`:
-  - Replace `encryptChapterKey(chapterKey, userKey)` → `wrapChapterKeyForRecipient(chapterKey, myPublicKey)`
-  - Include `ephemeralPublicKey` in the POST body
-  - Remove `getUserKey()` import if no longer used in this file
-- [x] **6.2** Update backend chapter creation to store `ephemeral_public_key` in the `chapter_members` row
-- [x] **6.3** Update all `getAndSetChapterKey` call sites to pass `ephemeralPublicKey` from the API response:
-  - `frontend/src/api/chapters.ts` (lines 24, 91)
-  - `frontend/src/api/meetings.ts` (line 41)
-- [x] **6.4** Add `ephemeralPublicKey` to `ChapterMember` type and `publicKey` to `UserProfile` type in `frontend/src/api/types.ts`
+  - Use `encryptChapterKey(chapterKey, userKey)` — same wrapping as everywhere else
+  - No `ephemeralPublicKey` in the POST body
+- [x] **6.2** Backend chapter creation stores only `encrypted_chapter_key` / `key_nonce` in `chapter_members` — no `ephemeral_public_key` column
+- [x] **6.3** All `getAndSetChapterKey` call sites take only 3 args: `(chapterId, encryptedChapterKey, keyNonce)`
+- [x] **6.4** `ChapterMember` and `Chapter` types in `frontend/src/api/types.ts` have no `ephemeralPublicKey` or `publicKey` fields
 
 ---
 

@@ -14,27 +14,25 @@ import (
 // ChapterInput is the data the client sends when creating a chapter.
 // The server stores name plaintext, and the encrypted blob opaquely.
 type CreateChapterInput struct {
-	EncryptedChapterBlob 	[]byte `json:"encryptedChapterBlob"`
-	ChapterNonce         	[]byte `json:"chapterNonce"`
-	EncryptedMemberBlob 	[]byte `json:"encryptedMemberBlob"`
-	MemberNonce         	[]byte `json:"memberNonce"`
-	IsPublic      			bool   `json:"isPublic"`
+	EncryptedChapterBlob []byte `json:"encryptedChapterBlob"`
+	ChapterNonce         []byte `json:"chapterNonce"`
+	EncryptedMemberBlob  []byte `json:"encryptedMemberBlob"`
+	MemberNonce          []byte `json:"memberNonce"`
+	IsPublic             bool   `json:"isPublic"`
 	// EncryptedChapterKey is the chapter's symmetric key, ECDH-wrapped for the creator's own X25519 public key.
 	// Only the creator can unwrap it using their private key (never sent to the server).
-	EncryptedChapterKey 	[]byte `json:"encryptedChapterKey"`
-	KeyNonce            	[]byte `json:"keyNonce"`
-	// EphemeralPublicKey is the one-time sender key used for the ECDH wrap above.
-	EphemeralPublicKey      []byte `json:"ephemeralPublicKey"`
+	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
+	KeyNonce            []byte `json:"keyNonce"`
 }
 
 type ChapterInput struct {
-	EncryptedBlob 			[]byte `json:"encryptedBlob"`
-	Nonce         			[]byte `json:"nonce"`
-	IsPublic      			bool   `json:"isPublic"`
+	EncryptedBlob []byte `json:"encryptedBlob"`
+	Nonce         []byte `json:"nonce"`
+	IsPublic      bool   `json:"isPublic"`
 	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's public key.
 	// Only the creator can decrypt it using their private key (never sent to the server).
-	EncryptedChapterKey 	[]byte `json:"encryptedChapterKey"`
-	KeyNonce            	[]byte `json:"keyNonce"`
+	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
+	KeyNonce            []byte `json:"keyNonce"`
 }
 
 // Chapter represents a book club chapter returned from the database.
@@ -49,8 +47,6 @@ type Chapter struct {
 	Nonce               []byte          `json:"nonce"`
 	EncryptedChapterKey []byte          `json:"encryptedChapterKey"`
 	KeyNonce            []byte          `json:"keyNonce"`
-	// EphemeralPublicKey is the requesting user's own membership row's ECDH sender key.
-	EphemeralPublicKey  []byte          `json:"ephemeralPublicKey"`
 	ChapterMembers      []ChapterMember `json:"chapterMembers"`
 }
 
@@ -68,11 +64,11 @@ func NewChapterService(db *pgxpool.Pool) *ChapterService {
 
 // ListForUser returns all chapters the given user is a member of.
 func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chapter, error) {
-	
+
 	// Note: No membership check since its part of the query
 	rows, err := s.db.Query(ctx, `
 		SELECT c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce, 
-			cm.encrypted_chapter_key, cm.key_nonce, cm.ephemeral_public_key
+			cm.encrypted_chapter_key, cm.key_nonce
 		FROM chapters c
 		JOIN chapter_members cm ON cm.chapter_id = c.id
 		WHERE cm.user_id = $1
@@ -86,7 +82,7 @@ func (s *ChapterService) ListForUser(ctx context.Context, userID string) ([]Chap
 	var chapters []Chapter
 	for rows.Next() {
 		var ch Chapter
-		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce, &ch.EncryptedChapterKey, &ch.KeyNonce, &ch.EphemeralPublicKey); err != nil {
+		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce, &ch.EncryptedChapterKey, &ch.KeyNonce); err != nil {
 			return nil, fmt.Errorf("ChapterService.ListForUser scan: %w", err)
 		}
 		chapters = append(chapters, ch)
@@ -133,11 +129,12 @@ func (s *ChapterService) Create(ctx context.Context, input CreateChapterInput, c
 
 	var cm ChapterMember
 	err = tx.QueryRow(ctx, `
-		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce, ephemeral_public_key, encrypted_blob, nonce)
-		VALUES ($1, $2, $3, 'ADMIN', now(), $4, $5, $6, $7, $8)
-		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce, ephemeral_public_key
-	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce, input.EphemeralPublicKey, input.EncryptedMemberBlob, input.MemberNonce).
-		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce, &cm.EphemeralPublicKey)
+		INSERT INTO chapter_members 
+			(id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce, encrypted_blob, nonce)
+		VALUES ($1, $2, $3, 'ADMIN', now(), $4, $5, $6, $7)
+		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce
+	`, memberID, creatorID, chapterID, input.EncryptedChapterKey, input.KeyNonce, input.EncryptedMemberBlob, input.MemberNonce).
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ChapterService.Create: insert member: %w", err)
 	}
@@ -153,7 +150,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	// Note: No membership check since its part of the query
 	rows, err := s.db.Query(ctx, `
 		SELECT c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce,
-			my_cm.encrypted_chapter_key, my_cm.key_nonce, my_cm.ephemeral_public_key,
+			my_cm.encrypted_chapter_key, my_cm.key_nonce,
 			cm.id, cm.user_id, cm.role, cm.joined_at
 		FROM chapters c
 		JOIN chapter_members my_cm ON my_cm.chapter_id = c.id AND my_cm.user_id = $2
@@ -163,7 +160,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	`, chapterID, userID)
 
 	if err != nil {
-    	return nil, fmt.Errorf("ChapterService.GetByID: %w", err)
+		return nil, fmt.Errorf("ChapterService.GetByID: %w", err)
 	}
 
 	defer rows.Close()
@@ -175,9 +172,9 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 		var cm ChapterMember
 		if err := rows.Scan(&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt,
 			&ch.EncryptedBlob, &ch.Nonce,
-			&ch.EncryptedChapterKey, &ch.KeyNonce, &ch.EphemeralPublicKey,
+			&ch.EncryptedChapterKey, &ch.KeyNonce,
 			&cm.ID, &cm.UserId, &cm.Role, &cm.JoinedAt); err != nil {
-				return nil, fmt.Errorf("scan: %w", err)
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 		if _, exists := chapterMap[ch.ID]; !exists {
 			chapterMap[ch.ID] = &ch
@@ -189,7 +186,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	for _, ch := range chapterMap {
 		chapters = append(chapters, *ch)
 	}
-	
+
 	if len(chapters) == 0 {
 		return nil, fmt.Errorf("chapter not found")
 	}

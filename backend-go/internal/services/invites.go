@@ -89,7 +89,7 @@ func (s *InviteService) GetByToken(ctx context.Context, token string) (*Invite, 
 // Accept validates the invite and admits the authenticated user into the
 // chapter with their own ECDH-wrapped copy of the chapter key. Runs as a
 // transaction so the membership insert and invite status update are atomic.
-func (s *InviteService) Accept(ctx context.Context, token, userID, userEmail string, encryptedChapterKey, keyNonce, ephemeralPublicKey []byte) (*ChapterMember, error) {
+func (s *InviteService) Accept(ctx context.Context, token, userID, userEmail string, encryptedChapterKey, keyNonce []byte) (*ChapterMember, error) {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("InviteService.Accept: begin: %w", err)
@@ -134,11 +134,11 @@ func (s *InviteService) Accept(ctx context.Context, token, userID, userEmail str
 
 	var cm ChapterMember
 	err = tx.QueryRow(ctx, `
-		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce, ephemeral_public_key)
-		VALUES ($1, $2, $3, 'MEMBER', now(), $4, $5, $6)
-		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce, ephemeral_public_key
-	`, memberID, userID, chapterID, encryptedChapterKey, keyNonce, ephemeralPublicKey).
-		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce, &cm.EphemeralPublicKey)
+		INSERT INTO chapter_members (id, user_id, chapter_id, role, joined_at, encrypted_chapter_key, key_nonce)
+		VALUES ($1, $2, $3, 'MEMBER', now(), $4, $5)
+		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce
+	`, memberID, userID, chapterID, encryptedChapterKey, keyNonce).
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce)
 	if err != nil {
 		return nil, fmt.Errorf("InviteService.Accept: insert member: %w", err)
 	}

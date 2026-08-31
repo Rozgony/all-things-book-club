@@ -29,26 +29,26 @@ func (s *MeetingService) GetDB() *pgxpool.Pool {
 // MeetingInput is the data the client sends when creating a member.
 // The server stores name plaintext, and the encrypted blob opaquely.
 type MeetingInput struct {
-	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
-	Nonce         		[]byte 	`json:"nonce"`
-	ChapterID      		string  `json:"chapterId"`
-	ScheduledAt       	time.Time  `json:"scheduledAt"`
-	Duration       		int  	`json:"duration"`
-	RecurringGroupId    *string `json:"recurringGroupId"`
+	EncryptedBlob    []byte    `json:"encryptedBlob"`
+	Nonce            []byte    `json:"nonce"`
+	ChapterID        string    `json:"chapterId"`
+	ScheduledAt      time.Time `json:"scheduledAt"`
+	Duration         int       `json:"duration"`
+	RecurringGroupId *string   `json:"recurringGroupId"`
 }
 
 type Meeting struct {
-	ID      			string  `json:"id"`
-	ChapterID      		string  `json:"chapterId"`
-	ScheduledAt       	time.Time  `json:"scheduledAt"`
-	Duration       		int  	`json:"duration"`
-	RecurringGroupId    *string `json:"recurringGroupId"`
-	Status    			string  `json:"status"`
-	EncryptedBlob 		[]byte 	`json:"encryptedBlob"`
-	Nonce         		[]byte 	`json:"nonce"`
-	Chapter				*Chapter `json:"chapter"`
-	Topics				[]*Topic `json:"topics"`
-	ChapterMembers		[]*ChapterMember	`json:"chapterMember"`
+	ID               string           `json:"id"`
+	ChapterID        string           `json:"chapterId"`
+	ScheduledAt      time.Time        `json:"scheduledAt"`
+	Duration         int              `json:"duration"`
+	RecurringGroupId *string          `json:"recurringGroupId"`
+	Status           string           `json:"status"`
+	EncryptedBlob    []byte           `json:"encryptedBlob"`
+	Nonce            []byte           `json:"nonce"`
+	Chapter          *Chapter         `json:"chapter"`
+	Topics           []*Topic         `json:"topics"`
+	ChapterMembers   []*ChapterMember `json:"chapterMember"`
 }
 
 func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID string) (*Meeting, error) {
@@ -87,7 +87,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	var ch Chapter
 	err := s.db.QueryRow(ctx, `
 		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
-			cm.id, cm.encrypted_chapter_key, cm.key_nonce, cm.ephemeral_public_key,
+			cm.id, cm.encrypted_chapter_key, cm.key_nonce,
 			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapter_members cm ON cm.chapter_id = m.chapter_id AND cm.user_id = $2
@@ -96,7 +96,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	`, meetingID, userID).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
 			&m.Status, &m.Nonce, &m.EncryptedBlob,
-			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce, &cm.EphemeralPublicKey,
+			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce,
 			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", err)
@@ -255,7 +255,7 @@ func (s *MeetingService) UpdateEncryptedData(ctx context.Context, meetingID stri
 }
 
 func (s *MeetingService) Delete(ctx context.Context, meetingID string, userID string) error {
-	
+
 	var m Meeting
 	err := s.db.QueryRow(ctx, `
 		SELECT m.id, m.chapter_id
@@ -266,7 +266,7 @@ func (s *MeetingService) Delete(ctx context.Context, meetingID string, userID st
 	if err != nil {
 		return fmt.Errorf("MeetingService.Delete: %w", err)
 	}
-	
+
 	ok, adminErr := db.IsAdmin(ctx, s.db, m.ChapterID, userID)
 	if adminErr != nil {
 		return fmt.Errorf("MeetingService.Delete: %w", adminErr)

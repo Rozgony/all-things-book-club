@@ -22,16 +22,12 @@ func NewUserService(db *pgxpool.Pool) *UserService {
 type UserInput struct {
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
-	// PublicKey is the client-generated X25519 public key used for asymmetric
-	// chapter key handoff (invites). Stored plaintext — it's public by design.
-	PublicKey     []byte `json:"publicKey"`
 }
 
 type User struct {
-	ID            string `json:"id"`
-	EncryptedBlob []byte `json:"encryptedBlob"`
-	Nonce         []byte `json:"nonce"`
-	PublicKey     []byte `json:"publicKey"`
+	ID            string    `json:"id"`
+	EncryptedBlob []byte    `json:"encryptedBlob"`
+	Nonce         []byte    `json:"nonce"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 }
@@ -71,32 +67,29 @@ func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (strin
 func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error) {
 	var u User
 	err := s.db.QueryRow(ctx, `
-		SELECT id, encrypted_blob, nonce, public_key, created_at, updated_at
+		SELECT id, encrypted_blob, nonce, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`, userID).
-		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.PublicKey, &u.CreatedAt, &u.UpdatedAt)
+		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("UserService.GetByID: %w", err)
 	}
 	return &u, nil
 }
 
-// Update writes the encrypted profile blob and/or the X25519 public key.
-// PublicKey is only ever written once per device-derivation (idempotent —
-// re-deriving the same password + salt always yields the same key).
+// Update writes the encrypted profile blob to the DB.
 func (s *UserService) Update(ctx context.Context, input UserInput, userID string) (*User, error) {
 	var u User
 	err := s.db.QueryRow(ctx, `
 		UPDATE users
 		SET encrypted_blob = COALESCE($1, encrypted_blob),
 			nonce = COALESCE($2, nonce),
-			public_key = COALESCE($3, public_key),
 			updated_at = now()
-		WHERE id = $4
-		RETURNING id, encrypted_blob, nonce, public_key, created_at, updated_at
-	`, input.EncryptedBlob, input.Nonce, input.PublicKey, userID).
-		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.PublicKey, &u.CreatedAt, &u.UpdatedAt)
+		WHERE id = $3
+		RETURNING id, encrypted_blob, nonce, created_at, updated_at
+	`, input.EncryptedBlob, input.Nonce, userID).
+		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("UserService.Update: %w", err)
 	}
