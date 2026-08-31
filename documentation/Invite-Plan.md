@@ -191,14 +191,25 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 - **Out of scope:** `GET /api/users/by-email` (removed — see Phase 2.3 note), public topics layer, password-change key rotation, multi-device explicit re-registration
 
 TODO
-- re-simplify key wrapping
-- Make create user flow better
-  - currently: "Sign up succeeded but no session was returned" because email address confirmation is required. Does it have to be that way?
-  - why is there such a delay after clicking the email accept button?
-- Show warning on bounced emails
-- Make email link a clickable button
-- Is there a way to not be able to see the email text in Resend?
-- Why are chapters now wrapped by the public key instead of the user key?
-- Why was there a delay in the email invite working?
-- Better welcome screen than "mkschultz@proton.me has invited you to an All Things Book Club chapter."
-- No one's chapters are loading, not for the creator or the invited.
+- [x] re-simplify key wrapping
+- [ ] consider security improvements
+  - [ ] The invite token being bound to the invitee's email (invited_email check in InviteService.Accept) — so the attacker would also need to sign up or log in with that exact email address
+  - [ ] Token expiry (7 days)
+  - make sure we delete invites after accepted
+- [ ] Make create user flow better
+  - [ ] currently: "Sign up succeeded but no session was returned" because email address confirmation is required. Does it have to be that way?
+  - [ ] why is there such a delay after clicking the email accept button?
+- [ ] Show warning on bounced emails
+- [ ] Make email link a clickable button
+- [ ] Is there a way to not be able to see the email text in Resend?
+- [ ] Why are chapters now wrapped by the public key instead of the user key?
+- [ ] Why was there a delay in the email invite working?
+- [ ] Better welcome screen than "mkschultz@proton.me has invited you to an All Things Book Club chapter."
+- [ ] No one's chapters are loading, not for the creator or the invited.
+
+
+NEXT QUESTION:
+ok, so it's a one-time secret only used for the invite.  A couple more questions:
+1. How is that different than asymmetric? Is it related to the complex math not needed in X25519? 
+2. Would it make sense to have some sort of asymmetric encryption so with the app to make that invite more secure?
+3. For my own educational purposes, if asymmetric is not necessary for this app, what additional features would make it necessary? For example, why does Signal have it but this app doesn't?

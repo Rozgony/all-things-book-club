@@ -10,7 +10,7 @@ import {
 	fromBase64,
 	encryptChapterKey
 } from '../../lib/crypto'
-import { setUserKey, getUserKey, hasUserKey } from '../../lib/keyStore'
+import { setUserKey, getUserKey } from '../../lib/keyStore'
 import { getInvite, acceptInvite, type InviteInfo } from '../../api/invites'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'

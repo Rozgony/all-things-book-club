@@ -38,8 +38,7 @@ export { toBase64, fromBase64 }
  * server-provided salt. This is deterministic — same password + salt
  * always produces the same key, on any device.
  *
- * Uses Argon2id (19 MiB, t=2, p=1) with a `:userkey` domain label so
- * the output is independent from the X25519 keypair derived from the same salt.
+ * Uses Argon2id (19 MiB, t=2, p=1) with a `:userkey` domain label.
  */
 export async function deriveUserKey(password: string, saltHex: string): Promise<CryptoKey> {
   const seed = argon2id(password, saltHex + ':userkey', { t: 2, m: 19456, p: 1, dkLen: 32 })
@@ -119,7 +118,7 @@ export async function wrapChapterKeyWithSecret(
   chapterKey: CryptoKey,
   inviteSecret: Uint8Array
 ): Promise<{ encryptedChapterKey: string; keyNonce: string }> {
-  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret, 'AES-GCM', false, ['encrypt'])
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, 'AES-GCM', false, ['encrypt'])
   const rawChapterKey = await crypto.subtle.exportKey('raw', chapterKey)
 
   const nonce = crypto.getRandomValues(new Uint8Array(12))
@@ -141,7 +140,7 @@ export async function unwrapChapterKeyWithSecret(
   keyNonce: string,
   inviteSecret: Uint8Array
 ): Promise<Uint8Array> {
-  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret, 'AES-GCM', false, ['decrypt'])
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, 'AES-GCM', false, ['decrypt'])
   const rawChapterKey = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: fromBase64(keyNonce) },
     wrapKey,
@@ -152,7 +151,7 @@ export async function unwrapChapterKeyWithSecret(
 
 /** Imports raw chapter key bytes (e.g. from `unwrapChapterKeyWithSecret`) as a usable CryptoKey. */
 export async function importChapterKey(rawChapterKey: Uint8Array): Promise<CryptoKey> {
-  return crypto.subtle.importKey('raw', rawChapterKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
+  return crypto.subtle.importKey('raw', rawChapterKey as BufferSource, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
 }
 
 // ─── Content Encryption ──────────────────────────────────────────────────────
