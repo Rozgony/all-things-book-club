@@ -198,3 +198,16 @@ password + salt → Argon2id → 32-byte seed → X25519 keypair
 
 - **In scope:** X25519 keypair derivation, ECDH chapter key wrapping, single invite-secret flow for all invites (new and existing users), login/signup key setup, schema migrations
 - **Out of scope:** `GET /api/users/by-email` (removed — see Phase 2.3 note), public topics layer, password-change key rotation, multi-device explicit re-registration
+
+TODO
+- re-simplify key wrapping
+- Make create user flow better
+  - currently: "Sign up succeeded but no session was returned" because email address confirmation is required. Does it have to be that way?
+  - why is there such a delay after clicking the email accept button?
+- Show warning on bounced emails
+- Make email link a clickable button
+- Is there a way to not be able to see the email text in Resend?
+- Why are chapters now wrapped by the public key instead of the user key?
+- Why was there a delay in the email invite working?
+- Better welcome screen than "mkschultz@proton.me has invited you to an All Things Book Club chapter."
+- No one's chapters are loading, not for the creator or the invited.
