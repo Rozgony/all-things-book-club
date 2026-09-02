@@ -205,3 +205,12 @@ A self-study map of the concepts behind this app's encryption, in the order they
 
 **Self-check exercise:** once you've been through all 11, try to draw the full journey of one chapter key from `createChapter()` being called to a second member decrypting a meeting note, from memory, without opening any files. Then check yourself against the code.
 
+
+## History of my use of Asymmetic Encryptions
+- I implemented the invites architecture after the main userKey wrapping the chapterKey approach was already implemented.  
+- At the time, it seemed like a good idea to use asymmetric encryption to address the problem of strangers (the inviter and invitee) not knowing each other's encryption key (or the password it was derived from). 
+- This then led to an architecture change so that the chapterKeys were then wrapped by the X25519 public key that we held on to permanently and rederived the private key from the password.  
+- However, this then caused two complications:
+	-  First, it added a lot of unnecessary complexity to story the private key everywhere and pass it around for decryption in addition to storing the userKey. 
+	- Second, we had already moved to including the one-time secret on the invite to wrap the chapter key that is being sent. This was because the asymmetric encryption didn't work when the invitee didn't have a user yet because the invitee didn't have their own public key yet.  The invitee would have to create their own user before an invite could be created.  Also, the main vulnerability in this was email interception, which is also a vulnerability with the asymmetric approach.  So we streamlined the two paths into one path for if the person being invited already had an account or not.
+- I plan to are instead mitigating that email intercept approach by expiring (deleting) invites after 7 days and deleting invites after they have been accepted.  An addition future security method I may implement for users with Ghost Mode on will be to require the invite key to be used with the specific email address that was invited.
