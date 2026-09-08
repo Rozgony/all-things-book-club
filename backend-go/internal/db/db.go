@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -17,11 +18,22 @@ type Pool = pgxpool.Pool
 // Call this once in main() and pass the pool down to anything that needs the DB.
 //
 // Pattern:
-//   pool, err := db.Connect(ctx, cfg.DatabaseURL)
-//   if err != nil { log.Fatal(err) }
-//   defer pool.Close()
+//
+//	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+//	if err != nil { log.Fatal(err) }
+//	defer pool.Close()
 func Connect(ctx context.Context, databaseURL string) (*Pool, error) {
-	pool, err := pgxpool.New(ctx, databaseURL)
+	poolConfig, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("db.Connect: failed to parse database URL: %w", err)
+	}
+
+	// Supabase's connection pooler (transaction mode) can route each
+	// transaction to a different backend, invalidating cached prepared
+	// statements. Simple protocol avoids server-side prepared statements.
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("db.Connect: failed to create pool: %w", err)
 	}

@@ -24,30 +24,26 @@ Supabase Auth profiles. Only the user ID is known server-side; profile data is e
 | `key_derivation_salt` | TEXT | - | Random salt for Argon2id key derivation |
 | `encrypted_blob` | BYTEA | - | Encrypted profile (name, avatar, etc.) |
 | `nonce` | BYTEA | - | AES-GCM nonce |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 ---
 
 ### `chapters`
-Book clubs. Name/description are encrypted. `is_public` controls discoverability.
+Book clubs. Name/description/createdAt are encrypted. `is_public` controls discoverability.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `id` | TEXT | PRIMARY KEY | - |
 | `creator_id` | TEXT | NOT NULL, FK → users(id) | - |
 | `is_public` | BOOLEAN | NOT NULL, DEFAULT false | - |
-| `encrypted_blob` | BYTEA | - | Encrypted name, description, etc. |
+| `encrypted_blob` | BYTEA | - | Encrypted name, description, createdAt |
 | `nonce` | BYTEA | - | AES-GCM nonce |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 **Indexes**: chapter_id (meeting, topics, themes, recurring_rules)
 
 ---
 
 ### `chapter_members`
-Membership records. Each member has their own userKey-wrapped copy of the chapter's symmetric key.
+Membership records. Each member has their own userKey-wrapped copy of the chapter's symmetric key. Name and joinedAt are encrypted.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -57,8 +53,7 @@ Membership records. Each member has their own userKey-wrapped copy of the chapte
 | `role` | chapter_member_role | NOT NULL, DEFAULT 'MEMBER' | ADMIN or MEMBER |
 | `encrypted_chapter_key` | BYTEA | - | Chapter key wrapped with the member's `userKey` |
 | `key_nonce` | BYTEA | - | AES-GCM nonce |
-| `joined_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `encrypted_blob` | BYTEA | -	| Encrypted name, description, etc. |
+| `encrypted_blob` | BYTEA | -	| Encrypted name, joinedAt, etc. |
 | `nonce` | BYTEA | - | AES-GCM nonce |
 
 **Unique**: (user_id, chapter_id)
@@ -68,22 +63,19 @@ Membership records. Each member has their own userKey-wrapped copy of the chapte
 ---
 
 ### `chapter_invitations`
-Pending/accepted invites for members who don't have an account yet. See `documentation/Invite-Plan.md` for the full flow.
+Pending/accepted invites for members who don't have an account yet. Link-only — anyone holding the token can accept. See `documentation/Invite-Plan.md` for the full flow.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `id` | TEXT | PRIMARY KEY | - |
 | `chapter_id` | TEXT | NOT NULL, FK → chapters(id) | - |
 | `inviter_id` | TEXT | NOT NULL, FK → users(id) | - |
-| `invited_email` | TEXT | NOT NULL | - |
 | `invite_token` | TEXT | NOT NULL, UNIQUE | Opaque token in the accept-invite URL |
 | `encrypted_chapter_key` | BYTEA | NOT NULL | Chapter key wrapped with a one-time secret (not a public key) |
 | `key_nonce` | BYTEA | NOT NULL | AES-GCM nonce |
+| `inviter_name` | TEXT | NOT NULL, DEFAULT '' | Inviter's display name shown to the invitee |
 | `status` | TEXT | NOT NULL, DEFAULT 'PENDING' | PENDING, ACCEPTED, EXPIRED |
 | `expires_at` | TIMESTAMPTZ | NOT NULL | - |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-
-**Unique**: (chapter_id, invited_email) partial index WHERE status = 'PENDING'
 
 ---
 
@@ -100,8 +92,6 @@ Scheduled book club meetings. Metadata (date, duration, status) is plaintext; co
 | `recurring_group_id` | TEXT | FK → recurring_rules(id), ON DELETE SET NULL | - |
 | `encrypted_blob` | BYTEA | - | Encrypted title, notes, etc. |
 | `nonce` | BYTEA | - | AES-GCM nonce |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 **Indexes**: chapter_id, scheduled_at
 
@@ -137,7 +127,6 @@ Discussion topics for the spin wheel. Belongs to a chapter and can optionally be
 | `encrypted_blob` | BYTEA | - | Encrypted title, description, etc. |
 | `nonce` | BYTEA | - | AES-GCM nonce |
 | `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
-| `updated_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 **Indexes**: chapter_id, meeting_id, status
 
@@ -179,7 +168,7 @@ Many-to-many join table between topics and themes.
 - **Content encryption**: AES-256-GCM for encrypted data blobs (`encrypted_blob` + `nonce` pairs)
 - **Key distribution**: chapter keys are wrapped per-member with that member's `userKey` and stored in `chapter_members.encrypted_chapter_key` + `key_nonce`
 - **Invites**: invites carry a one-time-secret-wrapped chapter key; the secret is put in the URL hash fragment and never sent to the server. On accept, the client unwraps with the secret and re-wraps with the invitee's `userKey`
-- **Server visibility**: only plaintext metadata (IDs, timestamps, enum/status values, email addresses for invites, and wrapped key ciphertext) is visible server-side
+- **Server visibility**: only plaintext metadata (IDs, timestamps, enum/status values, inviter name, and wrapped key ciphertext) is visible server-side
 
 ---
 
@@ -200,3 +189,8 @@ Many-to-many join table between topics and themes.
 - `005_invitations.sql` — Added `chapter_members.ephemeral_public_key`; created `chapter_invitations`
 - `006_simplify_keys.sql` — Removed `users.public_key` and `chapter_members.ephemeral_public_key`; moved to symmetric key-wrap model
 - `007_enable_rls.sql` — Enabled RLS on all application tables
+- `008_remove_invited_email.sql` — Removed `invited_email` column; invites are link-only with no per-email restriction
+- `009_add_inviter_name.sql` — Added `inviter_name` column to store inviter's display name
+- `010_drop_unused_timestamps.sql` — Dropped `created_at`/`updated_at` columns that were never queried, ordered on, or displayed (`users.created_at`/`updated_at`, `chapters.updated_at`, `chapter_invitations.created_at`, `meetings.created_at`/`updated_at`, `topics.updated_at`)
+- `011_chapters_created_at_to_blob.sql` — Dropped `chapters.created_at`; the client now stores it inside `encrypted_blob` and sorts "my chapters" client-side after decrypting
+- `012_chapter_members_joined_at_to_blob.sql` — Dropped `chapter_members.joined_at`; the client now sets it (encrypted) at invite-accept time and sorts the member list client-side after decrypting

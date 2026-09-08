@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { type Meeting } from '../../api/types'
 import { MeetingCard } from './MeetingCard'
 import { createMeeting } from '../../api/meetings'
+import { InviteMemberForm } from './InviteMemberForm'
 
 interface MeetingsListProps {
 	chapterId: string
@@ -53,14 +54,17 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 		<div className="bg-white rounded border border-warm-border p-6 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
 			<div className="flex justify-between items-center mb-4">
 				<h3 className="font-heading text-forest-deep">Scheduled & Active Meetings</h3>
-				{isAdmin && !showForm && (
-					<button
-						onClick={() => setShowForm(true)}
-						className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
-					>
-						+ Schedule Meeting
-					</button>
-				)}
+				<div className="flex gap-2 ">
+					<InviteMemberForm chapterId={chapterId!} />
+					{isAdmin && !showForm && (
+						<button
+							onClick={() => setShowForm(true)}
+							className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
+						>
+							+ Schedule Meeting
+						</button>
+					)}
+				</div>
 			</div>
 
 			{showForm && (

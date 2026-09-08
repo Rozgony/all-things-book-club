@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/all-things-book-club/internal/db"
@@ -28,19 +27,36 @@ func NewInviteHandler(s *services.InviteService, m *mailer.Mailer, pool *pgxpool
 }
 
 type createInviteRequest struct {
-	InvitedEmail          string `json:"invitedEmail"`
 	EncryptedChapterKey   []byte `json:"encryptedChapterKey"`
 	KeyNonce              []byte `json:"keyNonce"`
 	InviteSecretBase64url string `json:"inviteSecretBase64url"`
+	InviterName           string `json:"inviterName"`
 }
 
-// Create handles POST /api/chapters/{id}/invites
-// The invite secret is used only to build the emailed URL fragment; it is
-// never written to the database (see services.InviteService.Create).
+type createInviteResponse struct {
+	InviteURL string `json:"inviteURL"`
+}
+
+// createInvite is the shared core: persists the invite and builds the URL.
+// It never emails anything — callers decide whether/how to deliver the link.
+func (h *InviteHandler) createInvite(r *http.Request, chapterID, requesterID string, encryptedChapterKey, keyNonce []byte, inviteSecretBase64url, inviterName string) (string, error) {
+	token, err := h.invites.Create(r.Context(), chapterID, requesterID, encryptedChapterKey, keyNonce, inviterName)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s/accept-invite?token=%s#%s", h.appURL, token, inviteSecretBase64url), nil
+}
+
+// Create handles POST /api/chapters/{id}/invites. It never emails the link —
+// the invite secret only ever exists in this request's memory to build the
+// URL, which is returned to the caller. Invites are link-only: whoever holds
+// the link can accept it. The caller decides how to share it: copy it
+// directly (fully private), or use POST /api/chapters/{id}/invites/email,
+// which hands the secret to our email provider (Resend) as a one-time
+// concession for convenience.
 func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	chapterID := chi.URLParam(r, "id")
 	requesterID := middleware.UserIDFromContext(r.Context())
-	requesterEmail := middleware.UserEmailFromContext(r.Context())
 
 	isMember, err := db.IsMember(r.Context(), h.pool, chapterID, requesterID)
 	if err != nil {
@@ -57,25 +73,73 @@ func (h *InviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 		handleError(w, badRequest(err))
 		return
 	}
-	if req.InvitedEmail == "" || req.InviteSecretBase64url == "" {
-		handleError(w, badRequest(errors.New("invitedEmail and inviteSecretBase64url are required")))
+	if req.InviteSecretBase64url == "" {
+		handleError(w, badRequest(errors.New("inviteSecretBase64url is required")))
 		return
 	}
-	log.Printf("req %+v", req)
 
-	token, err := h.invites.Create(r.Context(), chapterID, requesterID, req.InvitedEmail, req.EncryptedChapterKey, req.KeyNonce)
+	inviteURL, err := h.createInvite(r, chapterID, requesterID, req.EncryptedChapterKey, req.KeyNonce, req.InviteSecretBase64url, req.InviterName)
 	if err != nil {
 		handleError(w, err)
 		return
 	}
 
-	inviteURL := fmt.Sprintf("%s/accept-invite?token=%s#%s", h.appURL, token, req.InviteSecretBase64url)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(createInviteResponse{InviteURL: inviteURL})
+}
+
+type createAndEmailInviteRequest struct {
+	InvitedEmail          string `json:"invitedEmail"`
+	EncryptedChapterKey   []byte `json:"encryptedChapterKey"`
+	KeyNonce              []byte `json:"keyNonce"`
+	InviteSecretBase64url string `json:"inviteSecretBase64url"`
+	InviterName           string `json:"inviterName"`
+}
+
+// CreateAndEmail handles POST /api/chapters/{id}/invites/email — creates the
+// invite (same core as Create) and emails the link via Resend in the same
+// request. invitedEmail here is only the send-to address for this one email;
+// it is never persisted on the invite itself (invites remain link-only).
+func (h *InviteHandler) CreateAndEmail(w http.ResponseWriter, r *http.Request) {
+	chapterID := chi.URLParam(r, "id")
+	requesterID := middleware.UserIDFromContext(r.Context())
+	requesterEmail := middleware.UserEmailFromContext(r.Context())
+
+	isMember, err := db.IsMember(r.Context(), h.pool, chapterID, requesterID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+	if !isMember {
+		handleError(w, db.ErrNotMember)
+		return
+	}
+
+	var req createAndEmailInviteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		handleError(w, badRequest(err))
+		return
+	}
+	if req.InvitedEmail == "" || req.InviteSecretBase64url == "" {
+		handleError(w, badRequest(errors.New("invitedEmail and inviteSecretBase64url are required")))
+		return
+	}
+
+	inviteURL, err := h.createInvite(r, chapterID, requesterID, req.EncryptedChapterKey, req.KeyNonce, req.InviteSecretBase64url, req.InviterName)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
 	if err := h.mailer.SendInviteEmail(req.InvitedEmail, requesterEmail, inviteURL); err != nil {
 		handleError(w, err)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(createInviteResponse{InviteURL: inviteURL})
 }
 
 // GetByToken handles GET /api/invites/{token} — unauthenticated (the invitee
@@ -102,7 +166,6 @@ type acceptInviteRequest struct {
 func (h *InviteHandler) Accept(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	userID := middleware.UserIDFromContext(r.Context())
-	userEmail := middleware.UserEmailFromContext(r.Context())
 
 	var req acceptInviteRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -110,7 +173,7 @@ func (h *InviteHandler) Accept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	member, err := h.invites.Accept(r.Context(), token, userID, userEmail, req.EncryptedChapterKey, req.KeyNonce)
+	member, err := h.invites.Accept(r.Context(), token, userID, req.EncryptedChapterKey, req.KeyNonce)
 	if err != nil {
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
@@ -119,8 +182,6 @@ func (h *InviteHandler) Accept(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, `{"error":"invite has expired"}`, http.StatusGone)
 		case errors.Is(err, services.ErrInviteNotPending):
 			http.Error(w, `{"error":"invite already used"}`, http.StatusConflict)
-		case errors.Is(err, services.ErrInviteEmailMismatch):
-			http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		default:
 			handleError(w, err)
 		}

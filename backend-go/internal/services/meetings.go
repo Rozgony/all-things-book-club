@@ -68,8 +68,8 @@ func (s *MeetingService) Create(ctx context.Context, input MeetingInput, userID 
 
 	var m Meeting
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO meetings (id, chapter_id, duration, scheduled_at, recurring_group_id, created_at, updated_at, status, encrypted_blob, nonce)
-		VALUES ($1, $2, $3, $4, $5, now(), now(), 'SCHEDULED', $6, $7)
+		INSERT INTO meetings (id, chapter_id, duration, scheduled_at, recurring_group_id, status, encrypted_blob, nonce)
+		VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7)
 		RETURNING id, chapter_id, duration, scheduled_at, status
 	`, meetingID, input.ChapterID, input.Duration, input.ScheduledAt, input.RecurringGroupId, input.EncryptedBlob, input.Nonce).
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.Status)
@@ -88,7 +88,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 	err := s.db.QueryRow(ctx, `
 		SELECT m.id, m.chapter_id, m.duration, m.scheduled_at, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
 			cm.id, cm.encrypted_chapter_key, cm.key_nonce,
-			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
+			c.id, c.creator_id, c.is_public, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapter_members cm ON cm.chapter_id = m.chapter_id AND cm.user_id = $2
 		JOIN chapters c ON c.id = m.chapter_id
@@ -97,7 +97,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 		Scan(&m.ID, &m.ChapterID, &m.Duration, &m.ScheduledAt, &m.RecurringGroupId,
 			&m.Status, &m.Nonce, &m.EncryptedBlob,
 			&cm.ID, &cm.EncryptedChapterKey, &cm.KeyNonce,
-			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce)
+			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.EncryptedBlob, &ch.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("MeetingService.GetByID: %w", err)
 	}
@@ -107,7 +107,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	// Fetch topics for this meeting
 	topicRows, err := s.db.Query(ctx, `
-		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at, updated_at
+		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at
 		FROM topics
 		WHERE meeting_id = $1
 	`, meetingID)
@@ -118,7 +118,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	for topicRows.Next() {
 		var t Topic
-		if err := topicRows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt); err != nil {
+		if err := topicRows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByID: scan topic: %w", err)
 		}
 		m.Topics = append(m.Topics, &t)
@@ -169,7 +169,7 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 
 	rows, err := s.db.Query(ctx, `
 		SELECT m.id, m.chapter_id, m.scheduled_at, m.duration, m.recurring_group_id, m.status, m.nonce, m.encrypted_blob,
-			c.id, c.creator_id, c.is_public, c.created_at, c.encrypted_blob, c.nonce
+			c.id, c.creator_id, c.is_public, c.encrypted_blob, c.nonce
 		FROM meetings m
 		JOIN chapters c ON c.id = m.chapter_id
 		WHERE m.chapter_id = $1
@@ -184,7 +184,7 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 		var m Meeting
 		var ch Chapter
 		if err := rows.Scan(&m.ID, &m.ChapterID, &m.ScheduledAt, &m.Duration, &m.RecurringGroupId, &m.Status, &m.Nonce, &m.EncryptedBlob,
-			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.CreatedAt, &ch.EncryptedBlob, &ch.Nonce); err != nil {
+			&ch.ID, &ch.CreatorID, &ch.IsPublic, &ch.EncryptedBlob, &ch.Nonce); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByChapterID: scan: %w", err)
 		}
 		m.Chapter = &ch
@@ -197,7 +197,7 @@ func (s *MeetingService) GetByChapterID(ctx context.Context, chapterID string, u
 func (s *MeetingService) UpdateStatus(ctx context.Context, meetingID string, status string) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET status = $1, updated_at = now()
+		SET status = $1
 		WHERE id = $2
 	`, status, meetingID)
 	if err != nil {
@@ -209,7 +209,7 @@ func (s *MeetingService) UpdateStatus(ctx context.Context, meetingID string, sta
 func (s *MeetingService) UpdateScheduledAt(ctx context.Context, meetingID string, scheduledAt time.Time) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET scheduled_at = $1, updated_at = now()
+		SET scheduled_at = $1
 		WHERE id = $2
 	`, scheduledAt, meetingID)
 	if err != nil {
@@ -221,7 +221,7 @@ func (s *MeetingService) UpdateScheduledAt(ctx context.Context, meetingID string
 func (s *MeetingService) UpdateDuration(ctx context.Context, meetingID string, duration int) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET duration = $1, updated_at = now()
+		SET duration = $1
 		WHERE id = $2
 	`, duration, meetingID)
 	if err != nil {
@@ -233,7 +233,7 @@ func (s *MeetingService) UpdateDuration(ctx context.Context, meetingID string, d
 func (s *MeetingService) UpdateRecurringGroupId(ctx context.Context, meetingID string, recurringGroupId *string) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET recurring_group_id = $1, updated_at = now()
+		SET recurring_group_id = $1
 		WHERE id = $2
 	`, recurringGroupId, meetingID)
 	if err != nil {
@@ -245,7 +245,7 @@ func (s *MeetingService) UpdateRecurringGroupId(ctx context.Context, meetingID s
 func (s *MeetingService) UpdateEncryptedData(ctx context.Context, meetingID string, encryptedBlob []byte, nonce []byte) error {
 	_, err := s.db.Exec(ctx, `
 		UPDATE meetings
-		SET encrypted_blob = $1, nonce = $2, updated_at = now()
+		SET encrypted_blob = $1, nonce = $2
 		WHERE id = $3
 	`, encryptedBlob, nonce, meetingID)
 	if err != nil {

@@ -35,7 +35,6 @@ type Topic struct {
 	EncryptedBlob []byte  `json:"encryptedBlob"`
 	Nonce         []byte  `json:"nonce"`
 	CreatedAt     time.Time  `json:"createdAt"`
-	UpdatedAt     time.Time  `json:"updatedAt"`
 	ThemeIDs      []string   `json:"themeIds"`
 }
 
@@ -55,11 +54,11 @@ func (s *TopicService) Create(ctx context.Context, input TopicInput, userID stri
 
 	var t Topic
 	err = s.db.QueryRow(ctx, `
-		INSERT INTO topics (id, chapter_id, meeting_id, encrypted_blob, nonce, status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, 'PENDING', now(), now())
-		RETURNING id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at, updated_at
+		INSERT INTO topics (id, chapter_id, meeting_id, encrypted_blob, nonce, status, created_at)
+		VALUES ($1, $2, $3, $4, $5, 'PENDING', now())
+		RETURNING id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at
 	`, topicID, input.ChapterID, input.MeetingID, input.EncryptedBlob, input.Nonce).
-		Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt, &t.UpdatedAt)
+		Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("TopicService.Create: insert topic: %w", err)
 	}
@@ -78,7 +77,7 @@ func (s *TopicService) UpdateStatus(ctx context.Context, topicID string, status 
 
 	_, err = s.db.Exec(ctx, `
 		UPDATE topics
-		SET status = $1, updated_at = now()
+		SET status = $1
 		WHERE id = $2
 	`, status, topicID)
 	if err != nil {
@@ -98,7 +97,7 @@ func (s *TopicService) UpdateEncrypted(ctx context.Context, topicID string, encr
 
 	_, err = s.db.Exec(ctx, `
 		UPDATE topics
-		SET encrypted_blob = $1, nonce = $2, updated_at = now()
+		SET encrypted_blob = $1, nonce = $2
 		WHERE id = $3
 	`, encryptedBlob, nonce, topicID)
 	if err != nil {

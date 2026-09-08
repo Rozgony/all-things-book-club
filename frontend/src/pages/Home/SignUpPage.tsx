@@ -27,8 +27,7 @@ export function SignUpPage() {
 	    setLoading(false)
 	    return
 	  }
-	  // enable_confirmations = false in supabase/config.toml means this session
-	  // is active immediately — no separate email confirmation step needed.
+
 	  const accessToken = authData.session?.access_token
 	  if (!accessToken) {
 	    setError('Sign up succeeded but no session was returned. Please try logging in.')

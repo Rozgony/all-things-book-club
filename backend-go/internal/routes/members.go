@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/services"
@@ -50,5 +52,30 @@ func (h *MemberHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(member)
+}
+
+func (h *MemberHandler) Update(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		EncryptedBlob []byte `json:"encryptedBlob"`
+		Nonce         []byte `json:"nonce"`
+	}
+
+	err := json.NewDecoder(r.Body).Decode(&input)
+	if err != nil {
+		handleError(w, badRequest(err))
+		return
+	}
+
+	memberID := chi.URLParam(r, "id")
+	userID := middleware.UserIDFromContext(r.Context())
+
+	member, err := h.members.UpdateEncryptedBlob(r.Context(), memberID, input.EncryptedBlob, input.Nonce, userID)
+	if err != nil {
+		handleError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(member)
 }

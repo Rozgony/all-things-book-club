@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/all-things-book-club/internal/crypto"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -34,7 +33,6 @@ type MemberInput struct {
 	UserId        string            `json:"userId"`
 	ChapterId     string            `json:"chapterId"`
 	Role          ChapterMemberRole `json:"role"`
-	JoinedAt      time.Time         `json:"joinedAt"`
 	// EncryptedChapterKey is the chapter's symmetric key, ECDH-wrapped for this member's X25519 public key.
 	// Only this member can unwrap it using their private key (never sent to the server).
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
@@ -46,9 +44,10 @@ type ChapterMember struct {
 	UserId              string            `json:"userId"`
 	ChapterId           string            `json:"chapterId"`
 	Role                ChapterMemberRole `json:"role"`
-	JoinedAt            time.Time         `json:"joinedAt"`
 	EncryptedChapterKey []byte            `json:"encryptedChapterKey"`
 	KeyNonce            []byte            `json:"keyNonce"`
+	EncryptedBlob       []byte            `json:"encryptedBlob"`
+	Nonce               []byte            `json:"nonce"`
 }
 
 func (s *MemberService) Create(ctx context.Context, input MemberInput) (*ChapterMember, error) {
@@ -60,14 +59,31 @@ func (s *MemberService) Create(ctx context.Context, input MemberInput) (*Chapter
 	var cm ChapterMember
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO chapter_members 
-			(id, user_id, chapter_id, role, joined_at, encrypted_blob, nonce, encrypted_chapter_key, key_nonce)
-		VALUES ($1, $2, $3, $4, now(), $5, $6, $7, $8)
-		RETURNING id, user_id, chapter_id, role, joined_at
+			(id, user_id, chapter_id, role, encrypted_blob, nonce, encrypted_chapter_key, key_nonce)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, user_id, chapter_id, role
 	`, memberID, input.UserId, input.ChapterId, input.Role, input.EncryptedBlob, input.Nonce, input.EncryptedChapterKey, input.KeyNonce).
-		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.JoinedAt)
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role)
 	if err != nil {
 		return nil, fmt.Errorf("MemberService.Create: insert member: %w", err)
 	}
 
+	return &cm, nil
+}
+
+// UpdateEncryptedBlob updates the member's encrypted name blob.
+// Only the member themselves (matching userID) can update their own blob.
+func (s *MemberService) UpdateEncryptedBlob(ctx context.Context, memberID string, encryptedBlob []byte, nonce []byte, userID string) (*ChapterMember, error) {
+	var cm ChapterMember
+	err := s.db.QueryRow(ctx, `
+		UPDATE chapter_members
+		SET encrypted_blob = $1, nonce = $2
+		WHERE id = $3 AND user_id = $4
+		RETURNING id, user_id, chapter_id, role, encrypted_chapter_key, key_nonce, encrypted_blob, nonce
+	`, encryptedBlob, nonce, memberID, userID).
+		Scan(&cm.ID, &cm.UserId, &cm.ChapterId, &cm.Role, &cm.EncryptedChapterKey, &cm.KeyNonce, &cm.EncryptedBlob, &cm.Nonce)
+	if err != nil {
+		return nil, fmt.Errorf("MemberService.UpdateEncryptedBlob: %w", err)
+	}
 	return &cm, nil
 }

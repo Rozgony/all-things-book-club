@@ -29,7 +29,15 @@ function fromBase64(str: string): Uint8Array<ArrayBuffer> {
   return bytes
 }
 
-export { toBase64, fromBase64 }
+// Decodes base64url (RFC 4648 §5, unpadded) — the alphabet used for the
+// invite secret in the URL hash fragment.
+function fromBase64Url(str: string): Uint8Array<ArrayBuffer> {
+  const padded = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
+  return fromBase64(padded + padding)
+}
+
+export { toBase64, fromBase64, fromBase64Url }
 
 // ─── Key Derivation ──────────────────────────────────────────────────────────
 
@@ -103,7 +111,7 @@ export async function decryptChapterKey(
     userKey,
     { name: 'AES-GCM', iv: fromBase64(keyNonce) },
     { name: 'AES-GCM', length: 256 },
-    false,
+    true,   // extractable — invites re-wrap this key, which requires exporting it
     ['encrypt', 'decrypt']
   )
 }
@@ -118,7 +126,7 @@ export async function wrapChapterKeyWithSecret(
   chapterKey: CryptoKey,
   inviteSecret: Uint8Array
 ): Promise<{ encryptedChapterKey: string; keyNonce: string }> {
-  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, 'AES-GCM', false, ['encrypt'])
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
   const rawChapterKey = await crypto.subtle.exportKey('raw', chapterKey)
 
   const nonce = crypto.getRandomValues(new Uint8Array(12))
@@ -140,12 +148,15 @@ export async function unwrapChapterKeyWithSecret(
   keyNonce: string,
   inviteSecret: Uint8Array
 ): Promise<Uint8Array> {
-  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, 'AES-GCM', false, ['decrypt'])
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
+  console.log('unwrapChapterKeyWithSecret',{wrapKey});
+  
   const rawChapterKey = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: fromBase64(keyNonce) },
     wrapKey,
     fromBase64(encryptedChapterKey)
   )
+  console.log('unwrapChapterKeyWithSecret',{rawChapterKey});
   return new Uint8Array(rawChapterKey)
 }
 

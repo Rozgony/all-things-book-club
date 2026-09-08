@@ -10,6 +10,14 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 interface ChapterContent {
 	name: string
 	description?: string
+	createdAt: string
+}
+
+// The plaintext shape of a chapter_members encrypted_blob.
+interface MemberContent {
+	name?: string
+	email?: string
+	joinedAt?: string
 }
 
 export async function getChapters(): Promise<Chapter[]> {
@@ -19,12 +27,16 @@ export async function getChapters(): Promise<Chapter[]> {
 	const chapters: Chapter[] = await res.json()
 
 	// Decrypt each chapter's content using the stored chapter key
-	return Promise.all(chapters.map(async (chapter) => {
+	const decrypted = await Promise.all(chapters.map(async (chapter) => {
 		if (!chapter.encryptedBlob || !chapter.nonce) return chapter
 		const key = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 		const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, key!)
-		return { ...chapter, name: content.name, description: content.description ?? null }
+		return { ...chapter, name: content.name, description: content.description ?? null, createdAt: content.createdAt }
 	}))
+
+	// createdAt now lives inside the encrypted blob, so ordering (most recent
+	// first, matching the old server-side ORDER BY) happens here instead of in SQL.
+	return decrypted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
 type CreateResponse = {
@@ -41,13 +53,15 @@ export async function createChapter(data: { name: string; description?: string; 
 	// 2. Wrap the chapter key with argon2id using the userKey
 	const { encryptedChapterKey, keyNonce } = await encryptChapterKey(chapterKey, getUserKey())
 
-	// 3. Encrypt the chapter content (name, description) with the chapter key
+	// 3. Encrypt the chapter content (name, description, createdAt) with the chapter key.
+	// The creator's membership joinedAt uses the same instant.
+	const createdAt = new Date().toISOString()
 	const { encryptedBlob: encryptedChapterBlob, nonce: chapterNonce } = await encrypt(
-		{ name: data.name, description: data.description },
+		{ name: data.name, description: data.description, createdAt },
 		chapterKey
 	)
 	const { encryptedBlob: encryptedMemberBlob, nonce: memberNonce } = await encrypt(
-		{ name: data.creatorName, email: data.creatorEmail },
+		{ name: data.creatorName, email: data.creatorEmail, joinedAt: createdAt },
 		chapterKey
 	)
 
@@ -75,7 +89,7 @@ export async function createChapter(data: { name: string; description?: string; 
 	setChapterKey(chapter.id, chapterKey)
 
 	// 6. Return the chapter with decrypted fields for the UI
-	return { ...chapter, name: data.name, description: data.description ?? null, chapterMembers: [chapterMember] }
+	return { ...chapter, name: data.name, description: data.description ?? null, createdAt, chapterMembers: [{ ...chapterMember, name: data.creatorName, joinedAt: createdAt }] }
 }
 
 export async function getChapterAndSetKey(id: string): Promise<Chapter> {
@@ -90,16 +104,31 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 
 	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
-	return { ...chapter, name: content.name, description: content.description ?? null }
+	console.log({chapter});
+	if (chapter.chapterMembers?.length) {
+		for (let index = 0; index < chapter.chapterMembers.length; index++) {
+			const chapterMember = chapter.chapterMembers[index];
+			if (chapterMember.encryptedBlob && chapterMember.nonce) {
+				const memberContent = await decrypt<MemberContent>(chapterMember.encryptedBlob, chapterMember.nonce, chapterKey!)
+				chapterMember.name = memberContent.name;
+				chapterMember.joinedAt = memberContent.joinedAt ?? '';
+			}
+		}
+		// joinedAt now lives inside each member's encrypted_blob, so ordering
+		// (earliest member first, matching the old server-side ORDER BY) happens here.
+		chapter.chapterMembers.sort((a, b) => new Date(a.joinedAt || 0).getTime() - new Date(b.joinedAt || 0).getTime())
+	}
+	console.log({chapter});
+	return { ...chapter, name: content.name, description: content.description ?? null, createdAt: content.createdAt }
 }
 
-export async function updateChapter(id: string, data: { name?: string; description?: string }): Promise<Chapter> {
+export async function updateChapter(id: string, data: { name?: string; description?: string; createdAt: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 
 	const chapterKey = getChapterKey(id)
 
 	const { encryptedBlob, nonce } = await encrypt(
-		{ name: data.name, description: data.description },
+		{ name: data.name, description: data.description, createdAt: data.createdAt },
 		chapterKey
 	)
 
@@ -117,7 +146,7 @@ export async function updateChapter(id: string, data: { name?: string; descripti
 	const key = getChapterKey(returnedChapter.id)
 	const content = await decrypt<ChapterContent>(returnedChapter.encryptedBlob, returnedChapter.nonce, key)
 
-	return { ...returnedChapter, name: content.name, description: content.description ?? null }
+	return { ...returnedChapter, name: content.name, description: content.description ?? null, createdAt: content.createdAt }
 }
 
 export async function deleteChapter(id: string): Promise<void> {

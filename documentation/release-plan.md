@@ -33,16 +33,8 @@ Two usage tiers share the same codebase and crypto:
 - Domain labels `:userkey` and `:x25519` appended to the shared salt prevent the two derivations from producing the same output
 - **Breaking change** for any existing stored data — requires clearing/re-registering any test accounts created before this change
 
-### 1. Short Log Retention Policy
 
-Auto-delete server-side **infrastructure logs** (access logs, query logs, error logs) after 48 hours.
-
-- Applies to Go server logs, Supabase auth logs, and hosting provider logs
-- Does **not** affect application data (DB rows — meetings, members, encrypted blobs)
-- Configure at the hosting/infra layer; document the policy publicly (warrant canary)
-- Goal: cannot be compelled to produce logs that no longer exist
-
-### 2. Strip Timestamps from Content *(Privacy mode only)*
+### 1. Strip Timestamps from Content *(Privacy mode only)*
 
 Move sensitive timestamps client-side by encrypting them inside the content blob rather than storing them as plaintext DB columns.
 
@@ -51,7 +43,13 @@ Move sensitive timestamps client-side by encrypting them inside the content blob
 - Tradeoff: server-side sort/filter by date is no longer possible; all ordering happens client-side after decryption
 - Must be decided before launch — retrofitting requires re-encrypting every row with each user's key, which cannot be coordinated after the fact
 
-### 3. Password Change / Key Rotation
+**Progress:**
+- ✅ Deleted unused `created_at`/`updated_at` columns that carried no functional dependency: `users.created_at`/`updated_at`, `chapters.updated_at`, `chapter_invitations.created_at`, `meetings.created_at`/`updated_at`, `topics.updated_at` (migration `010_drop_unused_timestamps.sql`)
+- ✅ `chapters.created_at` moved into the chapter's `encrypted_blob`; "my chapters" list now sorts client-side after decrypting (migration `011_chapters_created_at_to_blob.sql`)
+- ✅ `chapter_members.joined_at` moved into the member's `encrypted_blob`, set by the invitee's browser at accept time (not by the inviter at invite-creation time); member list now sorts client-side after decrypting (migration `012_chapter_members_joined_at_to_blob.sql`). Setting a member's name re-encrypts the blob, so `joinedAt` is decrypted and carried forward rather than lost.
+- ⏳ Remaining: `topics.created_at`, `themes.created_at` still need to move into their respective encrypted blobs (same pattern — see `chapters.go`/`chapters.ts` for the reference implementation)
+
+### 2. Password Change / Key Rotation
 
 Allow users to change their password without losing access to their encrypted data. See `documentation/Password-Change-Plan.md` for the full implementation plan.
 
@@ -64,6 +62,16 @@ Allow users to change their password without losing access to their encrypted da
 ---
 
 ## Post-Launch
+
+### 3. Short Log Retention Policy
+
+Auto-delete server-side **infrastructure logs** (access logs, query logs, error logs) after 48 hours.
+
+- Applies to Go server logs, Supabase auth logs, and hosting provider logs
+- Does **not** affect application data (DB rows — meetings, members, encrypted blobs)
+- Configure at the hosting/infra layer; document the policy publicly (warrant canary)
+- Goal: cannot be compelled to produce logs that no longer exist
+
 
 ### 4. Per-IP Rate Limiting on Public Endpoints
 
