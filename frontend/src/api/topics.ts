@@ -9,8 +9,9 @@ export async function createTopic(chapterID: string, meetingId: string, title: s
 	const headers = await getAuthHeaders()
 	const chapterKey = getChapterKey(chapterID)
 
+	const createdAt = new Date().toISOString()
 	const { encryptedBlob, nonce } = await encrypt(
-		{ title, description, url },
+		{ title, description, url, createdAt },
 		chapterKey
 	)
 	const res = await fetch(`${API_BASE}/topics`, {
@@ -27,7 +28,7 @@ console.log({response});
 		title,
 		url,
 		description: description || '',
-		createdAt: response.createdAt,
+		createdAt,
 		status: response.status,
 		chapterId: response.chapterId, 
 		meetingId: response.meetingId,
@@ -51,12 +52,12 @@ export async function updateTopicStatus(id: string, topic: Topic, status: TopicS
 	} as Topic
 }
 
-export async function updateTopicContent(id: string, chapterId: string, title: string, description?: string, url?: string): Promise<Topic> {
+export async function updateTopicContent(id: string, chapterId: string, createdAt: string, title: string, description?: string, url?: string): Promise<Topic> {
 	const headers = await getAuthHeaders()
 	const chapterKey = getChapterKey(chapterId)
 	if (!chapterKey) throw new Error('Chapter key not available for encryption')
 
-	const { encryptedBlob, nonce } = await encrypt({ title, description, url }, chapterKey)
+	const { encryptedBlob, nonce } = await encrypt({ title, description, url, createdAt }, chapterKey)
 
 	const res = await fetch(`${API_BASE}/topics/${id}`, {
 		method: 'PATCH',
@@ -65,7 +66,7 @@ export async function updateTopicContent(id: string, chapterId: string, title: s
 	})
 	if (!res.ok) throw new Error('Failed to update topic')
 
-	return { id, title, description: description ?? null } as unknown as Topic
+	return { id, title, description: description ?? null, createdAt } as unknown as Topic
 }
 
 export async function deleteTopic(id: string): Promise<void> {

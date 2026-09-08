@@ -57,7 +57,8 @@ Move sensitive timestamps client-side by encrypting them inside the content blob
 - ✅ Deleted unused `created_at`/`updated_at` columns that carried no functional dependency: `users.created_at`/`updated_at`, `chapters.updated_at`, `chapter_invitations.created_at`, `meetings.created_at`/`updated_at`, `topics.updated_at` (migration `010_drop_unused_timestamps.sql`)
 - ✅ `chapters.created_at` moved into the chapter's `encrypted_blob`; "my chapters" list now sorts client-side after decrypting (migration `011_chapters_created_at_to_blob.sql`)
 - ✅ `chapter_members.joined_at` moved into the member's `encrypted_blob`, set by the invitee's browser at accept time (not by the inviter at invite-creation time); member list now sorts client-side after decrypting (migration `012_chapter_members_joined_at_to_blob.sql`). Setting a member's name re-encrypts the blob, so `joinedAt` is decrypted and carried forward rather than lost.
-- ⏳ Remaining: `topics.created_at`, `themes.created_at` still need to move into their respective encrypted blobs (same pattern — see `chapters.go`/`chapters.ts` for the reference implementation)
+- ✅ `topics.created_at` moved into the topic's `encrypted_blob` (migration `014_topics_created_at_to_blob.sql`) — no server-side ordering depended on it, so this was a straight drop with no client-side sort needed; editing a topic re-encrypts the blob, so `createdAt` is carried forward from the existing topic rather than lost
+- ✅ `themes.created_at` moved into the theme's `encrypted_blob` (migration `015_themes_created_at_to_blob.sql`); the autocomplete list now sorts client-side after decrypting (replaces the old `ORDER BY created_at ASC`)
 
 ### 3. Password Change / Key Rotation
 

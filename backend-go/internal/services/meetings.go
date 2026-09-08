@@ -107,7 +107,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	// Fetch topics for this meeting
 	topicRows, err := s.db.Query(ctx, `
-		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce, created_at
+		SELECT id, chapter_id, meeting_id, status, encrypted_blob, nonce
 		FROM topics
 		WHERE meeting_id = $1
 	`, meetingID)
@@ -118,7 +118,7 @@ func (s *MeetingService) GetByID(ctx context.Context, meetingID string, userID s
 
 	for topicRows.Next() {
 		var t Topic
-		if err := topicRows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt); err != nil {
+		if err := topicRows.Scan(&t.ID, &t.ChapterID, &t.MeetingID, &t.Status, &t.EncryptedBlob, &t.Nonce); err != nil {
 			return nil, fmt.Errorf("MeetingService.GetByID: scan topic: %w", err)
 		}
 		m.Topics = append(m.Topics, &t)

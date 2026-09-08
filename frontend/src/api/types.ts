@@ -78,9 +78,9 @@ export interface Theme {
 	chapterId: string
 	encryptedBlob?: string | null
 	nonce?: string | null
-	createdAt: string
-	// Decrypted field — populated client-side after decryption
+	// Decrypted fields — populated client-side after decryption
 	name: string
+	createdAt: string
 }
 
 export interface Topic {
@@ -89,11 +89,11 @@ export interface Topic {
 	url?: string
 	createdById: string | null
 	status: TopicStatus
-	createdAt: string
 	encryptedBlob?: string
 	nonce?: string
 	themeIds?: string[] | null
 	// Decrypted fields — populated client-side after decryption
 	title: string
 	description: string | null
+	createdAt: string
 }

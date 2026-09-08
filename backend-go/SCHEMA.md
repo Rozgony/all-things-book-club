@@ -115,7 +115,7 @@ Recurrence patterns for meeting series.
 ---
 
 ### `topics`
-Discussion topics for the spin wheel. Belongs to a chapter and can optionally be scoped to a meeting. Content is encrypted; status is plaintext for real-time sync.
+Discussion topics for the spin wheel. Belongs to a chapter and can optionally be scoped to a meeting. Content (including createdAt) is encrypted; status is plaintext for real-time sync.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -123,24 +123,22 @@ Discussion topics for the spin wheel. Belongs to a chapter and can optionally be
 | `meeting_id` | TEXT | FK → meetings(id) | Optional meeting scope |
 | `chapter_id` | TEXT | NOT NULL, FK → chapters(id) | Chapter ownership/access control |
 | `status` | topic_status | NOT NULL, DEFAULT 'PENDING' | PENDING, SELECTED, DISCUSSED |
-| `encrypted_blob` | BYTEA | - | Encrypted title, description, etc. |
+| `encrypted_blob` | BYTEA | - | Encrypted title, description, createdAt, etc. |
 | `nonce` | BYTEA | - | AES-GCM nonce |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 **Indexes**: chapter_id, meeting_id, status
 
 ---
 
 ### `themes`
-Chapter-scoped tags for organizing topics. Encrypted so the server can't read theme names.
+Chapter-scoped tags for organizing topics. Content (including createdAt) is encrypted so the server can't read theme names.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
 | `id` | TEXT | PRIMARY KEY | - |
 | `chapter_id` | TEXT | NOT NULL, FK → chapters(id) | - |
-| `encrypted_blob` | BYTEA | - | Encrypted theme name |
+| `encrypted_blob` | BYTEA | - | Encrypted theme name, createdAt |
 | `nonce` | BYTEA | - | AES-GCM nonce |
-| `created_at` | TIMESTAMPTZ | NOT NULL, DEFAULT now() | - |
 
 **Indexes**: chapter_id
 
@@ -193,3 +191,6 @@ Many-to-many join table between topics and themes.
 - `010_drop_unused_timestamps.sql` — Dropped `created_at`/`updated_at` columns that were never queried, ordered on, or displayed (`users.created_at`/`updated_at`, `chapters.updated_at`, `chapter_invitations.created_at`, `meetings.created_at`/`updated_at`, `topics.updated_at`)
 - `011_chapters_created_at_to_blob.sql` — Dropped `chapters.created_at`; the client now stores it inside `encrypted_blob` and sorts "my chapters" client-side after decrypting
 - `012_chapter_members_joined_at_to_blob.sql` — Dropped `chapter_members.joined_at`; the client now sets it (encrypted) at invite-accept time and sorts the member list client-side after decrypting
+- `013_drop_invite_status.sql` — Dropped `chapter_invitations.status`; invites are now hard-deleted on accept, reject, and expiry instead of being status-flagged, so every remaining row is implicitly PENDING
+- `014_topics_created_at_to_blob.sql` — Dropped `topics.created_at`; the client now stores it inside `encrypted_blob` (topics have no server-side ordering that depends on it)
+- `015_themes_created_at_to_blob.sql` — Dropped `themes.created_at`; the client now stores it inside `encrypted_blob` and sorts the autocomplete list client-side after decrypting (replaces the old `ORDER BY created_at ASC`)

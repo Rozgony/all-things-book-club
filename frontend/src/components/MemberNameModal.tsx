@@ -37,7 +37,7 @@ export function MemberNameModal({
 		
 		const loadEncryptedName = async () => {
 			try {
-				const chapterKey = getChapterKey(chapter.id)
+				const chapterKey = getChapterKey(chapter.id!)
 				if (!chapterKey) throw new Error('Chapter key not available')
 				const decrypted = await decrypt<{ name: string }>(memberEncryptedBlob, memberNonce, chapterKey)
 				setName(decrypted.name || initialName)
