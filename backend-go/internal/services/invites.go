@@ -32,7 +32,6 @@ type Invite struct {
 	EncryptedChapterKey []byte    `json:"encryptedChapterKey"`
 	KeyNonce            []byte    `json:"keyNonce"`
 	ExpiresAt           time.Time `json:"expiresAt"`
-	Status              string    `json:"status"`
 }
 
 // Create generates a random invite token and stores the invite. It does NOT
@@ -54,8 +53,8 @@ func (s *InviteService) Create(ctx context.Context, chapterID, inviterID string,
 
 	_, err = s.db.Exec(ctx, `
 		INSERT INTO chapter_invitations
-			(id, chapter_id, inviter_id, invite_token, encrypted_chapter_key, key_nonce, inviter_name, status, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', now() + interval '7 days')
+			(id, chapter_id, inviter_id, invite_token, encrypted_chapter_key, key_nonce, inviter_name, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, now() + interval '7 days')
 	`, id, chapterID, inviterID, token, encryptedChapterKey, keyNonce, inviterName)
 	if err != nil {
 		return "", fmt.Errorf("InviteService.Create: insert: %w", err)
@@ -70,10 +69,10 @@ func (s *InviteService) GetByToken(ctx context.Context, token string) (*Invite, 
 	fmt.Printf("token %s", token)
 	var inv Invite
 	err := s.db.QueryRow(ctx, `
-		SELECT ci.inviter_name, ci.encrypted_chapter_key, ci.key_nonce, ci.expires_at, ci.status
+		SELECT ci.inviter_name, ci.encrypted_chapter_key, ci.key_nonce, ci.expires_at
 		FROM chapter_invitations ci
 		WHERE ci.invite_token = $1
-	`, token).Scan(&inv.InviterName, &inv.EncryptedChapterKey, &inv.KeyNonce, &inv.ExpiresAt, &inv.Status)
+	`, token).Scan(&inv.InviterName, &inv.EncryptedChapterKey, &inv.KeyNonce, &inv.ExpiresAt)
 	if err != nil {
 		return nil, fmt.Errorf("InviteService.GetByToken: %w", err)
 	}
@@ -90,14 +89,14 @@ func (s *InviteService) Accept(ctx context.Context, token, userID string, encryp
 	}
 	defer tx.Rollback(ctx)
 
-	var chapterID, storedToken, status string
+	var chapterID, storedToken string
 	var expiresAt time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT chapter_id, invite_token, status, expires_at
+		SELECT chapter_id, invite_token, expires_at
 		FROM chapter_invitations
 		WHERE invite_token = $1
 		FOR UPDATE
-	`, token).Scan(&chapterID, &storedToken, &status, &expiresAt)
+	`, token).Scan(&chapterID, &storedToken, &expiresAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, pgx.ErrNoRows
@@ -110,9 +109,6 @@ func (s *InviteService) Accept(ctx context.Context, token, userID string, encryp
 	// can't silently reintroduce a timing side-channel.
 	if subtle.ConstantTimeCompare([]byte(token), []byte(storedToken)) != 1 {
 		return nil, pgx.ErrNoRows
-	}
-	if status != "PENDING" {
-		return nil, ErrInviteNotPending
 	}
 	if time.Now().After(expiresAt) {
 		return nil, ErrInviteExpired
@@ -151,7 +147,7 @@ func (s *InviteService) Accept(ctx context.Context, token, userID string, encryp
 // DeleteExpired removes pending invites past their expiry, along with the
 // wrapped chapter key each carries. Intended to be run periodically.
 func (s *InviteService) DeleteExpired(ctx context.Context) (int64, error) {
-	tag, err := s.db.Exec(ctx, `DELETE FROM chapter_invitations WHERE status = 'PENDING' AND expires_at < now()`)
+	tag, err := s.db.Exec(ctx, `DELETE FROM chapter_invitations WHERE expires_at < now()`)
 	if err != nil {
 		return 0, fmt.Errorf("InviteService.DeleteExpired: %w", err)
 	}

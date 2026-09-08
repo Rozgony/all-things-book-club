@@ -7,7 +7,6 @@ export interface InviteInfo {
 	encryptedChapterKey: string
 	keyNonce: string
 	expiresAt: string
-	status: 'PENDING' | 'ACCEPTED' | 'EXPIRED'
 }
 
 // Creates a link-only invite: anyone holding the returned URL can accept it.

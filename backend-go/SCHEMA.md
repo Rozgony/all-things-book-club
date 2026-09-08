@@ -63,7 +63,7 @@ Membership records. Each member has their own userKey-wrapped copy of the chapte
 ---
 
 ### `chapter_invitations`
-Pending/accepted invites for members who don't have an account yet. Link-only — anyone holding the token can accept. See `documentation/Invite-Plan.md` for the full flow.
+Pending invites for members who don't have an account yet — rows are hard-deleted on accept, reject, or expiry rather than status-flagged. Link-only — anyone holding the token can accept. See `documentation/Invite-Plan.md` for the full flow.
 
 | Column | Type | Constraints | Notes |
 |--------|------|-------------|-------|
@@ -74,7 +74,6 @@ Pending/accepted invites for members who don't have an account yet. Link-only �
 | `encrypted_chapter_key` | BYTEA | NOT NULL | Chapter key wrapped with a one-time secret (not a public key) |
 | `key_nonce` | BYTEA | NOT NULL | AES-GCM nonce |
 | `inviter_name` | TEXT | NOT NULL, DEFAULT '' | Inviter's display name shown to the invitee |
-| `status` | TEXT | NOT NULL, DEFAULT 'PENDING' | PENDING, ACCEPTED, EXPIRED |
 | `expires_at` | TIMESTAMPTZ | NOT NULL | - |
 
 ---

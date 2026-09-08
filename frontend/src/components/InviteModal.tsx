@@ -147,7 +147,9 @@ export function InviteModal({ chapterId, onClose }: InviteModalProps) {
 
 				{tab === 'email' && (
 					sent ? (
-						<p className="text-sm text-forest">Invite emailed to {email}.</p>
+						<div className="space-y-3 min-h-[229px] flex align-center">
+							<p className="text-sm text-forest">Invite emailed to {email}.</p>
+						</div>
 					) : (
 						<form onSubmit={handleSendEmail} className="space-y-3 min-h-[229px]">
 							<div className="mb-4">

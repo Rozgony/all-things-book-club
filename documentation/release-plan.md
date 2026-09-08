@@ -33,8 +33,18 @@ Two usage tiers share the same codebase and crypto:
 - Domain labels `:userkey` and `:x25519` appended to the shared salt prevent the two derivations from producing the same output
 - **Breaking change** for any existing stored data — requires clearing/re-registering any test accounts created before this change
 
+### ✅ 1. Minimize Invite Metadata
 
-### 1. Strip Timestamps from Content *(Privacy mode only)*
+**Completed.** Hard-delete `chapter_invitations` rows rather than retaining them with a status flag. Each row currently exposes `inviter_id`, `invited_email`, `chapter_id`, and `created_at` in plaintext — enough to reconstruct a social graph even if the invite was never accepted.
+
+- ✅ **On accept**: delete the row after the chapter key has been re-wrapped into `chapter_members` (migration `013_remove_invite_status.sql`)
+- ⏳ **On reject**: not yet implemented; invite remains live for 7 days (acceptable, can be added later as a UX hardening)
+- ✅ **On expiry**: hourly cleanup job (`runExpiredInviteCleanup`) hard-deletes expired rows
+- ✅ **`status` column**: removed (migration `013_remove_invite_status.sql`) — rows are always deleted, never marked expired
+- ✅ **`invited_email`**: eliminated entirely — invites are link/token-only, never persisted with an email address; `CreateAndEmail` only uses email as a send-to address for that one request
+
+
+### ⏳ 2. Strip Timestamps from Content *(Privacy mode only)*
 
 Move sensitive timestamps client-side by encrypting them inside the content blob rather than storing them as plaintext DB columns.
 
@@ -49,13 +59,12 @@ Move sensitive timestamps client-side by encrypting them inside the content blob
 - ✅ `chapter_members.joined_at` moved into the member's `encrypted_blob`, set by the invitee's browser at accept time (not by the inviter at invite-creation time); member list now sorts client-side after decrypting (migration `012_chapter_members_joined_at_to_blob.sql`). Setting a member's name re-encrypts the blob, so `joinedAt` is decrypted and carried forward rather than lost.
 - ⏳ Remaining: `topics.created_at`, `themes.created_at` still need to move into their respective encrypted blobs (same pattern — see `chapters.go`/`chapters.ts` for the reference implementation)
 
-### 2. Password Change / Key Rotation
+### 3. Password Change / Key Rotation
 
 Allow users to change their password without losing access to their encrypted data. See `documentation/Password-Change-Plan.md` for the full implementation plan.
 
-- When a user changes their password, `deriveUserKey` and `deriveX25519KeyPair` both produce new outputs from the new password + existing salt
-- The new `userKey` must re-wrap every `chapter_members.encrypted_chapter_key` the user holds before the old password is discarded
-- The new X25519 keypair must be re-stored in the user profile blob; existing chapter keys were wrapped to the old public key and must be re-encrypted to the new one
+- When a user changes their password, `deriveUserKey` produces a new output from the new password + existing salt
+- The new `userKey` must re-wrap every `chapter_members.encrypted_chapter_key` the user holds before the old password is discarded (decrypt with the old `userKey`, re-encrypt with the new one — chapter keys are wrapped symmetrically per-member, not via any asymmetric keypair)
 - Without this, a user who changes their Supabase auth password loses all their chapter keys permanently — unrecoverable
 - Must be implemented before any real users exist; there is no safe migration path after the fact
 
@@ -63,7 +72,7 @@ Allow users to change their password without losing access to their encrypted da
 
 ## Post-Launch
 
-### 3. Short Log Retention Policy
+### 4. Short Log Retention Policy
 
 Auto-delete server-side **infrastructure logs** (access logs, query logs, error logs) after 48 hours.
 
@@ -73,7 +82,7 @@ Auto-delete server-side **infrastructure logs** (access logs, query logs, error 
 - Goal: cannot be compelled to produce logs that no longer exist
 
 
-### 4. Per-IP Rate Limiting on Public Endpoints
+### 5. Per-IP Rate Limiting on Public Endpoints
 
 Add rate limiting to unauthenticated endpoints to defend against brute-force and enumeration attacks.
 
@@ -83,23 +92,13 @@ Add rate limiting to unauthenticated endpoints to defend against brute-force and
 - **Tradeoff**: legitimate users behind NAT or corporate proxies may hit the limit if multiple people from the same IP try simultaneously; document in UI
 - **Code**: middleware added to the public group in `backend-go/main.go` before the invite handler group
 
-### 5. Hard-Delete Member Records on Leave
+### 6. Hard-Delete Member Records on Leave
 
 When a member leaves a chapter, hard-delete their `chapter_members` row. No soft-delete, no `deleted_at` column.
 
 - The `encrypted_chapter_key`, `key_nonce`, and `ephemeral_public_key` columns live on the `chapter_members` row, so they are automatically destroyed with it — no extra step needed
 - Chapter content (topics, meetings, themes) is scoped to `chapter_id` only with no `user_id` or `created_by` column, so it remains intact for remaining members
 - Implementation: add a `Delete` method to `MemberService` in `backend-go/internal/services/members.go` that runs `DELETE FROM chapter_members WHERE id = $1` — the schema has no soft-delete pattern so nothing else needs to change
-
-### 6. Minimize Invite Metadata
-
-Hard-delete `chapter_invitations` rows rather than retaining them with a status flag. Each row currently exposes `inviter_id`, `invited_email`, `chapter_id`, and `created_at` in plaintext — enough to reconstruct a social graph even if the invite was never accepted.
-
-- **On accept**: delete the row after the chapter key has been re-wrapped into `chapter_members`
-- **On reject**: delete the row immediately
-- **On expiry**: run a periodic cleanup job (or DB trigger) to hard-delete expired rows — do not leave them with `status = 'EXPIRED'`
-- The `status` column and its index can be removed once rows are deleted instead of updated
-- If item 11 (anonymous sign-in) is implemented, `invited_email` may be eliminated entirely — invites would be shared as one-time URLs out-of-band rather than sent to an email address the server knows
 
 ### 7. Ghost Mode *(Privacy mode only)*
 
