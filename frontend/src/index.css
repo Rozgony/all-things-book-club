@@ -9,6 +9,9 @@
 	--color-terracotta-light:#deae9a;
 	--color-terracotta:      #d4967d;
 	--color-terracotta-dark: #b8775f;
+	--color-alert:           #d04a4a;
+	--color-alert-dark:      #b83838;
+	--color-alert-light:     #f5ebe9;
 	--color-cream:           #f5f2ee;
 	--color-stone:           #3f4a49;
 	--color-stone-muted:     #6b7a79;
@@ -83,7 +86,6 @@ h2 {
 h3 {
 	font-size: 1.125rem;
 	line-height: 1.35;
-	margin: 0;
 }
 
 p {

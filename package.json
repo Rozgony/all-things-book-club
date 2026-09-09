@@ -1,13 +1,15 @@
 {
 	"scripts": {
-		"dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\""
+		"reset-supa": "supabase stop --no-backup; supabase start",
+		"dev": "concurrently \"cd backend-go && go run main.go\" \"npm run dev --prefix frontend\"",
+		"dev:local-supabase": "supabase start && concurrently \"cd backend-go && go run main.go\" \"npm run dev --prefix frontend\"",
+		"migrate-dev": "cp backend-go/migrations/*.sql supabase/migrations/ && supabase db reset",
+		"migrate-prod": "cp backend-go/migrations/*.sql supabase/migrations/ && supabase db push"
 	},
 	"devDependencies": {
-		"concurrently": "^10.0.3",
-		"prisma": "^5.22.0"
+		"concurrently": "^10.0.3"
 	},
 	"dependencies": {
-		"@prisma/client": "^5.22.0",
 		"supabase": "^2.109.1"
 	}
 }

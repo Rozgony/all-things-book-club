@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "go build -o all-things-book-club ."
+
+[deploy]
+startCommand = "./all-things-book-club"
+restartPolicyType = "ON_FAILURE"

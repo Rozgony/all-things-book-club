@@ -1,28 +1,23 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { LoginPage } from './pages/LoginPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { ChaptersPage } from './pages/ChaptersPage'
-import { ChapterDetailPage } from './pages/ChapterDetailPage'
-import { MeetingPage } from './pages/MeetingPage'
+import { LoginPage } from './pages/Home/LoginPage'
+import { AcceptInvitePage } from './pages/Invite/AcceptInvitePage'
+import { ProfilePage } from './pages/Profile/ProfilePage'
+import { ChapterDetailPage } from './pages/ChapterDetail/ChapterDetailPage'
+import { MeetingPage } from './pages/Meetings/MeetingPage'
+import { PrivacyPage } from './pages/Privacy/PrivacyPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 function App() {
 	return (
 	  <Routes>
 	    <Route path="/login" element={<LoginPage />} />
+	    <Route path="/accept-invite" element={<AcceptInvitePage />} />
+	    <Route path="/privacy" element={<PrivacyPage />} />
 	    <Route
 	      path="/profile"
 	      element={
 	        <ProtectedRoute>
 	          <ProfilePage />
-	        </ProtectedRoute>
-	      }
-	    />
-	    <Route
-	      path="/chapters"
-	      element={
-	        <ProtectedRoute>
-	          <ChaptersPage />
 	        </ProtectedRoute>
 	      }
 	    />
@@ -42,7 +37,7 @@ function App() {
 	        </ProtectedRoute>
 	      }
 	    />
-	    <Route path="*" element={<Navigate to="/chapters" replace />} />
+	    <Route path="*" element={<Navigate to="/profile" replace />} />
 	  </Routes>
 	)
 }
