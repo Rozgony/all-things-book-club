@@ -6,9 +6,10 @@ import { EmailPasswordForm } from './EmailPasswordForm'
 
 export type LoginButtonProps = {
 	variant?: 'nav' | 'prominent'
+	buttonLabel?: string
 }
 
-export function LoginButton({ variant = 'nav' }: LoginButtonProps) {
+export function LoginButton({ variant = 'nav', buttonLabel }: LoginButtonProps) {
 	const [showLogin, setShowLogin] = useState(false)
 	const [mode, setMode] = useState<'login' | 'signup'>('login')
 	const [email, setEmail] = useState('')
@@ -93,7 +94,7 @@ export function LoginButton({ variant = 'nav' }: LoginButtonProps) {
 	return (
 		<>
 			<button onClick={() => setShowLogin(true)} className={buttonClasses}>
-				Login / Sign-up
+				{buttonLabel || 'Login / Sign-up'}
 			</button>
 
 			{showLogin && (

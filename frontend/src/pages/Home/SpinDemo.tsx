@@ -6,6 +6,7 @@ import {
 	DEMO_TOPIC_DURATION_MS,
 	DEMO_SPIN_DURATION_MS,
 	DEMO_BUBBLE_MAX_CHARS,
+	MODAL_DELAY_MS,
 	demoTopics,
 	demoConversations,
 } from './DemoData'
@@ -45,8 +46,7 @@ export function LoginSpinDemo() {
 
 		const messages = demoConversations[topic.id] ?? []
 		const talkWindow = DEMO_TOPIC_DURATION_MS - DEMO_SPIN_DURATION_MS
-		const interval = messages.length > 0 ? talkWindow / messages.length : talkWindow
-		const MODAL_DELAY_MS = 3000
+		const interval = messages.length > 0 ? talkWindow / (messages.length + 1) : talkWindow
 		messages.forEach((_, i) => {
 			timeoutIdsRef.current.push(
 				window.setTimeout(() => setVisibleCount(c => Math.max(c, i + 1)), MODAL_DELAY_MS + interval * i)

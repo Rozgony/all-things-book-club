@@ -34,12 +34,13 @@ export function LoginPage() {
 				</ol>
 				<p className="py-2">Everyone gets to share and everyone is listened to.</p>
 				<p className="py-2">Each meeting and its topics are stored in our end-to-end encrypted database so you can revisit any interesting topics anytime you want.</p>
-				<p className="py-2">Join today!</p>
+				<p className="py-2"><LoginButton variant="nav" buttonLabel="Join Today!" /></p>
 			</div>
 			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
 				<h3 className="text-white">Want to dig deeper?</h3>
 				<p className="py-2">Have a community of collaborators, researchers, or creators that you want to develop a deeper <a className="text-terracotta hover:text-terracotta-dark underline break-all" href="https://en.wiktionary.org/wiki/scenius">scenious</a> with?</p>
 				<p className="py-2">Create an All Things Book Club Chapter today and deepen your investigations and explorations together!</p>
+				<p className="py-2"><LoginButton variant="nav" buttonLabel="Create Your Community" /></p>
 			</div>
 			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
 				<h3 className="text-white">What about privacy?</h3>
