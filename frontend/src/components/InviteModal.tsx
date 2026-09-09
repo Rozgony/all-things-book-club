@@ -139,7 +139,7 @@ export function InviteModal({ chapterId, onClose }: InviteModalProps) {
 										{copied ? 'Copied!' : 'Copy'}
 									</button>
 								</div>
-								<p className="text-xs text-stone-muted">Anyone with this link can join the chapter.</p>
+								<p className="text-xs text-stone-muted">Anyone with this link can join the chapter. However, it will go dead after it's first use.</p>
 							</div>
 						)}
 					</div>
@@ -179,7 +179,7 @@ export function InviteModal({ chapterId, onClose }: InviteModalProps) {
 							</button>
 							<p className="text-xs text-stone-muted">
 								Sending via email shares the invite key with our email provider (Resend). See our{' '}
-								<a href="/privacy" className="text-terracotta hover:underline">privacy notes</a> for details.
+								<a href="/privacy" className="text-terracotta hover:underline">privacy page</a> for details.
 							</p>
 						</form>
 					)
