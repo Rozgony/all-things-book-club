@@ -3,18 +3,17 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Nav } from '../../components/Nav'
 import { LoadingSpinner } from '../../components/LoadingSpinner'
+import { EmailPasswordForm } from '../../components/EmailPasswordForm'
 import {
-	deriveUserKey,
 	unwrapChapterKeyWithSecret,
 	importChapterKey,
 	fromBase64Url,
 	encryptChapterKey
 } from '../../lib/crypto'
-import { setUserKey, getUserKey } from '../../lib/keyStore'
+import { getUserKey } from '../../lib/keyStore'
+import { deriveAndStoreUserKey } from '../../lib/authKey'
 import { getInvite, acceptInvite, type InviteInfo } from '../../api/invites'
 import { initializeMemberJoinedAt } from '../../api/members'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
 // Handles both new-user and already-logged-in acceptance of a chapter invite.
 // token comes from ?token=, the one-time invite secret comes from the URL
@@ -77,14 +76,7 @@ export function AcceptInvitePage() {
 			const { data: { session } } = await supabase.auth.getSession()
 			if (!session) throw new Error('Not authenticated')
 
-			const saltRes = await fetch(`${API_BASE}/users/me/salt`, {
-				headers: { Authorization: `Bearer ${session.access_token}` },
-			})
-			if (!saltRes.ok) throw new Error('Failed to initialize encryption')
-			const { salt } = await saltRes.json()
-
-			const userKey = await deriveUserKey(password, salt)
-			await setUserKey(userKey)
+			await deriveAndStoreUserKey(session.access_token, password)
 
 			const rawChapterKey = await unwrapInviteSecret()
 			await acceptWithKeys(rawChapterKey)
@@ -100,32 +92,16 @@ export function AcceptInvitePage() {
 		setSubmitError(null)
 		setSubmitting(true)
 		try {
-			console.log('password: '+password);
 			const { data, error } = await supabase.auth.signUp({ email, password })
 			if (error) throw error
 			const accessToken = data.session?.access_token
-			console.log('accessToken: '+accessToken);
 			if (!accessToken) throw new Error('Sign up succeeded but no session was returned.')
 
-			const saltRes = await fetch(`${API_BASE}/users/me/salt`, {
-				headers: { Authorization: `Bearer ${accessToken}` },
-			})
-			console.log('saltRes: ',saltRes);
-
-			if (!saltRes.ok) throw new Error('Failed to initialize encryption')
-			const { salt } = await saltRes.json()
-
-			const userKey = await deriveUserKey(password, salt)
-			await setUserKey(userKey)
-			console.log('userKey: ',userKey);
+			await deriveAndStoreUserKey(accessToken, password)
 
 			const rawChapterKey = await unwrapInviteSecret()
 			await acceptWithKeys(rawChapterKey)
-			console.log('rawChapterKey: ',rawChapterKey);
-
 		} catch (err) {
-			console.log('err: ',err);
-
 			setSubmitError(err instanceof Error ? err.message : 'Failed to accept invite')
 			setSubmitting(false)
 		}
@@ -137,33 +113,16 @@ export function AcceptInvitePage() {
 		setSubmitError(null)
 		setSubmitting(true)
 		try {
-			console.log('password: '+password);
 			const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-			console.log('handleLoginAndAccept: ',{data, error});
-
 			if (error) throw error
 			const accessToken = data.session?.access_token
 			if (!accessToken) throw new Error('Login succeeded but no session was returned.')
 
-			const saltRes = await fetch(`${API_BASE}/users/me/salt`, {
-				headers: { Authorization: `Bearer ${accessToken}` },
-			})
-			console.log('saltRes: ',saltRes);
-
-			if (!saltRes.ok) throw new Error('Failed to initialize encryption')
-			const { salt } = await saltRes.json()
-console.log('salt: ',salt);
-
-			const userKey = await deriveUserKey(password, salt)
-			await setUserKey(userKey)
-console.log('userKey: ',userKey);
+			await deriveAndStoreUserKey(accessToken, password)
 
 			const rawChapterKey = await unwrapInviteSecret()
 			await acceptWithKeys(rawChapterKey)
-			console.log('rawChapterKey: ',rawChapterKey);
-
 		} catch (err) {
-			console.log('err: ',err);
 			setSubmitError(err instanceof Error ? err.message : 'Failed to accept invite')
 			setSubmitting(false)
 		}
@@ -205,115 +164,70 @@ console.log('userKey: ',userKey);
 					</div>
 
 					{authState === 'needs-password' && (
-						<form onSubmit={handleAcceptWithPassword} className="space-y-5">
-							<div>
-								<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
-									Confirm your password to accept
-								</label>
-								<input
-									type="password"
-									value={password}
-									onChange={e => setPassword(e.target.value)}
-									required
-									className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-							</div>
-							{submitError && <p className="text-sm text-red-600">{submitError}</p>}
-							<button
-								type="submit"
-								disabled={submitting}
-								className="w-full py-2.5 px-4 bg-terracotta text-white font-sans tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
-							>
-								{submitting ? 'Joining…' : 'Accept invite'}
-							</button>
-						</form>
+						<EmailPasswordForm
+							onSubmit={handleAcceptWithPassword}
+							showEmail={false}
+							password={password}
+							onPasswordChange={setPassword}
+							passwordLabel="Confirm your password to accept"
+							error={submitError}
+							submitting={submitting}
+							submitLabel="Accept invite"
+							submittingLabel="Joining…"
+						/>
 					)}
 
 					{authState === 'needs-signup' && (
-						<form onSubmit={handleSignUpAndAccept} className="space-y-5">
-							<div>
-								<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Email</label>
-								<input
-									type="email"
-									value={email}
-									onChange={e => setEmail(e.target.value)}
-									required
-									className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-							</div>
-							<div>
-								<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Password</label>
-								<input
-									type="password"
-									value={password}
-									onChange={e => setPassword(e.target.value)}
-									required
-									minLength={8}
-									className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-							</div>
-							{submitError && <p className="text-sm text-red-600">{submitError}</p>}
-							<button
-								type="submit"
-								disabled={submitting}
-								className="w-full py-2.5 px-4 bg-terracotta text-white font-sans tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
-							>
-								{submitting ? 'Joining…' : 'Create account & accept'}
-							</button>
-							<p className="text-sm text-stone-muted text-center">
-								Already have an account?{' '}
-								<button
-									type="button"
-									onClick={() => { setSubmitError(null); setAuthState('needs-login') }}
-									className="text-terracotta hover:underline"
-								>
-									Log in
-								</button>
-							</p>
-						</form>
+						<EmailPasswordForm
+							onSubmit={handleSignUpAndAccept}
+							email={email}
+							onEmailChange={setEmail}
+							password={password}
+							onPasswordChange={setPassword}
+							passwordMinLength={8}
+							error={submitError}
+							submitting={submitting}
+							submitLabel="Create account & accept"
+							submittingLabel="Joining…"
+							footer={
+								<p className="text-sm text-stone-muted text-center">
+									Already have an account?{' '}
+									<button
+										type="button"
+										onClick={() => { setSubmitError(null); setAuthState('needs-login') }}
+										className="text-terracotta hover:underline"
+									>
+										Log in
+									</button>
+								</p>
+							}
+						/>
 					)}
 
 					{authState === 'needs-login' && (
-						<form onSubmit={handleLoginAndAccept} className="space-y-5">
-							<div>
-								<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Email</label>
-								<input
-									type="email"
-									value={email}
-									onChange={e => setEmail(e.target.value)}
-									required
-									className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-							</div>
-							<div>
-								<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Password</label>
-								<input
-									type="password"
-									value={password}
-									onChange={e => setPassword(e.target.value)}
-									required
-									className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-								/>
-							</div>
-							{submitError && <p className="text-sm text-red-600">{submitError}</p>}
-							<button
-								type="submit"
-								disabled={submitting}
-								className="w-full py-2.5 px-4 bg-terracotta text-white font-sans tracking-wide rounded hover:bg-terracotta-dark transition-colors disabled:opacity-50"
-							>
-								{submitting ? 'Joining…' : 'Log in & accept'}
-							</button>
-							<p className="text-sm text-stone-muted text-center">
-								Don't have an account?{' '}
-								<button
-									type="button"
-									onClick={() => { setSubmitError(null); setAuthState('needs-signup') }}
-									className="text-terracotta hover:underline"
-								>
-									Sign up
-								</button>
-							</p>
-						</form>
+						<EmailPasswordForm
+							onSubmit={handleLoginAndAccept}
+							email={email}
+							onEmailChange={setEmail}
+							password={password}
+							onPasswordChange={setPassword}
+							error={submitError}
+							submitting={submitting}
+							submitLabel="Log in & accept"
+							submittingLabel="Joining…"
+							footer={
+								<p className="text-sm text-stone-muted text-center">
+									Don't have an account?{' '}
+									<button
+										type="button"
+										onClick={() => { setSubmitError(null); setAuthState('needs-signup') }}
+										className="text-terracotta hover:underline"
+									>
+										Sign up
+									</button>
+								</p>
+							}
+						/>
 					)}
 				</div>
 			</div>
