@@ -1,37 +1,72 @@
+import { encrypt } from '../lib/crypto'
+import { getChapterKey } from '../lib/keyStore'
 import { getAuthHeaders } from './auth'
-// import { type Topic, type TopicStatus, type MeetingWithTopics } from './types'
-import { type Topic, type TopicStatus, type Meeting } from './types'
+import { type Topic, type TopicStatus } from './types'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
-// export async function getMeeting(id: string): Promise<MeetingWithTopics> {
-export async function getMeeting(id: string): Promise<Meeting> {
+export async function createTopic(chapterID: string, meetingId: string, title: string, description?: string, url?: string): Promise<Topic> {
 	const headers = await getAuthHeaders()
-	const res = await fetch(`${API_BASE}/meetings/${id}`, { headers })
-	if (!res.ok) throw new Error('Failed to fetch meeting')
-	return res.json()
-}
+	const chapterKey = getChapterKey(chapterID)
 
-export async function createTopic(meetingId: string, title: string, description?: string): Promise<Topic> {
-	const headers = await getAuthHeaders()
+	const createdAt = new Date().toISOString()
+	const { encryptedBlob, nonce } = await encrypt(
+		{ title, description, url, createdAt },
+		chapterKey
+	)
 	const res = await fetch(`${API_BASE}/topics`, {
 		method: 'POST',
 		headers,
-		body: JSON.stringify({ meetingId, title, description })
+		body: JSON.stringify({ chapterID, meetingId, encryptedBlob, nonce })
 	})
+
 	if (!res.ok) throw new Error('Failed to create topic')
-	return res.json()
+	const response = await res.json()
+console.log({response});
+	return {
+		id: response.id,
+		title,
+		url,
+		description: description || '',
+		createdAt,
+		status: response.status,
+		chapterId: response.chapterId, 
+		meetingId: response.meetingId,
+		createdById: response.createdById,
+	} as Topic
 }
 
-export async function updateTopicStatus(id: string, wheelStatus: TopicStatus): Promise<Topic> {
+export async function updateTopicStatus(id: string, topic: Topic, status: TopicStatus): Promise<Topic> {
 	const headers = await getAuthHeaders()
 	const res = await fetch(`${API_BASE}/topics/${id}`, {
 		method: 'PATCH',
 		headers,
-		body: JSON.stringify({ wheelStatus })
+		body: JSON.stringify({ status })
 	})
 	if (!res.ok) throw new Error('Failed to update topic')
-	return res.json()
+
+	return {
+		...topic,
+		id,
+		status,
+	} as Topic
+}
+
+export async function updateTopicContent(id: string, chapterId: string, createdAt: string, title: string, description?: string, url?: string): Promise<Topic> {
+	const headers = await getAuthHeaders()
+	const chapterKey = getChapterKey(chapterId)
+	if (!chapterKey) throw new Error('Chapter key not available for encryption')
+
+	const { encryptedBlob, nonce } = await encrypt({ title, description, url, createdAt }, chapterKey)
+
+	const res = await fetch(`${API_BASE}/topics/${id}`, {
+		method: 'PATCH',
+		headers,
+		body: JSON.stringify({ encryptedBlob, nonce })
+	})
+	if (!res.ok) throw new Error('Failed to update topic')
+
+	return { id, title, description: description ?? null, createdAt } as unknown as Topic
 }
 
 export async function deleteTopic(id: string): Promise<void> {

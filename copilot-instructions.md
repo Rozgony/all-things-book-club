@@ -9,14 +9,14 @@ This file consolidates core collaboration principles (MASTER.md) with project-sp
 - **Project Name:** all-things-book-club
 - **Purpose:** Website for hosting the "All Things Book Club" monthly online meetings
 - **Project Type:** Personal learning project
-- **Learning Focus:** Backend development (Postgres, Node.js/backend framework, database design, APIs)
+- **Learning Focus:** Full-stack development with Go backend and E2EE
 
-### Learning Objectives: Backend Development
+### Learning Objectives
 
 I will teach you backend concepts and best practices throughout this project by:
 - **Explaining why** backend decisions are made (not just what to do)
 - **Introducing concepts gradually** as they become relevant to features you're building
-- **Providing context** about database design, API patterns, authentication, etc.
+- **Providing context** about database design, API patterns, authentication, E2EE, etc.
 - **Suggesting best practices** appropriate for your experience level
 - **Explaining trade-offs** in backend architecture and design patterns
 
@@ -34,24 +34,48 @@ I will teach you backend concepts and best practices throughout this project by:
 **Frontend**
 - Framework: React
 - Language: TypeScript
-- Build Tool: (To be determined)
+- Build Tool: Vite
+- Hosting: Vercel
+- E2EE: Web Crypto API (AES-256-GCM) — all sensitive content is encrypted client-side before leaving the browser; the server stores only ciphertext
 
 **Backend**
-- Runtime/Framework: (To be determined - Node.js, Supabase Functions, or other)
-- Language: TypeScript
+- Language: Go
+- HTTP Router: chi
+- Database Driver: pgx/v5 (raw SQL, no ORM)
 - Database: PostgreSQL (via Supabase)
-- Authentication: (To be determined)
+- Authentication: Supabase Auth (JWT validation in middleware)
+- Hosting: Railway
+- Migrations: plain `.sql` files in `backend-go/migrations/`, synced to `supabase/migrations/` via `migrate-dev`/`migrate-prod` npm scripts
 
 **Infrastructure**
-- Hosting: Supabase (handles Postgres, Auth, Realtime, Storage)
+- Database: Supabase (managed PostgreSQL + Auth)
+
+### Workspace Structure
+
+- `backend-go/` — Go backend: `internal/routes/`, `internal/services/`, `internal/middleware/`, `internal/db/`, `internal/crypto/`, `migrations/`
+- `frontend/` — React + TypeScript + Vite frontend: `src/api/`, `src/lib/` (crypto, keyStore), `src/pages/`, `src/components/`
+- `supabase/migrations/` — canonical SQL migrations (synced from `backend-go/migrations/`)
+- There is **no** `backend/` directory — the old Node.js/Express backend has been fully removed
+
+### E2EE Architecture
+
+- Each chapter has a symmetric **chapter key** (AES-256-GCM) generated on creation
+- Each user has an **X25519 keypair** deterministically derived from their password via Argon2id at login; the public half is stored plaintext in `users.public_key`, the private half is never persisted (re-derived on every login)
+- The chapter key is wrapped per-member via ephemeral-sender **ECDH (X25519) + HKDF-SHA256** + AES-256-GCM, and stored in `chapter_members.encrypted_chapter_key` / `key_nonce` / `ephemeral_public_key`
+- A separate PBKDF2-derived **`userKey`** still exists but is only used to encrypt the user's profile blob (`users.encrypted_blob`) — it plays no role in chapter-key wrapping
+- Invites: an existing user's copy of the chapter key is wrapped directly via ECDH; a new user's copy is wrapped with a one-time random secret and emailed as a URL hash fragment, then re-wrapped to their real public key when they accept — see `documentation/Invite-Plan.md`
+- All sensitive content (chapter name/description, member profiles, topics, meeting details) is encrypted with the chapter key before being sent to the server
+- Encrypted fields are stored as `encrypted_blob` (base64) + `nonce` (base64) columns
+- Decrypted fields are populated client-side after fetching; the server never sees plaintext
+- Both the `userKey` and the X25519 private key are held in memory via `src/lib/keyStore.ts` for the duration of the session
 
 ### Known Constraints & Considerations
 
-- Personal learning project—focus on understanding over speed
-- **Monorepo structure**: `backend/` and `frontend/` are separate packages with their own `package.json`, `tsconfig.json`, `node_modules`. Keep them isolated and independent
-- **Monorepo best practices**: Each package manages its own dependencies; coordinate shared concerns in `prisma/` (schema, migrations); use consistent naming/patterns across packages; be explicit about interdependencies
-- Supabase provides managed PostgreSQL, so no infrastructure setup needed
-- Monthly online meetings suggest real-time collaboration features may be useful later
+- Personal learning project — focus on understanding over speed
+- **Monorepo structure**: `backend-go/` and `frontend/` are separate; Go modules in `backend-go/go.mod`, frontend deps in `frontend/package.json`
+- No ORM — use raw SQL with pgx/v5; migrations are plain `.sql` files
+- Supabase provides managed PostgreSQL and Auth — no infrastructure setup needed
+- E2EE is a core architectural constraint: the server must never receive or store plaintext sensitive data
 
 ---
 
