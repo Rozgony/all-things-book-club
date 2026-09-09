@@ -181,18 +181,4 @@ Many-to-many join table between topics and themes.
 
 ## Migration History
 
-- `001_init.sql` — Initial schema with E2EE (users, chapters, members, meetings, topics, themes, recurring_rules)
-- `002_topics_meeting_id.sql` — Added `meeting_id` FK to topics
-- `003_member_encypted_data.sql` — Added `chapter_members.encrypted_blob`/`nonce`
-- `004_public_key.sql` — Added `users.public_key` (X25519)
-- `005_invitations.sql` — Added `chapter_members.ephemeral_public_key`; created `chapter_invitations`
-- `006_simplify_keys.sql` — Removed `users.public_key` and `chapter_members.ephemeral_public_key`; moved to symmetric key-wrap model
-- `007_enable_rls.sql` — Enabled RLS on all application tables
-- `008_remove_invited_email.sql` — Removed `invited_email` column; invites are link-only with no per-email restriction
-- `009_add_inviter_name.sql` — Added `inviter_name` column to store inviter's display name
-- `010_drop_unused_timestamps.sql` — Dropped `created_at`/`updated_at` columns that were never queried, ordered on, or displayed (`users.created_at`/`updated_at`, `chapters.updated_at`, `chapter_invitations.created_at`, `meetings.created_at`/`updated_at`, `topics.updated_at`)
-- `011_chapters_created_at_to_blob.sql` — Dropped `chapters.created_at`; the client now stores it inside `encrypted_blob` and sorts "my chapters" client-side after decrypting
-- `012_chapter_members_joined_at_to_blob.sql` — Dropped `chapter_members.joined_at`; the client now sets it (encrypted) at invite-accept time and sorts the member list client-side after decrypting
-- `013_drop_invite_status.sql` — Dropped `chapter_invitations.status`; invites are now hard-deleted on accept, reject, and expiry instead of being status-flagged, so every remaining row is implicitly PENDING
-- `014_topics_created_at_to_blob.sql` — Dropped `topics.created_at`; the client now stores it inside `encrypted_blob` (topics have no server-side ordering that depends on it)
-- `015_themes_created_at_to_blob.sql` — Dropped `themes.created_at`; the client now stores it inside `encrypted_blob` and sorts the autocomplete list client-side after decrypting (replaces the old `ORDER BY created_at ASC`)
+- `001_init.sql` — Full schema, consolidated from the original 18-migration history now that there's no production data to preserve incrementally. Reflects the current E2EE design directly: symmetric userKey-wrapped chapter keys (no X25519/public keys), link-only hard-deleted invites, timestamps moved into encrypted blobs where the server has no functional need for them, and the meeting location/recurring-rules features.

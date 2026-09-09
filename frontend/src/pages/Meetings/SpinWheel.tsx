@@ -102,8 +102,8 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 
 	}, [pendingTopics.map(t => t.id).join(',')])
 
-	const handleSpin = () => {
-		if (meeting.status !== 'ACTIVE') {
+	const handleSpin = (bypassStatusCheck?: boolean) => {
+		if (!bypassStatusCheck && meeting.status !== 'ACTIVE') {
 			setShowStartMeeting(true);
 			return;
 		}
@@ -163,7 +163,7 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 	return (
 		<div className="gap-4">
 			<button
-				onClick={handleSpin}
+				onClick={() => handleSpin()}
 				disabled={spinning}
 				className="px-4 py-2 bg-forest text-white font-heading tracking-wide rounded hover:bg-forest-dark transition-colors disabled:opacity-50 text-lg absolute z-50"
 			>
@@ -185,6 +185,8 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 				onConfirm={() => {
 					updateMeetingStatus(MeetingStatus.ACTIVE)
 					setShowStartMeeting(false)
+					// Small delay so the modal has time to close before the wheel starts spinning
+    				requestAnimationFrame(() => requestAnimationFrame(() => handleSpin(true)))
 				}}
 				onCancel={() => setShowStartMeeting(false)}
 				confirming={false}

@@ -93,8 +93,8 @@ func (s *RecurringRuleService) Create(ctx context.Context, input RecurringRuleIn
 	var m Meeting
 	err = tx.QueryRow(ctx, `
 		INSERT INTO meetings (id, chapter_id, duration, scheduled_at, recurring_group_id,
-			created_at, updated_at, status, location_encrypted_blob, location_nonce)
-		VALUES ($1, $2, $3, $4, $5, now(), now(), 'SCHEDULED', $6, $7)
+			status, location_encrypted_blob, location_nonce)
+		VALUES ($1, $2, $3, $4, $5, 'SCHEDULED', $6, $7)
 		RETURNING id, chapter_id, duration, scheduled_at, status, recurring_group_id
 	`, meetingID, input.ChapterID, input.Duration, input.StartDate, ruleID,
 		input.LocationEncryptedBlob, input.LocationNonce).
@@ -287,8 +287,8 @@ func (s *RecurringRuleService) GenerateUpcomingOccurrences(ctx context.Context) 
 
 		_, err = s.db.Exec(ctx, `
 			INSERT INTO meetings (id, chapter_id, scheduled_at, duration, status, recurring_group_id,
-				location_encrypted_blob, location_nonce, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, 'SCHEDULED', $5, $6, $7, now(), now())
+				location_encrypted_blob, location_nonce)
+			VALUES ($1, $2, $3, $4, 'SCHEDULED', $5, $6, $7)
 		`, meetingID, c.rule.ChapterID, next, c.rule.Duration, c.rule.ID, c.locationEncryptedBlob, c.locationNonce)
 		if err != nil {
 			return fmt.Errorf("RecurringRuleService.GenerateUpcomingOccurrences: insert meeting for rule %s: %w", c.rule.ID, err)
