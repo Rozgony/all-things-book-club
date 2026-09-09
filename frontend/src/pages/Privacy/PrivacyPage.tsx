@@ -4,7 +4,7 @@ import { Nav } from '../../components/Nav'
 export function PrivacyPage() {
 	return (
 		<>
-			<Nav />
+			<Nav showLogin={true} showLogout={true} showProfile={true} />
 			<div className="flex items-center justify-center min-h-screen bg-cream">
 				<div className="w-full max-w-lg px-8 py-10 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 					<h2 className="font-heading text-forest-deep mb-3">Privacy & Encryption</h2>
