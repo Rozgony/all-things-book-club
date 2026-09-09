@@ -11,31 +11,29 @@ export interface ChapterMember {
 	userId: string
 	chapterId: string
 	role: 'ADMIN' | 'MEMBER'
-	joinedAt: string
 	users?: UserProfile[]
-}
-
-export enum VisibilityLevel {
-	ACCEPTING_MEMBERS = 'ACCEPTING_MEMBERS',
-	INVITE_ONLY = 'INVITE_ONLY',
-	MEMBERS_ONLY = 'MEMBERS_ONLY'
+	encryptedChapterKey?: string | null
+	keyNonce?: string | null
+	encryptedBlob?: string | null
+	nonce?: string | null
+	// Decrypted fields — populated client-side after decryption
+	name?: string
+	joinedAt?: string
 }
 
 export interface Chapter {
-	id: string
-	name: string
-	description: string | null
-	creatorId: string
-	createdAt: string
-	updatedAt: string
-	members: ChapterMember[]
-	visibility: VisibilityLevel
-}
-
-export const visibilityReadable = {
-	ACCEPTING_MEMBERS: 'Accepting Members (Public)',
-	INVITE_ONLY: 'Invite Only (Public)',
-	MEMBERS_ONLY: 'Members Only (Private)'
+  id: string
+  creatorId: string
+  isPublic: boolean
+  encryptedBlob: string | null
+  nonce: string | null
+  encryptedChapterKey: string | null
+  keyNonce: string | null
+  chapterMembers?: ChapterMember[]
+  // Decrypted fields — populated client-side after decryption
+  name: string
+  description: string | null
+  createdAt: string
 }
 
 export enum MeetingStatus {
@@ -43,6 +41,22 @@ export enum MeetingStatus {
 	ACTIVE = 'ACTIVE',
 	COMPLETED = 'COMPLETED',
 	CANCELLED = 'CANCELLED'
+}
+
+export enum MeetingFrequency {
+	MINUTES = 'MINUTES',
+	DAILY = 'DAILY',
+	WEEKLY = 'WEEKLY',
+	MONTHLY = 'MONTHLY',
+	MONTHLY_WEEKDAY = 'MONTHLY_WEEKDAY'
+}
+
+export const meetingFrequencyReadable = {
+	MINUTES: 'Minutes',
+	DAILY: 'Days',
+	WEEKLY: 'Weeks',
+	MONTHLY: 'Months (same date)',
+	MONTHLY_WEEKDAY: 'Months (same weekday, e.g. 1st Thursday)'
 }
 
 export enum SpinnerSize { 
@@ -57,10 +71,16 @@ export interface Meeting {
 	duration: number
 	status: MeetingStatus
 	recurringGroupId: string | null
-	createdAt: string
-	updatedAt: string
+	encryptedBlob?: string | null
+	nonce?: string | null
+	locationEncryptedBlob?: string | null
+	locationNonce?: string | null
 	chapter?: Chapter
 	topics?: Topic[]
+	// Decrypted fields — populated client-side after decryption
+	videoCallLink?: string | null
+	physicalAddress?: string | null
+	discussionNotes?: string | null
 }
 
 export const meetingStatusReadable = {
@@ -70,19 +90,39 @@ export const meetingStatusReadable = {
 	CANCELLED: 'Cancelled'
 }
 
+export interface RecurringRule {
+	id: string
+	chapterId: string
+	frequency: MeetingFrequency
+	interval: number
+	startDate: string
+	endDate: string | null
+	duration: number
+}
+
 export type TopicStatus = 'PENDING' | 'SELECTED' | 'DISCUSSED'
+
+export interface Theme {
+	id: string
+	chapterId: string
+	encryptedBlob?: string | null
+	nonce?: string | null
+	// Decrypted fields — populated client-side after decryption
+	name: string
+	createdAt: string
+}
 
 export interface Topic {
 	id: string
-	meetingId: string
+	chapterId: string
+	url?: string
+	createdById: string | null
+	status: TopicStatus
+	encryptedBlob?: string
+	nonce?: string
+	themeIds?: string[] | null
+	// Decrypted fields — populated client-side after decryption
 	title: string
 	description: string | null
-	createdById: string | null
-	wheelStatus: TopicStatus
 	createdAt: string
-	updatedAt: string
 }
-
-// export interface MeetingWithTopics extends Meeting {
-// 	topics: Topic[]
-// }

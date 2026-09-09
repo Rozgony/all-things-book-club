@@ -22,11 +22,11 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 - **Behavior**: Selected topic appears in a modal. User can skip it or remove it once discussed.
 - **Rendering**: Canvas or SVG (TBD based on D3.js capabilities)
 
-### Invitations & Membership
-- **Invite scope**: Any chapter member can invite anyone by email
-- **New users**: Can invite by email even if they don't have an account yet (they get signup link)
-- **Chapters view**: Users see active chapters + pending invitations in one place
-- **Invitation flow**: Email search → send invite → pending → accept/reject → member
+### Invitations & Membership — **Implemented** (see `documentation/Invite-Plan.md`)
+- **Invite scope**: Chapter admins only (enforced server-side via `db.IsAdmin`)
+- **Existing user** (has a `public_key` on file): chapter key is wrapped directly for them via X25519 ECDH — added to the chapter immediately, no pending state
+- **New user** (no account yet): chapter key is wrapped with a one-time random secret; an email is sent with an accept link carrying the secret in the URL hash fragment (never sent to the server); they sign up (or log in) and accept, which re-wraps the key to their own public key
+- **Key exchange**: X25519 keypair deterministically derived from password via Argon2id at login; chapter keys wrapped per-recipient via ephemeral-sender ECDH + HKDF-SHA256 + AES-256-GCM
 
 ### Data Visibility: Past Meeting Topics
 - Show: **title, themes, who suggested it, and notes** (comprehensive view)
@@ -49,25 +49,40 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 ## Tech Stack
 
 ### Backend
-- **Runtime**: Node.js 24
-- **Framework**: Express 5.2.1
-- **Language**: TypeScript
-- **ORM**: Prisma 5.9.0
-- **Database**: PostgreSQL (via Supabase)
+- **Runtime**: Go
+- **Framework**: chi (HTTP router)
+- **Language**: Go
+- **Database**: PostgreSQL (via Supabase), raw SQL with pgx/v5
 - **Auth**: Supabase Auth (JWT-based)
-- **Testing**: Vitest + Supertest
+- **Migrations**: Plain `.sql` files in `backend-go/migrations/`, synced to `supabase/migrations/`
 
 ### Frontend
-- 
+- **Framework**: React
+- **Language**: TypeScript
+- **Build Tool**: Vite
+- **Hosting**: Vercel
+- **E2EE**: Web Crypto API (AES-256-GCM) for content encryption; `@noble/curves` (X25519) + `@noble/hashes` (Argon2id, HKDF-SHA256) for asymmetric chapter-key exchange between members
+
+### Infrastructure
+- **Backend Hosting**: Railway
+- **Database**: Supabase (managed PostgreSQL)
+- **Auth**: Supabase Auth
 
 ---
 
 ## Code Style & Conventions
 
-- Services: functional exports, direct Prisma calls, no validation (validation in routes)
-- Routes: try/catch on every handler, `AppError` for user-facing errors, `next(err)` for middleware
-- Tests: Vitest + `vi.mock()` for Prisma/Supabase, Supertest for route integration tests
-- `__tests__/` folder colocated with source (`services/`, `routes/`, `middleware/`)
+### Backend (Go)
+- Services: methods on a struct with `*pgxpool.Pool`, named `<Resource>Service`
+- Routes: `handle<Action>` handlers in `internal/routes/`, decode JSON body → call service → encode response
+- Error handling: `handleError(w, err)` with typed errors from `internal/routes/errors.go`
+- Migrations: plain `.sql` files in `backend-go/migrations/` — copy to `supabase/migrations/` via `migrate-dev`/`migrate-prod` scripts
+
+### Frontend (TypeScript/React)
+- API layer in `src/api/` — one file per resource, async functions returning typed models
+- E2EE: encrypt before sending, decrypt after receiving; server never sees plaintext sensitive data
+- Encrypted fields use `encryptedBlob` (base64) + `nonce` (base64); decrypted fields populated client-side
+- Two keys held in memory via `src/lib/keyStore.ts`, both derived from the user's password at login (never persisted): a PBKDF2 `userKey` (profile blob only) and an Argon2id-derived X25519 private key (chapter-key wrapping/unwrapping)
 
 ---
 
@@ -89,7 +104,8 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 
 ---
 
-## New Stack & Hosting
-- Frontend: React on Vercel
-- Backend: Go on Railway
-- DB: Postgres on Supabase
+## Workspace Structure
+- `backend-go/` — Go backend (chi router, pgx, services/routes/middleware layers)
+- `frontend/` — React + TypeScript + Vite frontend
+- `supabase/migrations/` — canonical SQL migrations (synced from `backend-go/migrations/`)
+- No `backend/` directory — the old Node.js/Express backend has been removed
