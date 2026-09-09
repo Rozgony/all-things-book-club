@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "go build -o all-things-book-club ./..."
+buildCommand = "go build -o all-things-book-club ."
 
 [deploy]
 startCommand = "./all-things-book-club"
