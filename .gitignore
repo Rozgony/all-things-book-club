@@ -6,3 +6,7 @@ dist/
 build/
 *.log
 seed.sql
+
+# Go binaries
+backend-go/all-things-book-club
+backend-go/server

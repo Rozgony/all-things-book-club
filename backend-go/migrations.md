@@ -6,6 +6,16 @@ Migration files live in `backend-go/migrations/` and must also be copied to `sup
 
 Requires Docker and the Supabase CLI (`brew install supabase/tap/supabase`).
 
+### Using npm scripts (recommended)
+
+```bash
+# Apply all migrations (wipes and recreates local DB)
+# This also copies all migrations from backend-go/migrations/ to supabase/migrations/
+npm run migrate-dev
+```
+
+### Manual CLI commands
+
 ```bash
 # Start local Supabase (first time or after Docker restart)
 supabase start
@@ -25,6 +35,16 @@ The local connection string is printed by `supabase start`. Put it in `backend-g
 ## Production (Supabase)
 
 Never run migrations directly against production. Use the Supabase dashboard or the linked CLI.
+
+### Using npm scripts (recommended)
+
+```bash
+# Push migrations to production
+# This also copies all migrations from backend-go/migrations/ to supabase/migrations/
+npm run migrate-prod
+```
+
+### Manual CLI commands
 
 ```bash
 # Link CLI to your production project (one-time setup)

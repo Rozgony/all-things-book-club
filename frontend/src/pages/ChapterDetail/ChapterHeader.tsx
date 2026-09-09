@@ -1,7 +1,4 @@
-import { useState } from 'react'
 import { type Chapter } from '../../api/types'
-
-import { ConfirmModal } from '../../components/ConfirmModal'
 
 interface ChapterHeaderProps {
 	chapter: Partial<Chapter>
@@ -12,13 +9,11 @@ interface ChapterHeaderProps {
 	saving: boolean
 	deleting: boolean
 	isAdmin: boolean
-	isCreator: boolean
 	onEdit: () => void
 	onEditNameChange: (value: string) => void
 	onEditDescriptionChange: (value: string) => void
 	onSave: (e: React.FormEvent) => void
 	onCancel: () => void
-	onDelete: () => void
 }
 
 export function ChapterHeader({
@@ -28,17 +23,13 @@ export function ChapterHeader({
 	editDescription,
 	editError,
 	saving,
-	deleting,
 	isAdmin,
-	isCreator,
 	onEdit,
 	onEditNameChange,
 	onEditDescriptionChange,
 	onSave,
 	onCancel,
-	onDelete,
 }: ChapterHeaderProps) {
-	const [showConfirm, setShowConfirm] = useState(false)
 	if (editing) {
 		return (
 			<form onSubmit={onSave} className="bg-white rounded border border-warm-border p-6 space-y-4 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
@@ -96,26 +87,6 @@ export function ChapterHeader({
 						>
 							Edit
 						</button>
-						{isCreator && (
-							<button
-								onClick={() => setShowConfirm(true)}
-								disabled={deleting}
-								className="px-3 py-1 text-sm border border-red-200 text-red-600 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
-							>
-								{deleting ? 'Deleting…' : 'Delete'}
-							</button>
-
-						)}
-						{showConfirm && (
-							<ConfirmModal
-								header="Delete Chapter?"
-								bodyText={<>This will permanently delete the the <span className="text-stone font-medium">{chapter.name}</span> chapter.</>}
-								confirmText="Delete"
-								onConfirm={onDelete}
-								onCancel={() => setShowConfirm(false)}
-								confirming={deleting}
-							/>
-						)}
 					</div>
 				)}
 			</div>

@@ -1,7 +1,8 @@
 {
 	"scripts": {
-		"dev:express": "supabase start && concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-		"dev": "supabase start && concurrently \"cd backend-go && go run main.go\" \"npm run dev --prefix frontend\"",
+		"reset-supa": "supabase stop --no-backup; supabase start",
+		"dev": "concurrently \"cd backend-go && go run main.go\" \"npm run dev --prefix frontend\"",
+		"dev:local-supabase": "supabase start && concurrently \"cd backend-go && go run main.go\" \"npm run dev --prefix frontend\"",
 		"migrate-dev": "cp backend-go/migrations/*.sql supabase/migrations/ && supabase db reset",
 		"migrate-prod": "cp backend-go/migrations/*.sql supabase/migrations/ && supabase db push"
 	},

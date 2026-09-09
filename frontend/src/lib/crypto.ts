@@ -1,11 +1,17 @@
 /**
- * Crypto primitives for E2EE using the browser's built-in Web Crypto API.
+ * Crypto primitives for E2EE using the browser's built-in Web Crypto API
  *
  * Key hierarchy:
- *   password + server_salt → userKey  (derived once per session via PBKDF2)
- *   userKey + random → chapterKey     (generated once per chapter)
+ *   password + server_salt → userKey        (Argon2id — profile blob encryption only)
+ *   password + server_salt → userKey        (Argon2id — chapter key wrapping)
  *   chapterKey → encrypts all chapter content (meetings, topics, themes)
+ *
+ * The two derivations share the server-provided salt but use different
+ * domain-separation labels appended to it, so compromising one derived
+ * value gives no shortcut toward the other.
  */
+
+import { argon2id } from '@noble/hashes/argon2.js'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -23,6 +29,16 @@ function fromBase64(str: string): Uint8Array<ArrayBuffer> {
   return bytes
 }
 
+// Decodes base64url (RFC 4648 §5, unpadded) — the alphabet used for the
+// invite secret in the URL hash fragment.
+function fromBase64Url(str: string): Uint8Array<ArrayBuffer> {
+  const padded = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padding = padded.length % 4 === 0 ? '' : '='.repeat(4 - (padded.length % 4))
+  return fromBase64(padded + padding)
+}
+
+export { toBase64, fromBase64, fromBase64Url }
+
 // ─── Key Derivation ──────────────────────────────────────────────────────────
 
 /**
@@ -30,27 +46,14 @@ function fromBase64(str: string): Uint8Array<ArrayBuffer> {
  * server-provided salt. This is deterministic — same password + salt
  * always produces the same key, on any device.
  *
- * Uses PBKDF2-SHA256 with 600,000 iterations (NIST recommended).
+ * Uses Argon2id (19 MiB, t=2, p=1) with a `:userkey` domain label.
  */
 export async function deriveUserKey(password: string, saltHex: string): Promise<CryptoKey> {
-  const encoder = new TextEncoder()
+  const seed = argon2id(password, saltHex + ':userkey', { t: 2, m: 19456, p: 1, dkLen: 32 })
 
-  // Import the raw password as key material
-  const keyMaterial = await crypto.subtle.importKey(
+  return crypto.subtle.importKey(
     'raw',
-    encoder.encode(password),
-    'PBKDF2',
-    false,
-    ['deriveKey']
-  )
-
-  // Convert hex salt to bytes
-  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)))
-
-  // Derive a 256-bit AES-GCM key
-  return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: 600_000, hash: 'SHA-256' },
-    keyMaterial,
+    seed,
     { name: 'AES-GCM', length: 256 },
     true,        // extractable — needed to export to sessionStorage for reload support
     ['encrypt', 'decrypt', 'wrapKey', 'unwrapKey']
@@ -108,9 +111,58 @@ export async function decryptChapterKey(
     userKey,
     { name: 'AES-GCM', iv: fromBase64(keyNonce) },
     { name: 'AES-GCM', length: 256 },
-    false,
+    true,   // extractable — invites re-wrap this key, which requires exporting it
     ['encrypt', 'decrypt']
   )
+}
+
+/**
+ * Wraps a chapter key with a one-time random secret instead of a public
+ * key. Used only for new-user invites, where the invitee has no keypair
+ * yet — the secret travels in the invite email's URL hash fragment,
+ * which is never sent to the server.
+ */
+export async function wrapChapterKeyWithSecret(
+  chapterKey: CryptoKey,
+  inviteSecret: Uint8Array
+): Promise<{ encryptedChapterKey: string; keyNonce: string }> {
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, { name: 'AES-GCM', length: 256 }, false, ['encrypt'])
+  const rawChapterKey = await crypto.subtle.exportKey('raw', chapterKey)
+
+  const nonce = crypto.getRandomValues(new Uint8Array(12))
+  const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, wrapKey, rawChapterKey)
+
+  return {
+    encryptedChapterKey: toBase64(new Uint8Array(ciphertext)),
+    keyNonce: toBase64(nonce),
+  }
+}
+
+/**
+ * Inverse of `wrapChapterKeyWithSecret`. Returns the raw chapter key bytes
+ * so the caller can immediately re-wrap them with the invitee's own
+ * public key via `wrapChapterKeyForRecipient`.
+ */
+export async function unwrapChapterKeyWithSecret(
+  encryptedChapterKey: string,
+  keyNonce: string,
+  inviteSecret: Uint8Array
+): Promise<Uint8Array> {
+  const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
+  console.log('unwrapChapterKeyWithSecret',{wrapKey});
+  
+  const rawChapterKey = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: fromBase64(keyNonce) },
+    wrapKey,
+    fromBase64(encryptedChapterKey)
+  )
+  console.log('unwrapChapterKeyWithSecret',{rawChapterKey});
+  return new Uint8Array(rawChapterKey)
+}
+
+/** Imports raw chapter key bytes (e.g. from `unwrapChapterKeyWithSecret`) as a usable CryptoKey. */
+export async function importChapterKey(rawChapterKey: Uint8Array): Promise<CryptoKey> {
+  return crypto.subtle.importKey('raw', rawChapterKey as BufferSource, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt'])
 }
 
 // ─── Content Encryption ──────────────────────────────────────────────────────

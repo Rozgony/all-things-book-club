@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -28,12 +27,9 @@ type User struct {
 	ID            string `json:"id"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
-	CreatedAt     time.Time `json:"createdAt"`
-	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
-// GetOrCreateSalt returns the user's key derivation salt, creating one if it doesn't exist yet.
-// The frontend uses this salt with the user's password to derive their encryption key.
+// GetOrCreateSalt is the frontend's first call on login — it needs the salt
 func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (string, error) {
 	// Try to get existing salt
 	var salt string
@@ -54,8 +50,8 @@ func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (strin
 	salt = hex.EncodeToString(saltBytes)
 
 	_, err = s.db.Exec(ctx, `
-		INSERT INTO users (id, key_derivation_salt, created_at, updated_at)
-		VALUES ($1, $2, now(), now())
+		INSERT INTO users (id, key_derivation_salt)
+		VALUES ($1, $2)
 		ON CONFLICT (id) DO UPDATE SET key_derivation_salt = EXCLUDED.key_derivation_salt
 	`, userID, salt)
 	if err != nil {
@@ -68,31 +64,31 @@ func (s *UserService) GetOrCreateSalt(ctx context.Context, userID string) (strin
 func (s *UserService) GetByID(ctx context.Context, userID string) (*User, error) {
 	var u User
 	err := s.db.QueryRow(ctx, `
-		SELECT id, encrypted_blob, nonce, created_at, updated_at
+		SELECT id, encrypted_blob, nonce
 		FROM users
 		WHERE id = $1
 	`, userID).
-		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
+		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce)
 	if err != nil {
 		return nil, fmt.Errorf("UserService.GetByID: %w", err)
 	}
 	return &u, nil
 }
 
+// Update writes the encrypted profile blob to the DB.
 func (s *UserService) Update(ctx context.Context, input UserInput, userID string) (*User, error) {
-
 	var u User
 	err := s.db.QueryRow(ctx, `
 		UPDATE users
-		SET encrypted_blob = $1, nonce = $2, updated_at = now()
+		SET encrypted_blob = COALESCE($1, encrypted_blob),
+			nonce = COALESCE($2, nonce)
 		WHERE id = $3
-		RETURNING id, encrypted_blob, nonce, created_at, updated_at
+		RETURNING id, encrypted_blob, nonce
 	`, input.EncryptedBlob, input.Nonce, userID).
-		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce, &u.CreatedAt, &u.UpdatedAt)
+		Scan(&u.ID, &u.EncryptedBlob, &u.Nonce)
 	if err != nil {
-		return nil, fmt.Errorf("UserService.Update: update user: %w", err)
+		return nil, fmt.Errorf("UserService.Update: %w", err)
 	}
-
 	return &u, nil
 }
 

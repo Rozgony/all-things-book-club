@@ -1,19 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
-	"context"
+	"time"
 
 	"github.com/all-things-book-club/internal/config"
 	"github.com/all-things-book-club/internal/db"
 	"github.com/all-things-book-club/internal/jobs"
+	"github.com/all-things-book-club/internal/mailer"
+	"github.com/all-things-book-club/internal/middleware"
 	"github.com/all-things-book-club/internal/routes"
 	"github.com/all-things-book-club/internal/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
-	"github.com/all-things-book-club/internal/middleware"
 )
 
 func main() {
@@ -23,8 +25,10 @@ func main() {
 	ctx := context.Background()
 
 	pool, err := db.Connect(ctx, cfg.DatabaseURL)
-	if err != nil { log.Fatal(err) }
-  	defer pool.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer pool.Close()
 	log.Printf("Connected to DB, pool max conns: %d", pool.Config().MaxConns)
 
 	r := chi.NewRouter()
@@ -48,17 +52,22 @@ func main() {
 	topicService := services.NewTopicService(pool)
 	themeService := services.NewThemeService(pool)
 	userService := services.NewUserService(pool)
+	inviteService := services.NewInviteService(pool)
+	mailerService := mailer.New(cfg)
 	recurringRuleService := services.NewRecurringRuleService(pool)
 
-	jobs.StartRecurringMeetingGenerator(ctx, recurringRuleService) 
+	jobs.StartRecurringMeetingGenerator(ctx, recurringRuleService)
 
 	// Initialize handlers from services
 	chapterHandler := routes.NewChapterHandler(chapterService)
-	memberHandler := routes.NewMemberHandler(memberService)
+	memberHandler := routes.NewMemberHandler(memberService, pool)
 	meetingHandler := routes.NewMeetingHandler(meetingService)
 	topicHandler := routes.NewTopicHandler(topicService)
 	themeHandler := routes.NewThemeHandler(themeService)
 	userHandler := routes.NewUserHandler(userService)
+	inviteHandler := routes.NewInviteHandler(inviteService, mailerService, pool, cfg.FrontendURL)
+
+	go runExpiredInviteCleanup(ctx, inviteService)
 	recurringRuleHandler := routes.NewRecurringRuleHandler(recurringRuleService)
 
 	// Public routes (no auth required)
@@ -87,8 +96,8 @@ func main() {
 
 		// Members
 		r.Post("/api/members", memberHandler.Create)
-		r.Patch("/api/members/{memberID}", memberHandler.Update)
-		
+		r.Patch("/api/members/{id}", memberHandler.Update)
+
 		// Meetings
 		r.Post("/api/meetings", meetingHandler.Create)
 		r.Get("/api/meetings/chapter/{id}", meetingHandler.GetByChapterID)
@@ -116,6 +125,16 @@ func main() {
 		r.Get("/api/users/me", userHandler.GetByID)
 		r.Patch("/api/users/me", userHandler.Update)
 		r.Delete("/api/users/me", userHandler.Update)
+
+		// Invites (creation + acceptance require auth; GET by token does not — registered below)
+		r.Post("/api/chapters/{id}/invites", inviteHandler.Create)
+		r.Post("/api/chapters/{id}/invites/email", inviteHandler.CreateAndEmail)
+		r.Post("/api/invites/{token}/accept", inviteHandler.Accept)
+	})
+
+	// Public: invite lookup has no account yet to authenticate with.
+	r.Group(func(r chi.Router) {
+		r.Get("/api/invites/{token}", inviteHandler.GetByToken)
 	})
 
 	addr := ":" + cfg.Port
@@ -123,5 +142,21 @@ func main() {
 
 	if err := http.ListenAndServe(addr, r); err != nil {
 		log.Fatalf("Server failed to start: %v", err)
+	}
+}
+
+// runExpiredInviteCleanup deletes expired invites (and their wrapped chapter
+// keys) on an hourly tick, so they don't linger once past expires_at.
+func runExpiredInviteCleanup(ctx context.Context, inviteService *services.InviteService) {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		if n, err := inviteService.DeleteExpired(ctx); err != nil {
+			log.Printf("invite cleanup failed: %v", err)
+		} else if n > 0 {
+			log.Printf("invite cleanup: deleted %d expired invite(s)", n)
+		}
+		<-ticker.C
 	}
 }

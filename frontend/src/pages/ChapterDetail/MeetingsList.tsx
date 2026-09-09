@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { type Meeting } from '../../api/types'
 import { MeetingCard } from './MeetingCard'
+import { InviteMemberForm } from './InviteMemberForm'
 import { ScheduleMeetingForm } from './ScheduleMeetingForm'
 
 interface MeetingsListProps {
@@ -9,10 +10,9 @@ interface MeetingsListProps {
 	loading: boolean
 	onMeetingCreated: (meeting: Meeting) => void
 	onMeetingDeleted?: (id: string) => void
-	isAdmin: boolean
 }
 
-export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, onMeetingDeleted, isAdmin }: MeetingsListProps) {
+export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, onMeetingDeleted }: MeetingsListProps) {
 	const upcomingAndActive = meetings
 		.filter(m => m.status === 'SCHEDULED' || m.status === 'ACTIVE')
 		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
@@ -31,9 +31,17 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 		<div className="bg-white rounded border border-warm-border p-6 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
 			<div className="flex justify-between items-center mb-4">
 				<h3 className="font-heading text-forest-deep">Scheduled & Active Meetings</h3>
-				{isAdmin && !showForm && (
-					<div className="flex gap-2">
-						{activeRecurringRuleId && (
+				<div className="flex gap-2 ">
+					<InviteMemberForm chapterId={chapterId!} />
+					{!showForm && (
+						<button
+							onClick={() => setShowForm(true)}
+							className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
+						>
+							+ Schedule Meeting
+						</button>
+					)}
+					{activeRecurringRuleId && (
 							<button
 								onClick={() => setShowRecurringRule(true)}
 								className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
@@ -41,14 +49,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 								Manage Recurring
 							</button>
 						)}
-						<button
-							onClick={() => setShowForm(true)}
-							className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
-						>
-							+ Schedule Meeting
-						</button>
-					</div>
-				)}
+				</div>
 			</div>
 
 			{showRecurringRule && activeRecurringRuleId && (

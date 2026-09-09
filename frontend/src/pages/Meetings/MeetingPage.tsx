@@ -150,10 +150,10 @@ export function MeetingPage() {
 				finalThemeIds.push(theme.id)
 			} else {
 				// New link (existing theme added during edit, or brand-new theme)
-				const themeId = await linkThemeToTopic(topicId, chapterId, theme)
+				const { themeId, createdAt } = await linkThemeToTopic(topicId, chapterId, theme)
 				finalThemeIds.push(themeId)
 				if (!theme.id) {
-					newlyCreatedThemes.push({ id: themeId, chapterId, createdAt: new Date().toISOString(), name: theme.name })
+					newlyCreatedThemes.push({ id: themeId, chapterId, createdAt: createdAt ?? new Date().toISOString(), name: theme.name })
 				}
 			}
 		}
@@ -193,8 +193,9 @@ export function MeetingPage() {
 		if (!meeting) return
 		setSavingTopic(true)
 		try {
-			await updateTopicContent(topicId, meeting.chapterId, data.title, data.description || undefined, data.url || undefined)
-			const previousThemeIds = meeting.topics?.find(t => t.id === topicId)?.themeIds || []
+			const existingTopic = meeting.topics?.find(t => t.id === topicId)
+			await updateTopicContent(topicId, meeting.chapterId, existingTopic?.createdAt ?? new Date().toISOString(), data.title, data.description || undefined, data.url || undefined)
+			const previousThemeIds = existingTopic?.themeIds || []
 			const { finalThemeIds, newlyCreatedThemes } = await syncTopicThemes(topicId, meeting.chapterId, previousThemeIds, data.themes)
 			setMeeting(prev => prev ? {
 				...prev,

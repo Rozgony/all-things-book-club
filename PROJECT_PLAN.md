@@ -22,11 +22,11 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 - **Behavior**: Selected topic appears in a modal. User can skip it or remove it once discussed.
 - **Rendering**: Canvas or SVG (TBD based on D3.js capabilities)
 
-### Invitations & Membership
-- **Invite scope**: Any chapter member can invite anyone by email
-- **New users**: Can invite by email even if they don't have an account yet (they get signup link)
-- **Chapters view**: Users see active chapters + pending invitations in one place
-- **Invitation flow**: Email search → send invite → pending → accept/reject → member
+### Invitations & Membership — **Implemented** (see `documentation/Invite-Plan.md`)
+- **Invite scope**: Chapter admins only (enforced server-side via `db.IsAdmin`)
+- **Existing user** (has a `public_key` on file): chapter key is wrapped directly for them via X25519 ECDH — added to the chapter immediately, no pending state
+- **New user** (no account yet): chapter key is wrapped with a one-time random secret; an email is sent with an accept link carrying the secret in the URL hash fragment (never sent to the server); they sign up (or log in) and accept, which re-wraps the key to their own public key
+- **Key exchange**: X25519 keypair deterministically derived from password via Argon2id at login; chapter keys wrapped per-recipient via ephemeral-sender ECDH + HKDF-SHA256 + AES-256-GCM
 
 ### Data Visibility: Past Meeting Topics
 - Show: **title, themes, who suggested it, and notes** (comprehensive view)
@@ -61,7 +61,7 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 - **Language**: TypeScript
 - **Build Tool**: Vite
 - **Hosting**: Vercel
-- **E2EE**: Web Crypto API (AES-256-GCM) — all sensitive content encrypted client-side before sending to the server
+- **E2EE**: Web Crypto API (AES-256-GCM) for content encryption; `@noble/curves` (X25519) + `@noble/hashes` (Argon2id, HKDF-SHA256) for asymmetric chapter-key exchange between members
 
 ### Infrastructure
 - **Backend Hosting**: Railway
@@ -82,7 +82,7 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 - API layer in `src/api/` — one file per resource, async functions returning typed models
 - E2EE: encrypt before sending, decrypt after receiving; server never sees plaintext sensitive data
 - Encrypted fields use `encryptedBlob` (base64) + `nonce` (base64); decrypted fields populated client-side
-- Chapter key stored in memory via `src/lib/keyStore.ts`; derived from user password via PBKDF2
+- Two keys held in memory via `src/lib/keyStore.ts`, both derived from the user's password at login (never persisted): a PBKDF2 `userKey` (profile blob only) and an Argon2id-derived X25519 private key (chapter-key wrapping/unwrapping)
 
 ---
 

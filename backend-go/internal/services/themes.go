@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -24,7 +23,6 @@ type Theme struct {
 	ChapterID     string `json:"chapterId"`
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
-	CreatedAt     time.Time `json:"createdAt"`
 }
 
 // ThemeInput is used when the frontend creates a brand new theme.
@@ -54,10 +52,9 @@ func (s *ThemeService) ListByChapter(ctx context.Context, chapterID string, user
 	}
 
 	rows, err := s.db.Query(ctx, `
-		SELECT id, chapter_id, encrypted_blob, nonce, created_at
+		SELECT id, chapter_id, encrypted_blob, nonce
 		FROM themes
 		WHERE chapter_id = $1
-		ORDER BY created_at ASC
 	`, chapterID)
 	if err != nil {
 		return nil, fmt.Errorf("ThemeService.ListByChapter: query: %w", err)
@@ -67,7 +64,7 @@ func (s *ThemeService) ListByChapter(ctx context.Context, chapterID string, user
 	themes := []*Theme{}
 	for rows.Next() {
 		var t Theme
-		if err := rows.Scan(&t.ID, &t.ChapterID, &t.EncryptedBlob, &t.Nonce, &t.CreatedAt); err != nil {
+		if err := rows.Scan(&t.ID, &t.ChapterID, &t.EncryptedBlob, &t.Nonce); err != nil {
 			return nil, fmt.Errorf("ThemeService.ListByChapter: scan: %w", err)
 		}
 		themes = append(themes, &t)
@@ -114,8 +111,8 @@ func (s *ThemeService) LinkToTopic(ctx context.Context, input LinkThemeInput, to
 		}
 
 		err = tx.QueryRow(ctx, `
-			INSERT INTO themes (id, chapter_id, encrypted_blob, nonce, created_at)
-			VALUES ($1, $2, $3, $4, now())
+			INSERT INTO themes (id, chapter_id, encrypted_blob, nonce)
+			VALUES ($1, $2, $3, $4)
 			RETURNING id
 		`, newThemeID, chapterID, input.EncryptedBlob, input.Nonce).Scan(&themeID)
 		if err != nil {

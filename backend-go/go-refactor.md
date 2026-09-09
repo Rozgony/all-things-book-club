@@ -57,7 +57,7 @@
 
 **Migrate Frontend** 
 - ✅ Encryption set up
-- ⬜ Encryption & Decryption of data before send
+- ✅ Encryption & Decryption of data before send
 - ⬜ Change password UI
 
 **Deploy**

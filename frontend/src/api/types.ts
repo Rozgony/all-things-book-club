@@ -11,13 +11,14 @@ export interface ChapterMember {
 	userId: string
 	chapterId: string
 	role: 'ADMIN' | 'MEMBER'
-	joinedAt: string
 	users?: UserProfile[]
+	encryptedChapterKey?: string | null
+	keyNonce?: string | null
 	encryptedBlob?: string | null
 	nonce?: string | null
 	// Decrypted fields — populated client-side after decryption
-	name?: string | null
-	email?: string | null
+	name?: string
+	joinedAt?: string
 }
 
 export interface Chapter {
@@ -28,12 +29,11 @@ export interface Chapter {
   nonce: string | null
   encryptedChapterKey: string | null
   keyNonce: string | null
-  createdAt: string
-  updatedAt: string
   chapterMembers?: ChapterMember[]
   // Decrypted fields — populated client-side after decryption
   name: string
   description: string | null
+  createdAt: string
 }
 
 export enum MeetingStatus {
@@ -71,8 +71,6 @@ export interface Meeting {
 	duration: number
 	status: MeetingStatus
 	recurringGroupId: string | null
-	createdAt: string
-	updatedAt: string
 	encryptedBlob?: string | null
 	nonce?: string | null
 	locationEncryptedBlob?: string | null
@@ -109,9 +107,9 @@ export interface Theme {
 	chapterId: string
 	encryptedBlob?: string | null
 	nonce?: string | null
-	createdAt: string
-	// Decrypted field — populated client-side after decryption
+	// Decrypted fields — populated client-side after decryption
 	name: string
+	createdAt: string
 }
 
 export interface Topic {
@@ -120,12 +118,11 @@ export interface Topic {
 	url?: string
 	createdById: string | null
 	status: TopicStatus
-	createdAt: string
-	updatedAt: string
 	encryptedBlob?: string
 	nonce?: string
 	themeIds?: string[] | null
 	// Decrypted fields — populated client-side after decryption
 	title: string
 	description: string | null
+	createdAt: string
 }

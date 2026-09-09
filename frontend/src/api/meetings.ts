@@ -45,7 +45,7 @@ export async function getMeetingById(id: string): Promise<Meeting> {
 	if (!res.ok) throw new Error('Failed to fetch meeting')
 	const meeting = await res.json()
 
-	const { encryptedChapterKey, keyNonce  } = meeting.chapterMember[0]
+	const { encryptedChapterKey, keyNonce } = meeting.chapterMember[0]
 
 	const chapterKey = await getAndSetChapterKey(meeting.chapterId, encryptedChapterKey, keyNonce)
 
@@ -74,8 +74,8 @@ export async function getMeetingById(id: string): Promise<Meeting> {
 	meeting.topics = await Promise.all(
 		meeting.topics.map(async (topic: Topic) => {
 			if (!topic.encryptedBlob || !topic.nonce) return topic
-			const decrypted = await decrypt<{ title: string; description?: string }>(topic.encryptedBlob, topic.nonce, chapterKey!)
-			return { ...topic, title: decrypted.title, description: decrypted.description ?? null, encryptedBlob: null, nonce: null }
+			const decrypted = await decrypt<{ title: string; description?: string; createdAt: string }>(topic.encryptedBlob, topic.nonce, chapterKey!)
+			return { ...topic, title: decrypted.title, description: decrypted.description ?? null, createdAt: decrypted.createdAt, encryptedBlob: null, nonce: null }
 		})
 	)
 	return meeting

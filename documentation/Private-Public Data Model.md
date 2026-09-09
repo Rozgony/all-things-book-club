@@ -1,106 +1,8 @@
-## Build Prompt: Go E2EE Backend — Data Model
+# Public Data Model
 
-### Context
+Future additive layer — no changes to the private schema.
 
-The current schema has: `User`, `Chapter`, `ChapterMember`, `ChapterInvitation`, `Theme`, `Meeting`, `Topic`, `TopicTheme`, `TopicStatus`, `DiscussionNote`, `MeetingStatus`
-
----
-
-### Privacy Model
-
-**Binary at the chapter level:**
-- `is_public = true` — chapter name, all topics, all themes visible to anyone
-- `is_public = false` — nothing attributed to this chapter publicly; optionally donates anonymously to the public corpus
-
----
-
-### Private Layer (E2EE — server is blind)
-
-```sql
--- Users: unchanged, still keyed to Supabase auth.uid
-users (
-  id          TEXT PRIMARY KEY,  -- Supabase auth UID
-  email       TEXT UNIQUE NOT NULL,
-  name        TEXT,
-  avatar_url  TEXT,
-  timezone    TEXT DEFAULT 'UTC',
-  -- NEW: client-generated public key for asymmetric key exchange
-  public_key  BYTEA NOT NULL,    -- X25519 public key, stored plaintext (it's public)
-  created_at  TIMESTAMPTZ DEFAULT now(),
-  updated_at  TIMESTAMPTZ DEFAULT now()
-)
-
--- Chapters: name stored plaintext (needed for lookup/display), everything else encrypted
-chapters (
-  id               TEXT PRIMARY KEY,
-  name             TEXT NOT NULL,         -- plaintext: needed for invitation flows
-  creator_id       TEXT REFERENCES users(id) ON DELETE CASCADE,
-  is_public        BOOLEAN DEFAULT false, -- the single privacy toggle
-  -- E2EE fields: server cannot read these
-  encrypted_blob   BYTEA,                 -- AES-256-GCM: description, settings, metadata
-  nonce            BYTEA,
-  created_at       TIMESTAMPTZ DEFAULT now(),
-  updated_at       TIMESTAMPTZ DEFAULT now()
-)
-
--- Chapter members: role stored plaintext (needed for authorization checks)
-chapter_members (
-  id          TEXT PRIMARY KEY,
-  user_id     TEXT REFERENCES users(id) ON DELETE CASCADE,
-  chapter_id  TEXT REFERENCES chapters(id) ON DELETE CASCADE,
-  role        TEXT NOT NULL DEFAULT 'MEMBER',  -- 'ADMIN' | 'MEMBER'
-  joined_at   TIMESTAMPTZ DEFAULT now(),
-  -- E2EE: the chapter's symmetric key, encrypted with THIS member's public key
-  -- Only this member can decrypt it with their private key
-  encrypted_chapter_key  BYTEA NOT NULL,
-  key_nonce              BYTEA NOT NULL,
-  UNIQUE(user_id, chapter_id)
-)
-
--- Invitations: email stored plaintext (needed for matching on signup)
-chapter_invitations (
-  id             TEXT PRIMARY KEY,
-  chapter_id     TEXT REFERENCES chapters(id) ON DELETE CASCADE,
-  invited_email  TEXT NOT NULL,
-  inviter_id     TEXT REFERENCES users(id) ON DELETE CASCADE,
-  expires_at     TIMESTAMPTZ NOT NULL,
-  created_at     TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(chapter_id, invited_email)
-)
-
--- Meetings: all content encrypted. scheduled_at stored plaintext for calendar queries.
-meetings (
-  id                  TEXT PRIMARY KEY,
-  chapter_id          TEXT REFERENCES chapters(id) ON DELETE CASCADE,
-  scheduled_at        TIMESTAMPTZ NOT NULL,   -- plaintext: needed for ordering/display
-  duration_minutes    INT DEFAULT 60,
-  status              TEXT DEFAULT 'SCHEDULED', -- plaintext: needed for active meeting logic
-  recurring_group_id  TEXT,
-  encrypted_blob      BYTEA,                  -- AES-256-GCM: description, notes, settings
-  nonce               BYTEA,
-  created_at          TIMESTAMPTZ DEFAULT now(),
-  updated_at          TIMESTAMPTZ DEFAULT now()
-)
-
--- Topics: all content encrypted. wheel_status plaintext for wheel logic.
--- title/themes live ONLY here for private chapters.
--- For public chapters, a parallel row is written to public_topics (see below).
-chapter_topics (
-  id              TEXT PRIMARY KEY,
-  meeting_id      TEXT REFERENCES meetings(id) ON DELETE CASCADE,
-  chapter_id      TEXT NOT NULL,              -- denormalized for efficient chapter-level queries
-  created_by_id   TEXT REFERENCES users(id) ON DELETE SET NULL,
-  wheel_status    TEXT DEFAULT 'PENDING',     -- plaintext: 'PENDING' | 'SELECTED' | 'DISCUSSED'
-  encrypted_blob  BYTEA NOT NULL,             -- AES-256-GCM: title, description, themes
-  nonce           BYTEA NOT NULL,
-  created_at      TIMESTAMPTZ DEFAULT now(),
-  updated_at      TIMESTAMPTZ DEFAULT now()
-)
-```
-
----
-
-### Public Layer (build later — additive, no changes to private layer)
+## Public Layer
 
 ```sql
 -- Global discovery table. Server can read/index/search this freely.
@@ -110,49 +12,16 @@ public_topics (
   title             TEXT NOT NULL,
   themes            TEXT[],                   -- plaintext theme names
   discussion_count  INT DEFAULT 1,
-  chapter_id        TEXT REFERENCES chapters(id) ON DELETE SET NULL,  -- nullable
+  chapter_id        TEXT REFERENCES chapters(id) ON DELETE SET NULL,
   created_at        TIMESTAMPTZ DEFAULT now(),
   updated_at        TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(title)                               -- deduplicate; write is an upsert + increment
+  UNIQUE(title)                               -- deduplicate; write is upsert + increment
 )
 ```
 
 **Dual-write rule** (enforced in Go service layer, not DB):
-- When a topic is added to a `public` chapter → upsert `public_topics` with `chapter_id` set
-- When a topic is added to a `private` chapter → optionally upsert `public_topics` with `chapter_id = NULL`
-- When a chapter toggles from public → private → nullify their `chapter_id` on all `public_topics` rows
+- Topic added to a `public` chapter → upsert `public_topics` with `chapter_id` set
+- Topic added to a `private` chapter → optionally upsert `public_topics` with `chapter_id = NULL`
+- Chapter toggles public → private → nullify `chapter_id` on all `public_topics` rows
 
----
-
-### Key Management (Go client-side flow)
-
-```
-New user signs up
-  └─► client generates X25519 keypair
-  └─► public_key stored in users table (plaintext)
-  └─► private_key stored ONLY in client (localStorage or derived from password via Argon2id)
-
-User creates a chapter
-  └─► client generates random 32-byte symmetric chapter key
-  └─► encrypts chapter data with chapter key (AES-256-GCM)
-  └─► encrypts chapter key with own public key → stores in chapter_members.encrypted_chapter_key
-
-User invites a member (they already have an account)
-  └─► inviter fetches invitee's public_key from server
-  └─► inviter encrypts chapter key with invitee's public key
-  └─► stores encrypted chapter key in chapter_members row for invitee
-
-User invites a member (no account yet)
-  └─► invitation stored by email
-  └─► on signup: inviter (or any admin) must re-encrypt chapter key for new member's public key
-      (admin is online — they complete the key handoff)
-```
-
----
-
-### Go Project Structure (when ready)
-- Framework: `net/http` + `chi` router (or `gin` — decide at build time)
-- Crypto: `golang.org/x/crypto` (Argon2, ChaCha20-Poly1305 or AES-GCM)
-- DB: `pgx/v5` directly (no ORM — schema is managed by raw migrations)
-- Auth: validate Supabase JWTs with `golang-jwt/jwt`
-- Migrations: `golang-migrate/migrate`
+**Ghost Mode interaction:** when Ghost Mode activates (item 7), existing `public_topics` rows with this chapter's `chapter_id` must also be nullified or deleted before the chapter auto-deletes.

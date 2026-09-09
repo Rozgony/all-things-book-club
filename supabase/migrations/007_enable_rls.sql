@@ -1,0 +1,11 @@
+-- Enable RLS on all tables. The Go backend uses the service role key,
+-- which bypasses RLS, so no explicit policies are needed.
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chapters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chapter_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurring_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE topics ENABLE ROW LEVEL SECURITY;
+ALTER TABLE themes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE topic_themes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chapter_invitations ENABLE ROW LEVEL SECURITY;

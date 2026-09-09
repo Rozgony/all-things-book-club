@@ -17,6 +17,13 @@ type Config struct {
 	SupabaseURL string
 	Env         string
 	FrontendURL string
+	// SMTP settings for sending invite emails (Supabase's SMTP relay in prod,
+	// local Inbucket during `supabase start` for dev).
+	SMTPHost string
+	SMTPPort string
+	SMTPUser string
+	SMTPPass string
+	SMTPFrom string
 }
 
 // Load reads the .env file (if present) then pulls values from the environment.
@@ -35,6 +42,11 @@ func Load() *Config {
 		SupabaseURL: requireEnv("SUPABASE_URL"),
 		Env:         getEnv("ENV", "development"),
 		FrontendURL: getEnv("FRONTEND_URL", ""),
+		SMTPHost:    getEnv("SMTP_HOST", "localhost"),
+		SMTPPort:    getEnv("SMTP_PORT", "2500"),
+		SMTPUser:    getEnv("SMTP_USER", ""),
+		SMTPPass:    getEnv("SMTP_PASS", ""),
+		SMTPFrom:    getEnv("SMTP_FROM", "no-reply@allthingsbook.club"),
 	}
 
 	return cfg
