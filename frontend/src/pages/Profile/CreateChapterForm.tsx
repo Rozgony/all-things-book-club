@@ -11,6 +11,7 @@ interface CreateChapterFormProps {
 export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterFormProps) {
 	const [newName, setNewName] = useState('')
 	const [newDescription, setNewDescription] = useState('')
+	const [displayName, setDisplayName] = useState('')
 	const [creating, setCreating] = useState(false)
 	const [formError, setFormError] = useState<string | null>(null)
 	const user = useAuthStore((s) => s.user)
@@ -23,12 +24,12 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 			const chapter = await createChapter({ 
 				name: newName, 
 				description: newDescription || undefined, 
-				creatorName: user?.user_metadata.full_name, // TODO: make sure this is correct
-				creatorEmail: user?.email! // TODO: make sure this is correct
+				creatorName: displayName || user?.user_metadata.full_name || user?.email || 'Unknown',
 			})
 			onChapterCreated(chapter)
 			setNewName('')
 			setNewDescription('')
+			setDisplayName('')
 		} catch {
 			setFormError('Failed to create chapter')
 		} finally {
@@ -58,6 +59,16 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 					className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 				/>
 	    	</div>
+			<div>
+				<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Your display name in this chapter</label>
+				<input
+					type="text"
+					value={displayName}
+					onChange={e => setDisplayName(e.target.value)}
+					placeholder="How members will see you"
+					className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+				/>
+			</div>
 	    	{formError && <p className="text-sm text-red-600">{formError}</p>}
 			<div className="flex gap-3">
 				<button

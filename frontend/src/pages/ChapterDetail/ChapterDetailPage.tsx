@@ -52,7 +52,6 @@ export function ChapterDetailPage() {
 	  if (!id) return
 	  getChapterAndSetKey(id)
 	    .then(chapter => {
-			console.log({chapter});
 	      setChapter(chapter)
 	      setEditName(chapter.name)
 	      setEditDescription(chapter.description ?? '')
@@ -154,7 +153,6 @@ export function ChapterDetailPage() {
 	    </div>
 	  )
 	}
-
 	return (
 	  	<div className="min-h-screen bg-cream">
 			<Nav showLogout={true} showProfile={true} username={name}/>
@@ -180,7 +178,6 @@ export function ChapterDetailPage() {
 					chapterId={id!}
 					meetings={meetings}
 					loading={meetingsLoading}
-					isAdmin={isAdmin}
 					onMeetingCreated={meeting => setMeetings(prev => [...prev, meeting])}
 					onMeetingDeleted={id => setMeetings(prev => prev.filter(m => m.id !== id))}
 				/>

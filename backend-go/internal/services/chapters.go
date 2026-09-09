@@ -152,7 +152,7 @@ func (s *ChapterService) GetByID(ctx context.Context, chapterID string, userID s
 	rows, err := s.db.Query(ctx, `
 		SELECT c.id, c.creator_id, c.is_public, c.encrypted_blob, c.nonce,
 			my_cm.encrypted_chapter_key, my_cm.key_nonce,
-			cm.id, cm.user_id, cm.role, cm.encrypted_blob, cm.nonce, cm.encrypted_chapter_key, cm.key_nonce
+				cm.id, cm.user_id, cm.role, cm.encrypted_blob, cm.nonce, cm.encrypted_chapter_key, cm.key_nonce
 		FROM chapters c
 		JOIN chapter_members my_cm ON my_cm.chapter_id = c.id AND my_cm.user_id = $2
 		JOIN chapter_members cm ON cm.chapter_id = c.id

@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { type Meeting } from '../../api/types'
 import { MeetingCard } from './MeetingCard'
-import { createMeeting } from '../../api/meetings'
 import { InviteMemberForm } from './InviteMemberForm'
+import { ScheduleMeetingForm } from './ScheduleMeetingForm'
 
 interface MeetingsListProps {
 	chapterId: string
@@ -10,10 +10,9 @@ interface MeetingsListProps {
 	loading: boolean
 	onMeetingCreated: (meeting: Meeting) => void
 	onMeetingDeleted?: (id: string) => void
-	isAdmin: boolean
 }
 
-export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, onMeetingDeleted, isAdmin }: MeetingsListProps) {
+export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, onMeetingDeleted }: MeetingsListProps) {
 	const upcomingAndActive = meetings
 		.filter(m => m.status === 'SCHEDULED' || m.status === 'ACTIVE')
 		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
@@ -23,32 +22,10 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 		.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
 
 	const [showForm, setShowForm] = useState(false)
-	const [scheduledAt, setScheduledAt] = useState('')
-	const [duration, setDuration] = useState(60)
-	const [videoCallLink, setVideoCallLink] = useState('')
-	const [physicalAddress, setPhysicalAddress] = useState('')
-	const [saving, setSaving] = useState(false)
-	const [formError, setFormError] = useState<string | null>(null)
 	const [viewPastMeetings, setViewPastMeetings] = useState(false)
+	const [showRecurringRule, setShowRecurringRule] = useState(false)
 
-	const handleCreate = async (e: React.FormEvent) => {
-		e.preventDefault()
-		setSaving(true)
-		setFormError(null)
-		try {
-			const meeting = await createMeeting(chapterId, scheduledAt, duration, videoCallLink || undefined, physicalAddress || undefined)
-			onMeetingCreated(meeting)
-			setShowForm(false)
-			setScheduledAt('')
-			setDuration(60)
-			setVideoCallLink('')
-			setPhysicalAddress('')
-		} catch {
-			setFormError('Failed to schedule meeting')
-		} finally {
-			setSaving(false)
-		}
-	}
+	const activeRecurringRuleId = meetings.find(m => m.recurringGroupId)?.recurringGroupId ?? null
 
 	return (
 		<div className="bg-white rounded border border-warm-border p-6 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
@@ -56,7 +33,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 				<h3 className="font-heading text-forest-deep">Scheduled & Active Meetings</h3>
 				<div className="flex gap-2 ">
 					<InviteMemberForm chapterId={chapterId!} />
-					{isAdmin && !showForm && (
+					{!showForm && (
 						<button
 							onClick={() => setShowForm(true)}
 							className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
@@ -64,78 +41,59 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 							+ Schedule Meeting
 						</button>
 					)}
+					{activeRecurringRuleId && (
+							<button
+								onClick={() => setShowRecurringRule(true)}
+								className="px-3 py-1 text-sm border border-warm-border rounded hover:bg-cream transition-colors"
+							>
+								Manage Recurring
+							</button>
+						)}
 				</div>
 			</div>
 
+			{showRecurringRule && activeRecurringRuleId && (
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowRecurringRule(false)}>
+					<div className="bg-white rounded border border-warm-border p-6 max-w-md w-full mx-4 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h2 className="text-lg font-heading text-forest-deep">Recurring Meeting</h2>
+							<button
+								onClick={() => setShowRecurringRule(false)}
+								className="text-stone-muted hover:text-stone text-2xl leading-none"
+								aria-label="Close modal"
+							>
+								×
+							</button>
+						</div>
+						<ScheduleMeetingForm
+							chapterId={chapterId}
+							editRuleId={activeRecurringRuleId}
+							onCancel={() => setShowRecurringRule(false)}
+						/>
+					</div>
+				</div>
+			)}
+
 			{showForm && (
-				<form onSubmit={handleCreate} className="mb-5 p-4 bg-cream/40 rounded border border-warm-border space-y-3">
-					<div>
-						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
-							Date & Time <span className="text-red-500">*</span>
-						</label>
-						<input
-							type="datetime-local"
-							value={scheduledAt}
-							onChange={e => setScheduledAt(e.target.value)}
-							required
-							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+				<div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowForm(false)}>
+					<div className="bg-white rounded border border-warm-border p-6 max-w-md w-full mx-4 max-h-screen overflow-y-auto" onClick={e => e.stopPropagation()}>
+						<div className="flex justify-between items-center mb-4">
+							<h2 className="text-lg font-heading text-forest-deep">Schedule a Meeting</h2>
+							<button
+								onClick={() => setShowForm(false)}
+								className="text-stone-muted hover:text-stone text-2xl leading-none"
+								aria-label="Close modal"
+							>
+								×
+							</button>
+						</div>
+						<ScheduleMeetingForm
+							chapterId={chapterId}
+							onMeetingCreated={onMeetingCreated}
+							onCancel={() => setShowForm(false)}
 						/>
 					</div>
-					<div>
-						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
-							Duration (minutes)
-						</label>
-						<input
-							type="number"
-							value={duration}
-							min={15}
-							step={15}
-							onChange={e => setDuration(Number(e.target.value))}
-							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-						/>
-					</div>
-					<div>
-						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
-							Video Call Link
-						</label>
-						<input
-							type="url"
-							value={videoCallLink}
-							placeholder="https://meet.link.com/..."
-							onChange={e => setVideoCallLink(e.target.value)}
-							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-						/>
-					</div>
-					<div>
-						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">
-							Physical Address
-						</label>
-						<input
-							type="text"
-							value={physicalAddress}
-							placeholder="123 Main St, City, State"
-							onChange={e => setPhysicalAddress(e.target.value)}
-							className="w-full px-3 py-2.5 border border-warm-border rounded bg-white text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
-						/>
-					</div>
-					{formError && <p className="text-sm text-red-600">{formError}</p>}
-					<div className="flex gap-3">
-						<button
-							type="submit"
-							disabled={saving}
-							className="px-4 py-2 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-deep transition-colors disabled:opacity-50"
-						>
-							{saving ? 'Scheduling…' : 'Schedule'}
-						</button>
-						<button
-							type="button"
-							onClick={() => { setShowForm(false); setFormError(null) }}
-							className="px-4 py-2 text-sm text-terracotta hover:text-terracotta-dark border rounded border-terracotta transition-colors"
-						>
-							Cancel
-						</button>
-					</div>
-				</form>
+				</div>
 			)}
 
 			{loading ? (
@@ -156,7 +114,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 					</div>
 					{ 
 						viewPastMeetings ? 
-						<ul className="divide-y divide-warm-border">
+						<ul className="divide-y divide-warm-border h-80 overflow-y-auto overflow-x-hidden border border-warm-border rounded bg-white p-4">
 							{pastMeetings.length > 0 ? (
 								pastMeetings.map(meeting => (
 									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />
@@ -165,7 +123,7 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 								<p className="py-4 text-stone-muted text-sm">No past meetings</p>
 							)}
 						</ul> :
-						<ul className="divide-y divide-warm-border">
+						<ul className="divide-y divide-warm-border h-80 overflow-y-auto overflow-x-hidden border border-warm-border rounded bg-white p-4">
 							{upcomingAndActive.length > 0 ? (
 								upcomingAndActive.map(meeting => (
 									<MeetingCard key={meeting.id} meeting={meeting} onDeleted={onMeetingDeleted} />

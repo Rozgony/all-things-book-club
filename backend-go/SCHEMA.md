@@ -6,7 +6,7 @@ Reference guide for the book club database. Updated when migrations are added.
 
 | Name | Values |
 |------|--------|
-| `meeting_frequency` | DAILY, WEEKLY, BIWEEKLY, MONTHLY |
+| `meeting_frequency` | MINUTES, DAILY, WEEKLY, BIWEEKLY, MONTHLY, MONTHLY_WEEKDAY |
 | `chapter_member_role` | ADMIN, MEMBER |
 | `meeting_status` | SCHEDULED, ACTIVE, COMPLETED, CANCELLED |
 | `topic_status` | PENDING, SELECTED, DISCUSSED |
@@ -89,8 +89,10 @@ Scheduled book club meetings. Metadata (date, duration, status) is plaintext; co
 | `duration` | INTEGER | NOT NULL, DEFAULT 60 | Minutes |
 | `status` | meeting_status | NOT NULL, DEFAULT 'SCHEDULED' | SCHEDULED, ACTIVE, COMPLETED, CANCELLED |
 | `recurring_group_id` | TEXT | FK → recurring_rules(id), ON DELETE SET NULL | - |
-| `encrypted_blob` | BYTEA | - | Encrypted title, notes, etc. |
-| `nonce` | BYTEA | - | AES-GCM nonce |
+| `encrypted_blob` | BYTEA | - | Encrypted title, `{discussionNotes}` — per-occurrence, never carried forward |
+| `nonce` | BYTEA | - | AES-GCM nonce for `encrypted_blob` |
+| `location_encrypted_blob` | BYTEA | - | Encrypted `{videoCallLink, physicalAddress}` — copied forward on recurring meetings |
+| `location_nonce` | BYTEA | - | AES-GCM nonce for `location_encrypted_blob` |
 
 **Indexes**: chapter_id, scheduled_at
 
@@ -103,7 +105,7 @@ Recurrence patterns for meeting series.
 |--------|------|-------------|-------|
 | `id` | TEXT | PRIMARY KEY | - |
 | `chapter_id` | TEXT | NOT NULL, FK → chapters(id) | - |
-| `frequency` | meeting_frequency | NOT NULL | DAILY, WEEKLY, BIWEEKLY, MONTHLY |
+| `frequency` | meeting_frequency | NOT NULL | MINUTES, DAILY, WEEKLY, BIWEEKLY, MONTHLY, MONTHLY_WEEKDAY |
 | `interval` | INTEGER | NOT NULL, DEFAULT 1 | Every N units (e.g., every 2 weeks) |
 | `start_date` | TIMESTAMPTZ | NOT NULL | First occurrence |
 | `end_date` | TIMESTAMPTZ | - | NULL = indefinite |

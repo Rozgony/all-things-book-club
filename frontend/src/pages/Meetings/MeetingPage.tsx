@@ -13,10 +13,12 @@ import { getThemesByChapterId, linkThemeToTopic, unlinkThemeFromTopic } from '..
 import { updateMeeting, getMeetingById } from '../../api/meetings'
 import { MeetingStatus, type Meeting, type Topic, type Theme } from '../../api/types'
 import { getMyProfile } from '../../api/users'
+import { useAuthStore } from '../../store/authStore'
 
 export function MeetingPage() {
 	const { id } = useParams<{ id: string }>()
 	const navigate = useNavigate()
+	const timezone = useAuthStore((s) => s.timezone)
 
 	const [meeting, setMeeting] = useState<Meeting | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -41,6 +43,9 @@ export function MeetingPage() {
 
 	const [savingStatus, setSavingStatus] = useState(false)
 
+	const [discussionNotesValue, setDiscussionNotesValue] = useState('')
+	const [savingNotes, setSavingNotes] = useState(false)
+
 	const toDatetimeLocal = (iso: string) => {
 		const d = new Date(iso)
 		const pad = (n: number) => String(n).padStart(2, '0')
@@ -63,6 +68,7 @@ export function MeetingPage() {
 				scheduledAt: new Date(editDateValue).toISOString(),
 				videoCallLink: videoCallLinkValue,
 				physicalAddress: physicalAddressValue,
+
 				chapterId: meeting.chapterId
 			})
 			setMeeting(prev => prev ? { ...prev, scheduledAt: updated.scheduledAt, videoCallLink: videoCallLinkValue || null, physicalAddress: physicalAddressValue || null } : prev)
@@ -105,7 +111,10 @@ export function MeetingPage() {
 
 		if (!id) return
 		getMeetingById(id)
-			.then((meeting) => setMeeting(meeting))
+			.then((meeting) => {
+				setMeeting(meeting)
+				setDiscussionNotesValue(meeting.discussionNotes || '')
+			})
 			.catch(() => setError('Failed to load meeting'))
 			.finally(() => setLoading(false))
 	}, [])
@@ -120,7 +129,8 @@ export function MeetingPage() {
 	const formatDate = (dateString: string) =>
 		new Date(dateString).toLocaleDateString('en-US', {
 			weekday: 'long', month: 'long', day: 'numeric',
-			hour: '2-digit', minute: '2-digit'
+			hour: '2-digit', minute: '2-digit',
+			...(timezone ? { timeZone: timezone } : {}),
 		})
 
 	// Reconciles a topic form's theme selections against the topic's previously linked
@@ -261,6 +271,23 @@ export function MeetingPage() {
 		}
 	}
 
+	const handleSaveNotes = async () => {
+		if (!meeting) return
+		if (discussionNotesValue === (meeting.discussionNotes || '')) return
+		setSavingNotes(true)
+		try {
+			await updateMeeting(meeting.id, {
+				discussionNotes: discussionNotesValue,
+				chapterId: meeting.chapterId
+			})
+			setMeeting(prev => prev ? { ...prev, discussionNotes: discussionNotesValue } : prev)
+		} catch {
+			// silent — textarea keeps the unsaved value so the user can retry (e.g. on blur again)
+		} finally {
+			setSavingNotes(false)
+		}
+	}
+
 	if (loading) return (
 		<div className="flex flex-col items-center justify-center min-h-screen">
 			<div>Loading Meeting…</div>
@@ -373,16 +400,35 @@ export function MeetingPage() {
 							</div>
 						)}
 					</div>
-					{/* Wheel */}
-					<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
-						<SpinWheel
-							topics={meeting.topics || []}
-							spinning={spinning}
-							onSpinStart={() => setSpinning(true)}
-							onSpinEnd={handleSpinEnd}
-							meeting={meeting}
-							updateMeetingStatus={handleStatusUpdate}
-						/>
+
+					<div className="space-y-6">
+						{/* Wheel */}
+						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+							<SpinWheel
+								topics={meeting.topics || []}
+								spinning={spinning}
+								onSpinStart={() => setSpinning(true)}
+								onSpinEnd={handleSpinEnd}
+								meeting={meeting}
+								updateMeetingStatus={handleStatusUpdate}
+							/>
+						</div>
+
+						{/* Discussion Notes */}
+						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+							<div className="flex items-center justify-between mb-3">
+								<h3 className="font-heading text-forest-deep">Discussion Notes</h3>
+								{savingNotes && <span className="text-xs text-stone-muted">Saving…</span>}
+							</div>
+							<textarea
+								value={discussionNotesValue}
+								onChange={e => setDiscussionNotesValue(e.target.value)}
+								onBlur={handleSaveNotes}
+								placeholder="Notes from the discussion…"
+								rows={8}
+								className="w-full bg-transparent border border-warm-border rounded text-sm text-stone focus:outline-none focus:border-terracotta p-3 resize-y"
+							/>
+						</div>
 					</div>
 				</div>
 			</main>

@@ -44,7 +44,7 @@ type CreateResponse = {
 	chapterMember: ChapterMember
 }
 
-export async function createChapter(data: { name: string; description?: string; creatorName: string; creatorEmail: string }): Promise<Chapter> {
+export async function createChapter(data: { name: string; description?: string; creatorName: string }): Promise<Chapter> {
 	const headers = await getAuthHeaders()
 
 	// 1. Generate a fresh symmetric key for this chapter
@@ -61,7 +61,7 @@ export async function createChapter(data: { name: string; description?: string; 
 		chapterKey
 	)
 	const { encryptedBlob: encryptedMemberBlob, nonce: memberNonce } = await encrypt(
-		{ name: data.creatorName, email: data.creatorEmail, joinedAt: createdAt },
+		{ name: data.creatorName, joinedAt: createdAt },
 		chapterKey
 	)
 
@@ -104,7 +104,6 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 
 	const chapterKey = await getAndSetChapterKey(chapter.id, chapter.encryptedChapterKey!, chapter.keyNonce!)
 	const content = await decrypt<ChapterContent>(chapter.encryptedBlob, chapter.nonce, chapterKey!)
-	console.log({chapter});
 	if (chapter.chapterMembers?.length) {
 		for (let index = 0; index < chapter.chapterMembers.length; index++) {
 			const chapterMember = chapter.chapterMembers[index];
@@ -118,7 +117,6 @@ export async function getChapterAndSetKey(id: string): Promise<Chapter> {
 		// (earliest member first, matching the old server-side ORDER BY) happens here.
 		chapter.chapterMembers.sort((a, b) => new Date(a.joinedAt || 0).getTime() - new Date(b.joinedAt || 0).getTime())
 	}
-	console.log({chapter});
 	return { ...chapter, name: content.name, description: content.description ?? null, createdAt: content.createdAt }
 }
 

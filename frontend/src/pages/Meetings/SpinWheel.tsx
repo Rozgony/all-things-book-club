@@ -11,6 +11,8 @@ interface SpinWheelProps {
 	updateMeetingStatus: (status: MeetingStatus) => void
 	meeting: Meeting
 	onSpinStart: () => void
+	// Increment this to trigger a spin programmatically (e.g. an automated demo), instead of a user click
+	autoSpinSignal?: number
 }
 
 const COLORS = [
@@ -18,7 +20,7 @@ const COLORS = [
 	'#6B8E7A', '#C4956A', '#7A8E6B', '#B07850', '#8E7A6B',
 ]
 
-export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeetingStatus, meeting }: SpinWheelProps) {
+export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeetingStatus, meeting, autoSpinSignal }: SpinWheelProps) {
 	const svgRef = useRef<SVGSVGElement>(null)
 	const rotationRef = useRef(0)
 
@@ -143,6 +145,16 @@ export function SpinWheel({ topics, onSpinEnd, spinning, onSpinStart, updateMeet
 		}
 		requestAnimationFrame(animate)
 	}
+
+	const isFirstAutoSpin = useRef(true)
+	useEffect(() => {
+		if (autoSpinSignal === undefined) return
+		if (isFirstAutoSpin.current) {
+			isFirstAutoSpin.current = false
+			return
+		}
+		handleSpin()
+	}, [autoSpinSignal])
 
 	if (pendingTopics.length === 0) {
 		return <EmptySpinWheel topics={topics} wheelSize={wheelSize} />
