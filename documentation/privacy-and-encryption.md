@@ -35,7 +35,26 @@ _What we are protecting against (honest-but-curious server, legal compulsion, da
 
 ## 3. What the Server Sees vs. What It Cannot See
 
-_A plain table: column or field / plaintext or encrypted / who holds the key. Cover the profile blob, chapter keys, meeting/topic/theme blobs, public key, invite secrets._
+| Table.Column | Plaintext or Encrypted | Who holds the key |
+|---|---|---|
+| `users.key_derivation_salt` | Plaintext | N/A — not a secret, just an Argon2id input |
+| `users.encrypted_blob` / `nonce` (profile: name, avatar) | Encrypted | The user only (`userKey`, from their password) |
+| `chapters.is_public` | Plaintext | N/A — server needs this for discoverability |
+| `chapters.encrypted_blob` / `nonce` (name, description, createdAt) | Encrypted | Every member of that chapter (`chapterKey`) |
+| `chapter_members.role` | Plaintext | N/A — server needs this for admin access checks |
+| `chapter_members.encrypted_chapter_key` / `key_nonce` | Encrypted | That member only (wrapped with their own `userKey`) |
+| `chapter_members.encrypted_blob` / `nonce` (name, joinedAt) | Encrypted | Every member of that chapter (`chapterKey`) |
+| `chapter_invitations.invite_token` | Plaintext | N/A — opaque lookup value, not an encryption key |
+| `chapter_invitations.encrypted_chapter_key` / `key_nonce` | Encrypted | Whoever holds the invite secret (never stored server-side — travels only in the invite URL's `#hash` fragment) |
+| `chapter_invitations.inviter_name` | Plaintext | N/A — shown to the invitee before they accept |
+| `meetings.scheduled_at` / `duration` / `status` | Plaintext | N/A — server needs these for scheduling and real-time status sync |
+| `meetings.encrypted_blob` / `nonce` (discussion notes) | Encrypted | Every member of that chapter (`chapterKey`) |
+| `meetings.location_encrypted_blob` / `location_nonce` (video link, address) | Encrypted | Every member of that chapter (`chapterKey`) |
+| `topics.status` | Plaintext | N/A — server tracks spin-wheel state in real time |
+| `topics.encrypted_blob` / `nonce` (title, description, url, createdAt) | Encrypted | Every member of that chapter (`chapterKey`) |
+| `themes.encrypted_blob` / `nonce` (name, createdAt) | Encrypted | Every member of that chapter (`chapterKey`) |
+
+Note: there is no `public_key` column anywhere in the schema — the earlier X25519-based design (Section 4's design note) has been fully removed.
 
 ---
 
@@ -51,8 +70,6 @@ password + server salt
                                   │
                            chapterKey (AES-256-GCM)  — encrypts all chapter content
 ```
-
-_Explain why breaking the `userKey` derivation (cracking the password) does not automatically give access to other members' data — each member's copy of the chapter key is independently wrapped._
 
 > **Design note:** An earlier version of this design used X25519 / ECDH to permanently wrap chapter keys in `chapter_members`. After implementation, it was simplified: X25519 is only needed during invite transport (where the inviter can't know the invitee's password). Once the invitee accepts, the chapter key is immediately re-wrapped with their `userKey`. This eliminated five crypto functions, an `ephemeral_public_key` column, and per-login X25519 key re-derivation.
 

@@ -149,7 +149,6 @@ export async function unwrapChapterKeyWithSecret(
   inviteSecret: Uint8Array
 ): Promise<Uint8Array> {
   const wrapKey = await crypto.subtle.importKey('raw', inviteSecret as BufferSource, { name: 'AES-GCM', length: 256 }, false, ['decrypt'])
-  console.log('unwrapChapterKeyWithSecret',{wrapKey});
   
   const rawChapterKey = await crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: fromBase64(keyNonce) },
