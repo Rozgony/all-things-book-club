@@ -24,9 +24,9 @@ Website for hosting the "All Things Book Club" monthly online meetings.
 
 ### Invitations & Membership — **Implemented** (see `documentation/Invite-Plan.md`)
 - **Invite scope**: Chapter admins only (enforced server-side via `db.IsAdmin`)
-- **Existing user** (has a `public_key` on file): chapter key is wrapped directly for them via X25519 ECDH — added to the chapter immediately, no pending state
-- **New user** (no account yet): chapter key is wrapped with a one-time random secret; an email is sent with an accept link carrying the secret in the URL hash fragment (never sent to the server); they sign up (or log in) and accept, which re-wraps the key to their own public key
-- **Key exchange**: X25519 keypair deterministically derived from password via Argon2id at login; chapter keys wrapped per-recipient via ephemeral-sender ECDH + HKDF-SHA256 + AES-256-GCM
+- **Existing user**: chapter key is wrapped directly with the invitee's `userKey` — added to the chapter immediately, no pending state
+- **New user** (no account yet): chapter key is wrapped with a one-time random secret; an email is sent with an accept link carrying the secret in the URL hash fragment (never sent to the server); they sign up (or log in) and accept, which re-wraps the key to their own `userKey`
+- **Key exchange**: chapter keys wrapped symmetrically per-member with each user's Argon2id-derived `userKey`; X25519 ECDH + HKDF-SHA256 is used only as one-time invite transport for new users
 
 ### Data Visibility: Past Meeting Topics
 - Show: **title, themes, who suggested it, and notes** (comprehensive view)
@@ -61,7 +61,7 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 - **Language**: TypeScript
 - **Build Tool**: Vite
 - **Hosting**: Vercel
-- **E2EE**: Web Crypto API (AES-256-GCM) for content encryption; `@noble/curves` (X25519) + `@noble/hashes` (Argon2id, HKDF-SHA256) for asymmetric chapter-key exchange between members
+- **E2EE**: Web Crypto API (AES-256-GCM) for content encryption and symmetric chapter-key wrapping; `@noble/curves` (X25519) + `@noble/hashes` (Argon2id, HKDF-SHA256) used only for one-time invite transport to new users
 
 ### Infrastructure
 - **Backend Hosting**: Railway
@@ -82,7 +82,7 @@ The frontend gets scaffolded at Slice 1 and grows with each slice. No big-bang f
 - API layer in `src/api/` — one file per resource, async functions returning typed models
 - E2EE: encrypt before sending, decrypt after receiving; server never sees plaintext sensitive data
 - Encrypted fields use `encryptedBlob` (base64) + `nonce` (base64); decrypted fields populated client-side
-- Two keys held in memory via `src/lib/keyStore.ts`, both derived from the user's password at login (never persisted): a PBKDF2 `userKey` (profile blob only) and an Argon2id-derived X25519 private key (chapter-key wrapping/unwrapping)
+- One key held in memory via `src/lib/keyStore.ts`, derived from the user's password at login (never persisted): an Argon2id-derived `userKey` used for both profile blob encryption and chapter-key wrapping/unwrapping
 
 ---
 

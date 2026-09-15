@@ -18,8 +18,8 @@ type CreateChapterInput struct {
 	EncryptedMemberBlob  []byte `json:"encryptedMemberBlob"`
 	MemberNonce          []byte `json:"memberNonce"`
 	IsPublic             bool   `json:"isPublic"`
-	// EncryptedChapterKey is the chapter's symmetric key, ECDH-wrapped for the creator's own X25519 public key.
-	// Only the creator can unwrap it using their private key (never sent to the server).
+	// EncryptedChapterKey is the chapter's symmetric key, wrapped with the creator's own userKey.
+	// Only the creator can unwrap it using their userKey (never sent to the server).
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
 	KeyNonce            []byte `json:"keyNonce"`
 }
@@ -28,8 +28,8 @@ type ChapterInput struct {
 	EncryptedBlob []byte `json:"encryptedBlob"`
 	Nonce         []byte `json:"nonce"`
 	IsPublic      bool   `json:"isPublic"`
-	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's public key.
-	// Only the creator can decrypt it using their private key (never sent to the server).
+	// EncryptedChapterKey is the chapter's symmetric key encrypted with the creator's userKey.
+	// Only the creator can decrypt it using their userKey (never sent to the server).
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
 	KeyNonce            []byte `json:"keyNonce"`
 }

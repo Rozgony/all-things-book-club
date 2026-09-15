@@ -33,8 +33,8 @@ type MemberInput struct {
 	UserId        string            `json:"userId"`
 	ChapterId     string            `json:"chapterId"`
 	Role          ChapterMemberRole `json:"role"`
-	// EncryptedChapterKey is the chapter's symmetric key, ECDH-wrapped for this member's X25519 public key.
-	// Only this member can unwrap it using their private key (never sent to the server).
+	// EncryptedChapterKey is the chapter's symmetric key, wrapped with this member's userKey.
+	// Only this member can unwrap it using their userKey (never sent to the server).
 	EncryptedChapterKey []byte `json:"encryptedChapterKey"`
 	KeyNonce            []byte `json:"keyNonce"`
 }

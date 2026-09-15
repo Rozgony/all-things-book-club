@@ -29,8 +29,7 @@ Two usage tiers share the same codebase and crypto:
 
 **Completed.** `deriveUserKey` was originally PBKDF2-SHA256 (600k iterations). The reasoning was that the user profile blob is low-sensitivity, so a lighter KDF was acceptable there. This was incorrect: `userKey` wraps `chapter_members.encrypted_chapter_key`, which decrypts all chapter content. PBKDF2 is compute-bound and GPU-parallelisable — cracking it bypasses Argon2id entirely.
 
-- Both `deriveUserKey` and `deriveX25519KeyPair` now use Argon2id (19 MiB, t=2, p=1)
-- Domain labels `:userkey` and `:x25519` appended to the shared salt prevent the two derivations from producing the same output
+- `deriveUserKey` now uses Argon2id (19 MiB, t=2, p=1) with a `:userkey` domain label
 - **Breaking change** for any existing stored data — requires clearing/re-registering any test accounts created before this change
 
 ### ✅ 1. Minimize Invite Metadata
@@ -163,7 +162,7 @@ Allow users to sign up with a **username + password** instead of an email addres
 
 #### Implementation approach
 
-Since Supabase requires an email identity for password-based re-login across devices, anonymous users are registered with a **synthetic email** derived deterministically on the client: `username@anon.internal`. This is never verified or displayed — it exists solely as a Supabase auth handle. The key derivation flow (salt → `deriveUserKey` → `deriveX25519KeyPair`) is identical to the email path.
+Since Supabase requires an email identity for password-based re-login across devices, anonymous users are registered with a **synthetic email** derived deterministically on the client: `username@anon.internal`. This is never verified or displayed — it exists solely as a Supabase auth handle. The key derivation flow (salt → `deriveUserKey`) is identical to the email path.
 
 #### Files to change
 
