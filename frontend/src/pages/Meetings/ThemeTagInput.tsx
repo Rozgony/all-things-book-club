@@ -50,6 +50,14 @@ export function ThemeTagInput({ chapterThemes, selectedThemes, onChange, placeho
 		}
 	}
 
+	const onBlur = (e: React.FocusEvent<HTMLInputElement, Element>) => {
+		const value = e.target?.value?.trim();
+		if (value) {
+			addTheme({ name: value })
+		}
+		setTimeout(() => setShowSuggestions(false), 150)
+	}
+
 	return (
 		<div className="relative flex-1 min-w-40">
 			<div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-warm-border rounded bg-cream/40 focus-within:ring-2 focus-within:ring-terracotta focus-within:border-terracotta">
@@ -73,7 +81,7 @@ export function ThemeTagInput({ chapterThemes, selectedThemes, onChange, placeho
 					value={inputValue}
 					onChange={e => { setInputValue(e.target.value); setShowSuggestions(true) }}
 					onFocus={() => setShowSuggestions(true)}
-					onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+					onBlur={onBlur}
 					onKeyDown={handleKeyDown}
 					style={{outline: 'none'}}
 					placeholder={selectedThemes.length === 0 ? (placeholder || 'Add themes & click enter…') : ''}

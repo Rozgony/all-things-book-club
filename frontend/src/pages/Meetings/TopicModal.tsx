@@ -7,13 +7,14 @@ interface TopicModalProps {
 	onSkip: () => void
 	onClose?: () => void
 	readOnly?: boolean
+	isAbsolute?: boolean
 }
 
-export function TopicModal({ topic, chapterThemes = [], onMarkDiscussed, onSkip, onClose, readOnly }: TopicModalProps) {
+export function TopicModal({ topic, chapterThemes = [], onMarkDiscussed, onSkip, onClose, readOnly, isAbsolute }: TopicModalProps) {
 	if (!topic) return null
-
+	const position = isAbsolute ? 'absolute' : 'fixed'
 	return (
-		<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+		<div className={`${position} inset-0 bg-black/40 flex items-center justify-center rounded z-50 p-4`}>
 			<div className="bg-white rounded border border-warm-border p-6 w-full text-center" style={{ boxShadow: 'var(--shadow)', width: '375px', maxWidth: '100%' }}>
 				<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-2">Selected Topic</p>
 				<h2 className="font-heading text-forest-deep text-2xl mb-3">{

@@ -224,7 +224,7 @@ export function ChapterDetailPage() {
 							disabled={deleting}
 							className="px-3 py-1 text-sm border border-alert text-alert rounded hover:bg-alert-light transition-colors disabled:opacity-50"
 						>
-							{deleting ? 'Deleting…' : 'Delete'}
+							{deleting ? 'Deleting Chapter…' : 'Delete Chapter'}
 						</button>
 						{showConfirm && (
 							<ConfirmModal
