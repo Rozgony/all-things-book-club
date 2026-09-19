@@ -87,10 +87,11 @@ export const demoConversations: Record<string, DemoMessage[]> = {
 		{ side: 'right', name: 'Devon', text: 'I\'m sure they are.' },
 	],
 	'demo-2': [
-		{ side: 'left', name: 'Jim', text: "This book really changed how I see history. Previously I assumed history was just a long string of Empires and democracy, with the exception of ancient Athens, was relatively recent. The book proved the opposite: most people did not live in empires until the last couple centuries and there were many forms of democracy in complex societies." },
-		{ side: 'right', name: 'Claire', text: 'That completely reframes how I think about progress. I always thought we were getting more democratic, but it sounds like we actually had to fight to get back to what we already knew how to do.' },
-		{ side: 'left', name: 'Maya', text: 'Exactly. And the part about how people had agency and made deliberate choices about their social structures? That was on point. We tend to treat hierarchy like it was inevitable.' },
-		{ side: 'right', name: 'Devon', text: 'So are you saying we could actually do something different now, or does the book suggest we\'re locked into this model?' },
+		{ side: 'left', name: 'Jim', text: "This book really changed how I see history. Previously I assumed history was just a long string of Empires and democracy, with the exception of ancient Athens, was relatively recent." },
+		{ side: 'right', name: 'Devon', text: "So true, it proved the opposite: most people did not live in empires until the last couple centuries and there were many forms of democracy in complex societies." },
+		{ side: 'left', name: 'Claire', text: 'That completely reframes how I think about progress. It sounds like we actually need to fight to get back to what we already knew how to do.' },
+		{ side: 'right', name: 'Devon', text: 'Exactly. And the part about how people had agency and made deliberate choices about their social structures? That was on point.' },
+		{ side: 'left', name: 'Maya', text: 'So are you saying we could actually do something different now, or does the book suggest we\'re locked into this model?' },
 	],
 	'demo-3': [
 		{ side: 'left', name: 'Devon', text: 'I love the #ThingsClaudeToldMe memes that have been going around. So hilarious!' },

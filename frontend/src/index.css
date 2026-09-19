@@ -20,6 +20,8 @@
 	--font-heading: 'Lora', Georgia, 'Times New Roman', serif;
 	--font-sans:    'Pontano Sans', system-ui, sans-serif;
 	--font-mono:    ui-monospace, Consolas, monospace;
+
+	--breakpoint-sm: 512px;
 }
 
 /* ── CSS Variables ─────────────────────────────────────────── */

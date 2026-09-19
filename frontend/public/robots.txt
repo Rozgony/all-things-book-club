@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# AI / LLM crawlers used by answer engines and assistants
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+Sitemap: https://allthingsbook.club/sitemap.xml

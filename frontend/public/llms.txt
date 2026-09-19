@@ -1,0 +1,24 @@
+# All Things Book Club
+
+> A platform for book clubs, discussion groups, and social clubs to talk about anything that fascinates their members — pop culture, science, politics, and reading — built on privacy and end-to-end encryption.
+
+All Things Book Club replaces the "what should we talk about?" problem with a simple ritual: each member adds a topic they're curious about to a shared wheel, the wheel randomly selects one, and the group discusses it for a few minutes before spinning again. It works equally well for a traditional book club, a general discussion group, or any social club that wants structured, everyone-gets-a-turn conversation.
+
+## What it's for
+
+- Book clubs discussing a shared reading pick, or recommending new books to read
+- Discussion groups and social clubs exploring pop culture (movies, TV, music, memes)
+- Groups digging into science, current events, and politics
+- Any community that wants a fair, low-pressure way to decide what to talk about next
+- Privacy-conscious groups that want their discussion history kept confidential
+
+## Key facts
+
+- Meetings and topics are encrypted on-device with AES-256-GCM (keys derived via Argon2id) before being sent to the server, so the service itself cannot read a group's content.
+- Groups are organized into "Chapters," each with its own members, meetings, and topic history.
+- Anyone can join for free; creating a Chapter lets a group run its own recurring meetings.
+
+## Pages
+
+- [/](https://allthingsbook.club/): Overview, how it works, and sign up
+- [/privacy](https://allthingsbook.club/privacy): Privacy and end-to-end encryption details, including the AES-256-GCM and Argon2id key hierarchy
