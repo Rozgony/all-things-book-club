@@ -43,8 +43,11 @@ export function ProfileSection({
 	onSave,
 	onCancel,
 }: ProfileSectionProps) {
+	// unused values until we have password change setup
 	onPasswordChange
 	onConfirmPasswordChange
+	passwordValue
+	confirmPasswordValue
 	return (
 		<div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 			<h2 className="font-heading text-forest-deep mb-7">Your Profile</h2>
