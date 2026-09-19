@@ -23,12 +23,12 @@ export function LoginPage() {
 				<p className="py-2">
 					We all have things that facinate us and want to tell someone about.  
 					It could be a book, a movie, a podcast, a conversation, or even a meme.
-					All Things Book Club is a chance to share about those topics with everyone's wrapped attention. 
+					All Things Book Club is a chance to share about those topics with everyone's rapt attention. 
 				</p>
 				<ol className="py-2">  The process is simple:
 					<li className="pl-4">1. Each member adds their topic of interest to the wheel.</li>
 					<li className="pl-4">2. Someone spins the wheel and it randomly selects a topic.</li>
-					<li className="pl-4">3. The person who selected the topic gets a couple minutes to share what facinates them about it.</li>
+					<li className="pl-4">3. The person who selected the topic gets a couple minutes to share what fascinates them about it.</li>
 					<li className="pl-4">4. Then the discussion opens to the group for a couple more minutes.</li>
 					<li className="pl-4">5. Once conversation on the topic has slowed, spin again to repeat with a new topic.</li>
 				</ol>
@@ -44,7 +44,7 @@ export function LoginPage() {
 			</div>
 			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
 				<h3 className="text-white">What about privacy?</h3>
-				<p className="py-2">Your ideas are yours. We don't want to know. That's why all collected with your Book Club Chapter is end-to-end encrypted so that it is server-blind.  Meaning we couldn't look at it even if we tried. To learn more, visit our <a className="text-terracotta hover:text-terracotta-dark underline break-all" href='/privacy'>privacy page</a>.</p>
+				<p className="py-2">Your ideas are yours. We don't want to know. That's why all collected with your Book Club Chapter is end-to-end encrypted so that it is server-blind.  Meaning, we couldn't look at it even if we tried. To learn more, visit our <a className="text-terracotta hover:text-terracotta-dark underline break-all" href='/privacy'>privacy page</a>.</p>
 			</div>
 		</div>
 	  </>
