@@ -102,3 +102,7 @@ p {
 button {
 	cursor: pointer;
 }
+
+code {
+	font-size: 0.9rem;
+}
