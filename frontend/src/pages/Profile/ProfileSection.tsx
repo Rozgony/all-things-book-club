@@ -43,11 +43,16 @@ export function ProfileSection({
 	onSave,
 	onCancel,
 }: ProfileSectionProps) {
+	// unused values until we have password change setup
+	onPasswordChange
+	onConfirmPasswordChange
+	passwordValue
+	confirmPasswordValue
 	return (
 		<div className="max-w-2xl mx-auto mt-12 p-8 bg-white rounded border border-warm-border" style={{ boxShadow: 'var(--shadow)' }}>
 			<h2 className="font-heading text-forest-deep mb-7">Your Profile</h2>
 			{!editing ? (
-				<div className="grid grid-cols-2 gap-x-8 gap-y-5">
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
 					<div>
 						<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Name</p>
 						<p className="text-stone">{profile.name ?? <span className="text-stone-muted italic">Not set</span>}</p>
@@ -65,7 +70,7 @@ export function ProfileSection({
 						<p className="text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1">Timezone</p>
 						<p className="text-stone">{profile.timezone}</p>
 					</div>
-					<div className="col-span-2 pt-2">
+				<div className="sm:col-span-2 pt-2">
 						<button
 							onClick={onEditClick}
 							className="py-2 px-5 bg-forest text-white text-sm tracking-wide rounded hover:bg-forest-dark transition-colors"
@@ -75,8 +80,8 @@ export function ProfileSection({
 					</div>
 				</div>
 			) : (
-				<form onSubmit={onSave} className="grid grid-cols-2 gap-x-8 gap-y-4">
-					<div className="col-span-2 text-xs font-semibold text-stone-muted uppercase tracking-wider">Profile</div>
+			<form onSubmit={onSave} className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+				<div className="sm:col-span-2 text-xs font-semibold text-stone-muted uppercase tracking-wider">Profile</div>
 					<div>
 						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Name</label>
 						<input
@@ -98,7 +103,7 @@ export function ProfileSection({
 							<p className="text-xs text-terracotta mt-1">Pending change to {pendingEmail} — check both inboxes to confirm</p>
 						)}
 					</div>
-					<div className="col-span-2">
+				<div className="sm:col-span-2">
 						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Timezone</label>
 						<input
 							type="text"
@@ -114,7 +119,7 @@ export function ProfileSection({
 							))}
 						</datalist>
 					</div>
-					<div className="col-span-2 border-t border-warm-border pt-4 text-xs font-semibold text-stone-muted uppercase tracking-wider">Security</div>
+					{/* <div className="sm:col-span-2 border-t border-warm-border pt-4 text-xs font-semibold text-stone-muted uppercase tracking-wider">Security</div>
 					<div>
 						<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">New Password</label>
 						<input
@@ -125,8 +130,8 @@ export function ProfileSection({
 							onChange={e => onPasswordChange(e.target.value)}
 							className="w-full px-3 py-2.5 border border-warm-border rounded bg-cream/40 text-stone focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 						/>
-					</div>
-					{passwordValue && (
+					</div> */}
+					{/* {passwordValue && (
 						<div>
 							<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Confirm Password</label>
 							<input
@@ -141,9 +146,9 @@ export function ProfileSection({
 								<p className="text-xs text-red-500 mt-1">Passwords don't match</p>
 							)}
 						</div>
-					)}
-					{error && <div className="col-span-2 text-sm text-red-600">{error}</div>}
-					<div className="col-span-2 flex gap-3">
+					)} */}
+				{error && <div className="sm:col-span-2 text-sm text-red-600">{error}</div>}
+				<div className="sm:col-span-2 flex gap-3">
 						<button
 							type="submit"
 							disabled={saving}

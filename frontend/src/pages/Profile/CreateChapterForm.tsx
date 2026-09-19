@@ -38,7 +38,7 @@ export function CreateChapterForm({ onChapterCreated, onCancel }: CreateChapterF
 	}
 
 	return (
-	  	<form onSubmit={handleCreate} className="bg-white rounded border border-warm-border p-6 mb-7 space-y-4" style={{ boxShadow: 'var(--shadow)' }}>
+	  	<form onSubmit={handleCreate} className="bg-white rounded border border-warm-border p-6 mb-7 space-y-4 w-full sm:w-1/2" style={{ boxShadow: 'var(--shadow)' }}>
 	    	<h3 className="font-heading text-forest-deep">Create a Chapter</h3>
 			<div>
 				<label className="block text-xs font-semibold text-stone-muted uppercase tracking-wider mb-1.5">Name <span className="text-red-500">*</span></label>

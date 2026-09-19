@@ -1,18 +1,23 @@
 import { Nav } from '../../components/Nav'
 import { LoginButton } from '../../components/LoginButton'
 import { LoginSpinDemo } from './SpinDemo'
+import { useAuthStore } from '../../store/authStore'
+import { useNavigate } from 'react-router-dom'
 
 export function LoginPage() {
+	const isAuthenticated = useAuthStore((s) => !!s.session)
+	const navigate = useNavigate()
 	return (
 	  <>
 		<Nav showLogin={true}/>
 		<div className="max-w-2xl mx-auto px-4 py-8">
 			
 			<h1>Welcome to All Things Book Club</h1>
-			<h4>A place to share what facinates you, hear new ideas, and make new friends.</h4>
+			<h4>A place to share what fascinates you, hear new ideas, and make new friends.</h4>
+			<p className="py-2">A tool for book clubs, discussion groups, and social clubs to talk about anything worth talking about &mdash; pop culture, science, politics, current events, and reading &mdash; kept private with end-to-end encryption.</p>
 		</div>
 		<div className="flex justify-center mb-8">
-			<LoginButton variant="prominent" />
+			{ isAuthenticated ? <button onClick={() => navigate('/profile')} className="text-white rounded bg-forest font-bold py-2 px-4 hover:opacity-90 transition-colors">My Profile</button> : <LoginButton variant="prominent" /> }
 		</div>
 		<div className="flex flex-col items-center bg-cream px-6 py-12">
 			<LoginSpinDemo />
@@ -21,7 +26,7 @@ export function LoginPage() {
 			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
 				<h3>How does it work?</h3>
 				<p className="py-2">
-					We all have things that facinate us and want to tell someone about.  
+					We all have things that fascinate us and want to tell someone about.  
 					It could be a book, a movie, a podcast, a conversation, or even a meme.
 					All Things Book Club is a chance to share about those topics with everyone's rapt attention. 
 				</p>
@@ -45,6 +50,15 @@ export function LoginPage() {
 			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
 				<h3 className="text-white">What about privacy?</h3>
 				<p className="py-2">Your ideas are yours. We don't want to know. That's why all collected with your Book Club Chapter is end-to-end encrypted so that it is server-blind.  Meaning, we couldn't look at it even if we tried. To learn more, visit our <a className="text-terracotta hover:text-terracotta-dark underline break-all" href='/privacy'>privacy page</a>.</p>
+			</div>
+			<div className="bg-white rounded border border-warm-border text-forest-deep p-6 my-8 text-left">
+				<h3 className="text-white">Frequently asked questions</h3>
+				<p className="py-2 font-semibold">Is it only for book clubs?</p>
+				<p className="py-2">No. While it started with book clubs, All Things Book Club works for any discussion group or social club that wants to talk about pop culture, science, politics, books, or anything else members find interesting.</p>
+				<p className="py-2 font-semibold">What kinds of topics can a discussion group cover?</p>
+				<p className="py-2">Any topic a member wants to share, from a favorite book or reading recommendation to pop culture, scientific discoveries, or political news and current events.</p>
+				<p className="py-2 font-semibold">How private is my group's data?</p>
+				<p className="py-2">Every meeting and topic is end-to-end encrypted with AES-256-GCM, so it's unreadable to anyone outside your chapter. See the <a className="text-terracotta hover:text-terracotta-dark underline" href='/privacy'>privacy &amp; encryption page</a> for details.</p>
 			</div>
 		</div>
 	  </>

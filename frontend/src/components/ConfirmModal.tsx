@@ -7,6 +7,7 @@ interface ConfirmModalProps {
 	onCancel: () => void
 	confirmColor?: string
 	confirming?: boolean
+	absolute?: boolean
 }
 
 export function ConfirmModal({
@@ -18,9 +19,11 @@ export function ConfirmModal({
 	onCancel,
 	confirmColor = 'bg-red-600',
 	confirming = false,
+	absolute = false,
 }: ConfirmModalProps) {
+	const positionClass = absolute ? 'absolute' : 'fixed'
 	return (
-		<div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+		<div className={`${positionClass} inset-0 bg-black/40 flex items-center justify-center z-50 p-4`}>
 			<div className="bg-white rounded border border-warm-border p-6 max-w-sm w-full" style={{ boxShadow: 'var(--shadow)' }}>
 				<h3 className="font-heading text-forest-deep mb-2">{header}</h3>
 				<p className="text-sm text-stone-muted mb-5">{bodyText}</p>

@@ -44,7 +44,7 @@ export function PrivacyPage() {
 						<code>userKey</code> once they accept. Invites expire after 7 days, and accepted or not, the record is deleted
 						once used. 
 					</p>
-					<p className="py-2">It is important to note the invite emails themselves are not encrypted.  
+					<p className="py-2">It is important to note the invite emails themselves are not encrypted because most emails are not encrypted. 
 						While we will not read the invite emails, if you want a fully encrypted experience, copy the invite link and sent it via 
 						a more secure method such as an encrypted chat app like Signal.</p>
 				</div>

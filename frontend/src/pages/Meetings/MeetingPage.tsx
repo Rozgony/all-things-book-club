@@ -334,7 +334,7 @@ export function MeetingPage() {
 
 						{/* Add topic */}
 						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
-							<h3 className="font-heading text-forest-deep mb-4">Topics</h3>
+							<h3 className="font-heading text-forest-deep mb-8">Topics</h3>
 							<TopicForm
 								chapterThemes={chapterThemes}
 								submitLabel="Add"
@@ -343,7 +343,9 @@ export function MeetingPage() {
 								onSubmit={handleAddTopic}
 							/>
 							{addError && <p className="text-sm text-red-600 mb-3">{addError}</p>}
-
+						</div>
+						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+							<h3 className="font-heading text-forest-deep">Awaiting Discussion</h3>
 							{pendingTopics.length > 0 ? (
 								<ul className="divide-y divide-warm-border">
 									{pendingTopics.map(topic => (
@@ -403,7 +405,7 @@ export function MeetingPage() {
 
 					<div className="space-y-6">
 						{/* Wheel */}
-						<div className="bg-white rounded border border-warm-border p-6" style={{ boxShadow: 'var(--shadow)' }}>
+						<div className="bg-white rounded border border-warm-border relative p-6" style={{ boxShadow: 'var(--shadow)' }}>
 							<SpinWheel
 								topics={meeting.topics || []}
 								spinning={spinning}
@@ -411,6 +413,15 @@ export function MeetingPage() {
 								onSpinEnd={handleSpinEnd}
 								meeting={meeting}
 								updateMeetingStatus={handleStatusUpdate}
+							/>
+							<TopicModal
+								topic={selectedTopic}
+								chapterThemes={chapterThemes}
+								onMarkDiscussed={handleMarkDiscussed}
+								onSkip={handleSkip}
+								onClose={() => setSelectedTopic(null)}
+								readOnly={selectedTopic?.status === 'DISCUSSED'}
+								isAbsolute={true}
 							/>
 						</div>
 
@@ -432,15 +443,6 @@ export function MeetingPage() {
 					</div>
 				</div>
 			</main>
-
-			<TopicModal
-				topic={selectedTopic}
-			chapterThemes={chapterThemes}
-			onMarkDiscussed={handleMarkDiscussed}
-			onSkip={handleSkip}
-			onClose={() => setSelectedTopic(null)}
-			readOnly={selectedTopic?.status === 'DISCUSSED'}
-		/>
 	</div>
 )
 }

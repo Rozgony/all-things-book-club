@@ -29,9 +29,9 @@ export function MeetingsList({ chapterId, meetings, loading, onMeetingCreated, o
 
 	return (
 		<div className="bg-white rounded border border-warm-border p-6 mb-7" style={{ boxShadow: 'var(--shadow)' }}>
-			<div className="flex justify-between items-center mb-4">
+			<div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-4 gap-2">
 				<h3 className="font-heading text-forest-deep">Scheduled & Active Meetings</h3>
-				<div className="flex gap-2 ">
+				<div className="flex gap-2">
 					<InviteMemberForm chapterId={chapterId!} />
 					{!showForm && (
 						<button
