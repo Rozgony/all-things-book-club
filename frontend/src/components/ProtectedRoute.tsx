@@ -8,7 +8,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	const loading = useAuthStore((s) => s.loading)
 	const checkSession = useAuthStore((s) => s.checkSession)
 	const [keyReady, setKeyReady] = useState(hasUserKey())
-	const [isAuthenticated, setIsAuthenticated] = useState(hasUserKey())
+	const [isAuthenticated, setIsAuthenticated] = useState(false)
 
 	useEffect(() => {
 		checkSession()
@@ -26,11 +26,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	if (loading) {
 	  return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading...</div>
 	}
-
+console.log('inline isAuthenticated: '+isAuthenticated);
 	if (!isAuthenticated) {
 	  return <Navigate to="/login" replace />
 	}
-
+console.log('inline keyReady: '+keyReady);
 	if (!keyReady) {
 	  return <Navigate to="/login" replace />
 	}
