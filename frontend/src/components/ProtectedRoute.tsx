@@ -12,6 +12,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	useEffect(() => {
 		checkSession()
 			.then(session => {
+				console.log('checkSession',{session})
 				setIsAuthenticated(!!session)
 			})
 	}, [checkSession])
@@ -25,11 +26,12 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	if (loading) {
 	  return <div className="flex items-center justify-center min-h-screen text-gray-500">Loading...</div>
 	}
+	console.log('isAuthenticated: '+isAuthenticated)
 
 	if (!isAuthenticated) {
 	  return <Navigate to="/login" replace />
 	}
-
+	console.log('keyReady: '+keyReady)
 	if (!keyReady) {
 	  return <Navigate to="/login" replace />
 	}
