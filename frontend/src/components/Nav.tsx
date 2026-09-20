@@ -13,6 +13,9 @@ export type NavParams = {
 export function Nav(params: NavParams) {
  const { showLogout, showProfile, showChapters, showLogin, username } = params;
 	const isAuthenticated = useAuthStore((s) => !!s.session)
+	console.log('isAuthenticated: '+isAuthenticated);
+	const session = useAuthStore((s) => s.session)
+	console.log({session});
 	const signOut = useAuthStore((s) => s.signOut)
 	const navigate = useNavigate()
 	return (

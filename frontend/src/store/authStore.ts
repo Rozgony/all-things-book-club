@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 	// Forces a real expiry/refresh check instead of trusting the cached session.
 	checkSession: async () => {
 	  const { data: { session } } = await supabase.auth.getSession()
+	  console.log('checkSession',session)
 	  set({ session, user: session?.user ?? null })
 	  return session
 	},
@@ -52,6 +53,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 	  // backgrounded or the machine sleeps, so the session can silently expire without
 	  // onAuthStateChange ever firing. Re-check when the tab becomes active again.
 	  const revalidate = () => {
+		console.log('revalidate')
 	    if (document.visibilityState === 'visible') {
 	      useAuthStore.getState().checkSession()
 	    }
