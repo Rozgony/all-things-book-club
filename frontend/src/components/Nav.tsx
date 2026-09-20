@@ -13,9 +13,6 @@ export type NavParams = {
 export function Nav(params: NavParams) {
  const { showLogout, showProfile, showChapters, showLogin, username } = params;
 	const isAuthenticated = useAuthStore((s) => !!s.session)
-	console.log('isAuthenticated: '+isAuthenticated);
-	const session = useAuthStore((s) => s.session)
-	console.log({session});
 	const signOut = useAuthStore((s) => s.signOut)
 	const navigate = useNavigate()
 	return (
@@ -25,14 +22,7 @@ export function Nav(params: NavParams) {
 				{ (!showChapters || !isAuthenticated) || <button onClick={() => navigate('/chapters')} className="text-sm text-white/75 hover:text-white transition-colors">All Chapters</button> }
 	      		{ (!showProfile || !isAuthenticated) || <button onClick={() => navigate('/profile')} className="text-sm text-white/75 hover:text-white transition-colors">{username || 'Profile'}</button> }
 	      		{ (!showLogout || !isAuthenticated) || <button onClick={signOut} className="text-sm text-white/75 hover:text-white transition-colors">Sign out</button> }
-	      		{ (!showLogin || (
-					isAuthenticated ? 
-						<button onClick={() => navigate('/profile')} className="text-sm text-white/75 hover:text-white transition-colors">{username || 'Profile'}</button> 
-						: 
-						<LoginButton variant='nav' />
-						)
-					) 
-				}
+	      		{ (!showLogin || <LoginButton variant='nav' />) }
 	    	</div>
 	  	</nav>
 	)
