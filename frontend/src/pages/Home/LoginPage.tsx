@@ -1,12 +1,8 @@
 import { Nav } from '../../components/Nav'
 import { LoginButton } from '../../components/LoginButton'
 import { LoginSpinDemo } from './SpinDemo'
-import { useAuthStore } from '../../store/authStore'
-import { useNavigate } from 'react-router-dom'
 
 export function LoginPage() {
-	const isAuthenticated = useAuthStore((s) => !!s.session)
-	const navigate = useNavigate()
 	return (
 	  <>
 		<Nav showLogin={true}/>
@@ -17,7 +13,7 @@ export function LoginPage() {
 			<p className="py-2">A tool for book clubs, discussion groups, and social clubs to talk about anything worth talking about &mdash; pop culture, science, politics, current events, and reading &mdash; kept private with end-to-end encryption.</p>
 		</div>
 		<div className="flex justify-center mb-8">
-			{ isAuthenticated ? <button onClick={() => navigate('/profile')} className="text-white rounded bg-forest font-bold py-2 px-4 hover:opacity-90 transition-colors">My Profile</button> : <LoginButton variant="prominent" /> }
+			<LoginButton variant="prominent" />
 		</div>
 		<div className="flex flex-col items-center bg-cream px-6 py-12">
 			<LoginSpinDemo />
