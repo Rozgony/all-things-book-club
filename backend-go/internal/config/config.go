@@ -41,7 +41,7 @@ func Load() *Config {
 		DatabaseURL: requireEnv("DATABASE_URL"),
 		SupabaseURL: requireEnv("SUPABASE_URL"),
 		Env:         getEnv("ENV", "development"),
-		FrontendURL: getEnv("FRONTEND_URL", ""),
+		FrontendURL: requireEnv("FRONTEND_URL"),
 		SMTPHost:    getEnv("SMTP_HOST", "localhost"),
 		SMTPPort:    getEnv("SMTP_PORT", "2500"),
 		SMTPUser:    getEnv("SMTP_USER", ""),

@@ -10,6 +10,7 @@ interface AuthState {
 	timezone: string | null
 	setTimezone: (tz: string) => void
 	signOut: () => Promise<void>
+	checkSession: () => Promise<Session | null>
 	_initialize: () => () => void
 }
 
@@ -23,6 +24,13 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 	signOut: async () => {
 	  await supabase.auth.signOut()
+	},
+
+	// Forces a real expiry/refresh check instead of trusting the cached session.
+	checkSession: async () => {
+	  const { data: { session } } = await supabase.auth.getSession()
+	  set({ session, user: session?.user ?? null })
+	  return session
 	},
 
 	_initialize: () => {
@@ -40,6 +48,19 @@ export const useAuthStore = create<AuthState>((set) => ({
 	    }
 	  })
 
-	  return () => subscription.unsubscribe()
+	  // Timers that auto-refresh the token get throttled/suspended while the tab is
+	  // backgrounded or the machine sleeps, so the session can silently expire without
+	  // onAuthStateChange ever firing. Re-check when the tab becomes active again.
+	  const revalidate = () => {
+	    if (document.visibilityState === 'visible') {
+	      useAuthStore.getState().checkSession()
+	    }
+	  }
+	  document.addEventListener('visibilitychange', revalidate)
+
+	  return () => {
+	    subscription.unsubscribe()
+	    document.removeEventListener('visibilitychange', revalidate)
+	  }
 	},
 }))

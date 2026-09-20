@@ -6,7 +6,12 @@ import { hasUserKey, restoreUserKey } from '../lib/keyStore'
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 	const session = useAuthStore((s) => s.session)
 	const loading = useAuthStore((s) => s.loading)
+	const checkSession = useAuthStore((s) => s.checkSession)
 	const [keyReady, setKeyReady] = useState(hasUserKey())
+
+	useEffect(() => {
+		checkSession()
+	}, [checkSession])
 
 	useEffect(() => {
 		if (!keyReady) {
