@@ -26,6 +26,8 @@ type Config struct {
 	SMTPFrom string
 }
 
+// https://all-things-book-club-production.up.railway.app
+// https://all-things-book-club-production.up.railway.app/api/
 // Load reads the .env file (if present) then pulls values from the environment.
 // Call this once in main() and pass cfg down to everything that needs it.
 func Load() *Config {
@@ -42,10 +44,10 @@ func Load() *Config {
 		SupabaseURL: requireEnv("SUPABASE_URL"),
 		Env:         getEnv("ENV", "development"),
 		FrontendURL: requireEnv("FRONTEND_URL"),
-		SMTPHost:    getEnv("SMTP_HOST", "localhost"),
-		SMTPPort:    getEnv("SMTP_PORT", "2500"),
-		SMTPUser:    getEnv("SMTP_USER", ""),
-		SMTPPass:    getEnv("SMTP_PASS", ""),
+		SMTPHost:    requireEnv("SMTP_HOST"),
+		SMTPPort:    requireEnv("SMTP_PORT"),
+		SMTPUser:    requireEnv("SMTP_USER"),
+		SMTPPass:    requireEnv("SMTP_PASS"),
 		SMTPFrom:    getEnv("SMTP_FROM", "no-reply@allthingsbook.club"),
 	}
 

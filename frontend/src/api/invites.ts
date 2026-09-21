@@ -61,6 +61,7 @@ export async function createInviteAndEmail(params: {
 	})
 	if (!res.ok) {
 		const response = await res.json()
+		console.log('error',{response})
 		throw new Error(response.error)
 	}
 	return res.json()

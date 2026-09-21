@@ -64,7 +64,8 @@ export function InviteModal({ chapterId, onClose }: InviteModalProps) {
 		setError(null)
 		try {
 			const { encryptedChapterKey, keyNonce, inviteSecretBase64url } = await buildInvite()
-			await createInviteAndEmail({ chapterId, invitedEmail: email, encryptedChapterKey, keyNonce, inviteSecretBase64url, inviterName })
+			const res = await createInviteAndEmail({ chapterId, invitedEmail: email, encryptedChapterKey, keyNonce, inviteSecretBase64url, inviterName })
+			console.log({res})
 			setSent(true)
 		} catch {
 			setError('Failed to send invite. Please try again.')
