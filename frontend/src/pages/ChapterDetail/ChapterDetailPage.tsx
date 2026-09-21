@@ -158,6 +158,9 @@ export function ChapterDetailPage() {
 			<Nav showLogout={true} showProfile={true} username={name}/>
 
 			<main className="max-w-2xl mx-auto px-4 py-10">
+				<button onClick={() => navigate('/profile')} className="text-med font-bold underline text-stone-muted hover:text-stone inline-block">
+					{'← My Profile'}
+				</button>
 				<ChapterHeader
 					chapter={chapter}
 					editing={editing}
