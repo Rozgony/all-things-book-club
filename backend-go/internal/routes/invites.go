@@ -104,7 +104,6 @@ type createAndEmailInviteRequest struct {
 func (h *InviteHandler) CreateAndEmail(w http.ResponseWriter, r *http.Request) {
 	chapterID := chi.URLParam(r, "id")
 	requesterID := middleware.UserIDFromContext(r.Context())
-	requesterEmail := middleware.UserEmailFromContext(r.Context())
 
 	isMember, err := db.IsMember(r.Context(), h.pool, chapterID, requesterID)
 	if err != nil {
@@ -132,7 +131,7 @@ func (h *InviteHandler) CreateAndEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.mailer.SendInviteEmail(req.InvitedEmail, requesterEmail, inviteURL); err != nil {
+	if err := h.mailer.SendInviteEmail(req.InvitedEmail, req.InviterName, inviteURL); err != nil {
 		handleError(w, err)
 		return
 	}
