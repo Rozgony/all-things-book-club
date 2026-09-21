@@ -80,7 +80,7 @@ export function TopicForm({
 					value={url}
 					onChange={e => setUrl(e.target.value)}
 					placeholder="Add a link (optional)"
-					className="px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
+					className="flex-1 min-w-20 px-3 py-2 border border-warm-border rounded bg-cream/40 text-stone text-sm focus:outline-none focus:ring-2 focus:ring-terracotta focus:border-terracotta"
 				/>
 			</div>
 			<textarea
