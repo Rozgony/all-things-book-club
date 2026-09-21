@@ -17,15 +17,14 @@ type Config struct {
 	SupabaseURL string
 	Env         string
 	FrontendURL string
-	// SMTP settings for sending invite emails (Supabase's SMTP relay in prod,
-	// local Inbucket during `supabase start` for dev).
-	SMTPHost string
-	SMTPPort string
-	SMTPUser string
-	SMTPPass string
-	SMTPFrom string
+	// Resend's HTTPS API is used instead of SMTP because Railway blocks
+	// outbound SMTP ports (25/465/587) by default.
+	ResendAPIKey string
+	EmailFrom    string
 }
 
+// https://all-things-book-club-production.up.railway.app
+// https://all-things-book-club-production.up.railway.app/api/
 // Load reads the .env file (if present) then pulls values from the environment.
 // Call this once in main() and pass cfg down to everything that needs it.
 func Load() *Config {
@@ -37,16 +36,13 @@ func Load() *Config {
 	}
 
 	cfg := &Config{
-		Port:        getEnv("PORT", "8080"),
-		DatabaseURL: requireEnv("DATABASE_URL"),
-		SupabaseURL: requireEnv("SUPABASE_URL"),
-		Env:         getEnv("ENV", "development"),
-		FrontendURL: requireEnv("FRONTEND_URL"),
-		SMTPHost:    getEnv("SMTP_HOST", "localhost"),
-		SMTPPort:    getEnv("SMTP_PORT", "2500"),
-		SMTPUser:    getEnv("SMTP_USER", ""),
-		SMTPPass:    getEnv("SMTP_PASS", ""),
-		SMTPFrom:    getEnv("SMTP_FROM", "no-reply@allthingsbook.club"),
+		Port:         getEnv("PORT", "8080"),
+		DatabaseURL:  requireEnv("DATABASE_URL"),
+		SupabaseURL:  requireEnv("SUPABASE_URL"),
+		Env:          getEnv("ENV", "development"),
+		FrontendURL:  requireEnv("FRONTEND_URL"),
+		ResendAPIKey: requireEnv("RESEND_API_KEY"),
+		EmailFrom:    getEnv("EMAIL_FROM", "no-reply@allthingsbook.club"),
 	}
 
 	return cfg
